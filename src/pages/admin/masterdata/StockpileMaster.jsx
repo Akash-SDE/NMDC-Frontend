@@ -3,9 +3,15 @@ import {
   stockpilesData,
   stockpilesMeta,
 } from "../../../data/adminmasterdatafiles/stockpiles";
+import useCrud from "../../../hooks/useCrud";
+import { exportToCSV } from "../../../utils/export";
 import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
+import Modal from "../../../components/shared/Modal";
+import ConfirmDialog from "../../../components/shared/ConfirmDialog";
+import Toast from "../../../components/shared/Toast";
+import FilterPanel from "../../../components/shared/FilterPanel";
 import { PlusIcon } from "../../../components/icons";
 
 function EditIcon() {
@@ -26,7 +32,6 @@ function EditIcon() {
     </svg>
   );
 }
-
 function DeleteIcon() {
   return (
     <svg
@@ -46,27 +51,191 @@ function DeleteIcon() {
   );
 }
 
+const oreTypeOptions = [
+  "Lump Ore",
+  "Fines",
+  "Pellets",
+  "Sinter Feed",
+  "Mixed Ore",
+  "Calibrated Ore",
+];
+
 const oreTypeBadgeColors = {
   "Lump Ore": "bg-blue-100 text-blue-700 border-blue-200",
   Fines: "bg-amber-100 text-amber-700 border-amber-200",
   Pellets: "bg-purple-100 text-purple-700 border-purple-200",
   "Sinter Feed": "bg-emerald-100 text-emerald-700 border-emerald-200",
   "Mixed Ore": "bg-slate-100 text-slate-700 border-slate-200",
+  "Calibrated Ore": "bg-cyan-100 text-cyan-700 border-cyan-200",
 };
 
-export default function StockpileMaster() {
-  const [search, setSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+const emptyForm = {
+  code: "",
+  name: "",
+  oreType: "Lump Ore",
+  capacity: "",
+  status: "active",
+};
+const csvColumns = [
+  { key: "code", label: "Stockpile Code" },
+  { key: "name", label: "Stockpile Name" },
+  { key: "oreType", label: "Ore Type" },
+  { key: "capacity", label: "Capacity (MT)" },
+  { key: "status", label: "Status" },
+];
 
-  const filtered = stockpilesData.filter(
-    (s) =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.code.toLowerCase().includes(search.toLowerCase()),
+function StockpileForm({ initialData, onSave, onCancel, isEditing }) {
+  const [form, setForm] = useState(initialData || { ...emptyForm });
+  const [errors, setErrors] = useState({});
+
+  function handleChange(field, value) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
+  }
+
+  function validate() {
+    const e = {};
+    if (!form.code.trim()) e.code = "Code is required";
+    if (!form.name.trim()) e.name = "Name is required";
+    if (!form.capacity.trim()) e.capacity = "Capacity is required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function handleSubmit(ev) {
+    ev.preventDefault();
+    if (validate()) onSave(form);
+  }
+
+  const inputClass = (f) =>
+    `w-full rounded-lg border ${errors[f] ? "border-red-300 ring-2 ring-red-100" : "border-slate-200"} bg-slate-50 px-4 py-2.5 3xl:py-3 5xl:py-4 text-[14px] 3xl:text-[16px] 5xl:text-[20px] text-brand-900 placeholder-slate-400 outline-none transition-all focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:bg-white`;
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4 3xl:space-y-6 5xl:space-y-8"
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 3xl:gap-5">
+        <div>
+          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+            Stockpile Code *
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. SP-NY-006"
+            value={form.code}
+            onChange={(e) => handleChange("code", e.target.value)}
+            disabled={isEditing}
+            className={`${inputClass("code")} ${isEditing ? "opacity-60 cursor-not-allowed" : ""}`}
+          />
+          {errors.code && (
+            <p className="mt-1 text-[11px] 3xl:text-[13px] text-red-500 font-medium">
+              {errors.code}
+            </p>
+          )}
+        </div>
+        <div>
+          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+            Capacity (MT) *
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. 150,000"
+            value={form.capacity}
+            onChange={(e) => handleChange("capacity", e.target.value)}
+            className={inputClass("capacity")}
+          />
+          {errors.capacity && (
+            <p className="mt-1 text-[11px] 3xl:text-[13px] text-red-500 font-medium">
+              {errors.capacity}
+            </p>
+          )}
+        </div>
+      </div>
+      <div>
+        <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+          Stockpile Name *
+        </label>
+        <input
+          type="text"
+          placeholder="e.g. North Yard Terminal"
+          value={form.name}
+          onChange={(e) => handleChange("name", e.target.value)}
+          className={inputClass("name")}
+        />
+        {errors.name && (
+          <p className="mt-1 text-[11px] 3xl:text-[13px] text-red-500 font-medium">
+            {errors.name}
+          </p>
+        )}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 3xl:gap-5">
+        <div>
+          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+            Ore Type
+          </label>
+          <select
+            value={form.oreType}
+            onChange={(e) => handleChange("oreType", e.target.value)}
+            className={
+              inputClass("oreType") + " appearance-none cursor-pointer"
+            }
+          >
+            {oreTypeOptions.map((ot) => (
+              <option key={ot} value={ot}>
+                {ot}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+            Status
+          </label>
+          <select
+            value={form.status}
+            onChange={(e) => handleChange("status", e.target.value)}
+            className={inputClass("status") + " appearance-none cursor-pointer"}
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="maintenance">Maintenance</option>
+          </select>
+        </div>
+      </div>
+      <div className="flex items-center justify-end gap-3 3xl:gap-4 pt-4 3xl:pt-6 border-t border-slate-100">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 3xl:px-6 3xl:py-3 5xl:px-8 5xl:py-4 text-[14px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50 transition-all"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="rounded-lg bg-brand-600 px-5 py-2.5 3xl:px-6 3xl:py-3 5xl:px-8 5xl:py-4 text-[14px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-white shadow-sm hover:bg-brand-700 transition-all active:scale-[0.98]"
+        >
+          {isEditing ? "Update Stockpile" : "Add Stockpile"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default function StockpileMaster() {
+  const crud = useCrud(stockpilesData, "code");
+  const pageSize = stockpilesMeta.pageSize;
+  const totalFiltered = crud.data.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
+  const paginatedData = crud.data.slice(
+    (crud.currentPage - 1) * pageSize,
+    crud.currentPage * pageSize,
   );
 
   return (
     <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
-      {/* Header */}
+      <Toast toast={crud.toast} />
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-brand-900">
@@ -76,104 +245,182 @@ export default function StockpileMaster() {
             {stockpilesMeta.subtitle}
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 3xl:px-6 3xl:py-3 text-[13px] 3xl:text-[16px] font-semibold text-white shadow-sm hover:bg-brand-700 transition-all self-start">
+        <button
+          onClick={crud.openAddForm}
+          className="flex items-center gap-2 3xl:gap-3 rounded-lg bg-brand-600 px-5 py-2.5 3xl:px-6 3xl:py-3 5xl:px-8 5xl:py-4 text-[13px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-white shadow-sm hover:bg-brand-700 transition-all self-start active:scale-[0.98]"
+        >
           <PlusIcon />
           <span>{stockpilesMeta.addLabel}</span>
         </button>
       </div>
 
-      {/* Search */}
       <SearchBar
         placeholder={stockpilesMeta.searchPlaceholder}
-        value={search}
-        onChange={setSearch}
-        showFilter={true}
+        value={crud.search}
+        onChange={(v) => {
+          crud.setSearch(v);
+          crud.setCurrentPage(1);
+        }}
+        showFilter
+        showExport={false}
         filterLabel="Filter"
+        onFilter={crud.toggleFilter}
+      />
+      <FilterPanel
+        isOpen={crud.isFilterOpen}
+        onClose={crud.toggleFilter}
+        activeFilters={crud.activeFilters}
+        onApply={crud.applyFilter}
+        onClear={crud.clearFilters}
+        filterFields={[
+          { key: "oreType", label: "Ore Type", options: oreTypeOptions },
+        ]}
       />
 
-      {/* Table */}
       <div className="rounded-xl border border-border-subtle bg-card shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full" data-print-table>
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
-                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   Stockpile Code
                 </th>
-                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   Stockpile Name
                 </th>
-                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden sm:table-cell">
+                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden sm:table-cell">
                   Ore Type
                 </th>
-                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden md:table-cell">
+                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden md:table-cell">
                   Capacity (MT)
                 </th>
-                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   Status
                 </th>
-                <th className="px-5 py-3.5 text-right text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                <th className="px-5 py-3.5 text-right text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map((sp) => (
-                <tr
-                  key={sp.code}
-                  className="hover:bg-slate-50/60 transition-colors"
-                >
-                  <td className="px-5 py-4">
-                    <span className="text-[13px] 3xl:text-[15px] font-semibold text-brand-600">
-                      {sp.code}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="text-[13px] 3xl:text-[15px] font-semibold text-brand-900">
-                      {sp.name}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 hidden sm:table-cell">
-                    <span
-                      className={`inline-flex rounded-md border px-2.5 py-1 text-[11px] 3xl:text-[13px] font-semibold ${oreTypeBadgeColors[sp.oreType] || "bg-slate-100 text-slate-600 border-slate-200"}`}
-                    >
-                      {sp.oreType}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 hidden md:table-cell">
-                    <span className="text-[13px] 3xl:text-[15px] font-medium text-slate-700">
-                      {sp.capacity}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <StatusBadge status={sp.status} />
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
-                        <EditIcon />
-                      </button>
-                      <button className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
-                        <DeleteIcon />
-                      </button>
+              {paginatedData.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-12 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <svg
+                        width="40"
+                        height="40"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#94a3b8"
+                        strokeWidth="1.5"
+                        className="mb-2"
+                      >
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                      </svg>
+                      <p className="text-[15px] 3xl:text-[18px] font-semibold text-slate-400">
+                        No stockpiles found
+                      </p>
+                      <p className="text-[13px] 3xl:text-[15px] text-slate-400">
+                        Try adjusting your search or filters
+                      </p>
                     </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                paginatedData.map((sp) => (
+                  <tr
+                    key={sp.code}
+                    className="hover:bg-slate-50/60 transition-colors group"
+                  >
+                    <td className="px-5 py-4 3xl:px-6 3xl:py-5">
+                      <span className="text-[13px] 3xl:text-[15px] 5xl:text-[19px] font-semibold text-brand-600">
+                        {sp.code}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 3xl:px-6 3xl:py-5">
+                      <span className="text-[13px] 3xl:text-[15px] 5xl:text-[19px] font-semibold text-brand-900">
+                        {sp.name}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 3xl:px-6 3xl:py-5 hidden sm:table-cell">
+                      <span
+                        className={`inline-flex rounded-md border px-2.5 py-1 text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-semibold ${oreTypeBadgeColors[sp.oreType] || "bg-slate-100 text-slate-600 border-slate-200"}`}
+                      >
+                        {sp.oreType}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 3xl:px-6 3xl:py-5 hidden md:table-cell">
+                      <span className="text-[13px] 3xl:text-[15px] 5xl:text-[19px] font-medium text-slate-700">
+                        {sp.capacity}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 3xl:px-6 3xl:py-5">
+                      <StatusBadge status={sp.status} />
+                    </td>
+                    <td className="px-5 py-4 3xl:px-6 3xl:py-5">
+                      <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => crud.openEditForm(sp)}
+                          className="flex h-8 w-8 3xl:h-10 3xl:w-10 items-center justify-center rounded-lg text-slate-400 hover:bg-brand-50 hover:text-brand-600 transition-colors"
+                          title="Edit"
+                        >
+                          <EditIcon />
+                        </button>
+                        <button
+                          onClick={() => crud.openDeleteConfirm(sp)}
+                          className="flex h-8 w-8 3xl:h-10 3xl:w-10 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                          title="Delete"
+                        >
+                          <DeleteIcon />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-4">
+        <div className="px-5 py-4 3xl:px-6 3xl:py-5">
           <Pagination
-            currentPage={currentPage}
-            totalPages={3}
-            totalCount={stockpilesMeta.totalCount}
-            pageSize={stockpilesMeta.pageSize}
-            onPageChange={setCurrentPage}
+            currentPage={crud.currentPage}
+            totalPages={totalPages}
+            totalCount={totalFiltered}
+            pageSize={pageSize}
+            onPageChange={crud.setCurrentPage}
             showPrevNext={true}
           />
         </div>
       </div>
+
+      <Modal
+        isOpen={crud.isFormOpen}
+        onClose={crud.closeForm}
+        title={crud.editingItem ? "Edit Stockpile" : "Add New Stockpile"}
+        subtitle={
+          crud.editingItem
+            ? `Editing ${crud.editingItem.code}`
+            : "Fill in the stockpile details"
+        }
+        size="lg"
+      >
+        <StockpileForm
+          initialData={crud.editingItem}
+          onSave={crud.saveItem}
+          onCancel={crud.closeForm}
+          isEditing={!!crud.editingItem}
+        />
+      </Modal>
+      <ConfirmDialog
+        isOpen={crud.isDeleteOpen}
+        onClose={crud.closeDeleteConfirm}
+        onConfirm={crud.deleteItem}
+        title="Delete Stockpile"
+        message="This will permanently remove this stockpile from the system."
+        itemName={crud.deletingItem?.name || ""}
+      />
     </div>
   );
 }
