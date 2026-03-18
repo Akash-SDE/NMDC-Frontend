@@ -10,49 +10,49 @@ export const sidebarSections = [
       },
     ],
   },
-  //   {
-  //     id: "dispatch-ops",
-  //     title: "DISPATCH OPS",
-  //     items: [
-  //       {
-  //         id: "rake-management",
-  //         label: "Rake Management",
-  //         icon: "rake",
-  //         hasDropdown: true,
-  //       },
-  //       {
-  //         id: "loading-management",
-  //         label: "Loading Management",
-  //         icon: "loading",
-  //       },
-  //       {
-  //         id: "delay-management",
-  //         label: "Delay Management",
-  //         icon: "delay",
-  //       },
-  //     ],
-  //   },
-  //   {
-  //     id: "logistics",
-  //     title: "LOGISTICS & COMPLIANCE",
-  //     items: [
-  //       {
-  //         id: "load-adjustment",
-  //         label: "Load Adjustment",
-  //         icon: "loadAdjust",
-  //       },
-  //       {
-  //         id: "demand-management",
-  //         label: "Demand Management",
-  //         icon: "demand",
-  //       },
-  //       {
-  //         id: "permit-management",
-  //         label: "Permit Management",
-  //         icon: "permit",
-  //       },
-  //     ],
-  //   },
+  // {
+  //   id: "dispatch-ops",
+  //   title: "DISPATCH OPS",
+  //   items: [
+  //     {
+  //       id: "rake-management",
+  //       label: "Rake Management",
+  //       icon: "rake",
+  //       hasDropdown: true,
+  //     },
+  //     {
+  //       id: "loading-management",
+  //       label: "Loading Management",
+  //       icon: "loading",
+  //     },
+  //     {
+  //       id: "delay-management",
+  //       label: "Delay Management",
+  //       icon: "delay",
+  //     },
+  //   ],
+  // },
+  // {
+  //   id: "logistics",
+  //   title: "LOGISTICS & COMPLIANCE",
+  //   items: [
+  //     {
+  //       id: "load-adjustment",
+  //       label: "Load Adjustment",
+  //       icon: "loadAdjust",
+  //     },
+  //     {
+  //       id: "demand-management",
+  //       label: "Demand Management",
+  //       icon: "demand",
+  //     },
+  //     {
+  //       id: "permit-management",
+  //       label: "Permit Management",
+  //       icon: "permit",
+  //     },
+  //   ],
+  // },
   {
     id: "configuration",
     title: "CONFIGURATION",
@@ -70,19 +70,20 @@ export const sidebarSections = [
           { id: "destinations", label: "Destinations" },
           { id: "route-mapping", label: "Route Mapping" },
           { id: "stockpile-logs", label: "Stockpile Logs" },
+          { id: "delay-categories", label: "Delay Categories" },
         ],
       },
-      //   {
-      //     id: "user-management",
-      //     label: "User Management",
-      //     icon: "users",
-      //   },
-      //   { id: "reports", label: "Reports", icon: "reports" },
-      //   {
-      //     id: "system-config",
-      //     label: "System Config",
-      //     icon: "config",
-      //   },
+      // {
+      //   id: "user-management",
+      //   label: "User Management",
+      //   icon: "users",
+      // },
+      // { id: "reports", label: "Reports", icon: "reports" },
+      // {
+      //   id: "system-config",
+      //   label: "System Config",
+      //   icon: "config",
+      // },
     ],
   },
 ];

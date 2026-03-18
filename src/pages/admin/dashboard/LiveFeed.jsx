@@ -1,3 +1,4 @@
+import React from "react";
 import { feedItems } from "./../../../data/feed";
 
 const dotColorMap = {

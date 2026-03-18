@@ -1,3 +1,4 @@
+import React from "react";
 import { statsCards } from "../../../data/stats";
 import StatsCard from "./StatsCard";
 

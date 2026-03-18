@@ -1,3 +1,4 @@
+import React from "react";
 import Greeting from "./Greeting";
 import StatsGrid from "./StatsGrid";
 import WeeklyChart from "./WeeklyChart";

@@ -1,3 +1,4 @@
+import React from "react";
 import { currentUser, currentDate } from "../../../data/user";
 import { CalendarIcon, PlusIcon } from "../../../components/icons/index";
 
