@@ -1,20 +1,51 @@
-import React from "react";
-import { RouterProvider, useRouter } from "./context/RouterContext";
+import { RouterProvider, useRouter, USER_ROLES } from "./context/RouterContext";
 import Layout from "./components/layout/Layout";
 import LoginPage from "./components/auth/LoginPage";
 import SignupPage from "./components/auth/SignupPage";
+
 import Dashboard from "./pages/admin/dashboard/Dashboard";
 import MasterDataPage from "./pages/admin/masterdata/MasterDataPage";
+import SuperadminLayout from "./pages/superadmin/SuperadminLayout";
+import RoleManagementPage from "./pages/superadmin/RoleManagement/RoleManagementPage";
+import AddRolePage from "./pages/superadmin/RoleManagement/AddRolePage";
+import UserManagementPage from "./pages/superadmin/UserManagement/UserManagementPage";
+import AddUserPage from "./pages/superadmin/UserManagement/AddUserPage";
 
 function AppRoutes() {
-  const { currentRoute } = useRouter();
+  const { currentRoute, userRole, isAuthenticated } = useRouter();
 
-  // Auth pages — no sidebar/header layout
+  // === AUTH PAGES ===
   if (currentRoute === "login") return <LoginPage />;
   if (currentRoute === "signup") return <SignupPage />;
 
-  // Determine which page content to show
-  const renderPage = () => {
+  // === GUARD ===
+  if (!isAuthenticated) return <LoginPage />;
+
+  // === SUPERADMIN ROUTES ===
+  if (
+    currentRoute.startsWith("sa-") ||
+    (userRole === USER_ROLES.SUPERADMIN && currentRoute.startsWith("sa-"))
+  ) {
+    const renderSuperadminPage = () => {
+      switch (currentRoute) {
+        case "sa-roles":
+          return <RoleManagementPage />;
+        case "sa-add-role":
+          return <AddRolePage />;
+        case "sa-users":
+          return <UserManagementPage />;
+        case "sa-add-user":
+          return <AddUserPage />;
+        default:
+          return <RoleManagementPage />;
+      }
+    };
+
+    return <SuperadminLayout>{renderSuperadminPage()}</SuperadminLayout>;
+  }
+
+  // === ADMIN ROUTES ===
+  const renderAdminPage = () => {
     switch (currentRoute) {
       case "dashboard":
         return <Dashboard />;
@@ -33,7 +64,7 @@ function AppRoutes() {
     }
   };
 
-  return <Layout>{renderPage()}</Layout>;
+  return <Layout>{renderAdminPage()}</Layout>;
 }
 
 export default function App() {
