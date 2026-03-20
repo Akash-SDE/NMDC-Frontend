@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "../../context/RouterContext";
+import { Logo } from "../icons";
 
 const roleOptions = [
   "Select Role",
@@ -14,8 +15,6 @@ export default function SignupPage() {
   const { navigate } = useRouter();
   const [formData, setFormData] = useState({
     fullName: "",
-    employeeId: "",
-    role: "",
     email: "",
     password: "",
     agreeTerms: false,
@@ -45,21 +44,11 @@ export default function SignupPage() {
         {/* Bottom brand card */}
         <div className="absolute bottom-0 left-0 right-0 p-8 3xl:p-12 5xl:p-16">
           <div className="flex items-center gap-3 mb-5 3xl:mb-7">
-            <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 items-center justify-center rounded-lg bg-brand-600 text-white">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                <rect x="14" y="14" width="7" height="7" rx="1.5" />
-              </svg>
+            <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 items-center justify-center rounded-lg overflow-hidden bg-white/10 backdrop-blur-sm">
+              <Logo size={36} className="3xl:w-12 3xl:h-12" />
             </div>
             <span className="text-[16px] 3xl:text-[20px] 5xl:text-[26px] font-bold text-white">
-              Iron Ore Dispatch
+              Rake Dispatch Management System
             </span>
           </div>
           <h3 className="text-[24px] sm:text-[28px] 3xl:text-[36px] 5xl:text-[48px] font-bold text-white leading-tight italic">
@@ -154,7 +143,7 @@ export default function SignupPage() {
             {/* Company Email */}
             <div>
               <label className="block text-[13px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-brand-900 mb-2 3xl:mb-3">
-                Company Email
+                Email
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">

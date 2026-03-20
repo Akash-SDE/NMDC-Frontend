@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter, USER_ROLES } from "../../context/RouterContext";
+import { Logo } from "../icons";
 
 function EyeIcon() {
   return (
@@ -111,22 +112,11 @@ export default function LoginPage() {
         <div className="mx-auto w-full max-w-[420px] 3xl:max-w-[520px] 5xl:max-w-[700px]">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8 3xl:mb-12">
-            <div className="flex h-11 w-11 3xl:h-14 3xl:w-14 items-center justify-center rounded-xl bg-brand-600 text-white">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="3xl:w-7 3xl:h-7"
-              >
-                <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                <rect x="14" y="14" width="7" height="7" rx="1.5" />
-              </svg>
+            <div className="flex h-11 w-11 3xl:h-14 3xl:w-14 items-center justify-center rounded-xl overflow-hidden bg-brand-50">
+              <Logo size={44} className="3xl:w-14 3xl:h-14" />
             </div>
             <span className="text-[18px] 3xl:text-[22px] font-bold text-brand-900">
-              Iron Ore Dispatch
+              Rake Dispatch Management System
             </span>
           </div>
 

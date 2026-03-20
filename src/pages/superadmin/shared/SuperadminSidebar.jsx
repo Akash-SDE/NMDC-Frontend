@@ -1,4 +1,5 @@
 import { useRouter } from "./../../../context/RouterContext";
+import { Logo } from "./../../../components/icons";
 
 const navSections = [
   {
@@ -86,17 +87,8 @@ export default function SuperadminSidebar({ isOpen, onClose }) {
     >
       {/* Brand */}
       <div className="flex items-center gap-3 px-5 py-5 3xl:px-7 3xl:py-7 border-b border-slate-200">
-        <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 text-white flex-shrink-0">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="3xl:w-6 3xl:h-6"
-          >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
-          </svg>
+        <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 items-center justify-center rounded-xl overflow-hidden bg-brand-50 shrink-0">
+          <Logo size={40} className="3xl:w-12 3xl:h-12" />
         </div>
         <div className="min-w-0">
           <h1 className="text-[15px] 3xl:text-[18px] font-bold text-slate-900 leading-tight truncate">
@@ -166,26 +158,6 @@ export default function SuperadminSidebar({ isOpen, onClose }) {
 
       {/* Bottom actions */}
       <div className="border-t border-slate-200 px-3 py-3 3xl:px-4 3xl:py-4 space-y-1">
-        {/* Switch to Admin */}
-        <button
-          onClick={() => navigate("dashboard")}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 3xl:px-4 3xl:py-3 text-[14px] 3xl:text-[16px] font-medium text-brand-600 hover:bg-brand-50 transition-colors"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="flex-shrink-0"
-          >
-            <rect x="3" y="3" width="7" height="7" rx="1.5" />
-            <rect x="14" y="3" width="7" height="7" rx="1.5" />
-            <rect x="3" y="14" width="7" height="7" rx="1.5" />
-            <rect x="14" y="14" width="7" height="7" rx="1.5" />
-          </svg>
-          <span>Admin Dashboard</span>
-        </button>
-
         {/* Sign Out */}
         <button
           onClick={logout}

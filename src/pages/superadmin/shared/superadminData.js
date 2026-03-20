@@ -25,38 +25,6 @@ export const PRIVILEGE_MODULES = [
     ]
   },
   {
-    id: 'port_customer_management',
-    name: 'Port & Customer Management',
-    privileges: [
-      { id: 'CREATE_PORT', name: 'CREATE_PORT', description: 'Create new port' },
-      { id: 'UPDATE_PORT', name: 'UPDATE_PORT', description: 'Update port details' },
-      { id: 'VIEW_PORT', name: 'VIEW_PORT', description: 'View port information' },
-      { id: 'CREATE_CUSTOMER', name: 'CREATE_CUSTOMER', description: 'Create new customer' },
-      { id: 'UPDATE_CUSTOMER', name: 'UPDATE_CUSTOMER', description: 'Update customer details' },
-      { id: 'VIEW_CUSTOMER', name: 'VIEW_CUSTOMER', description: 'View customer information' },
-    ]
-  },
-  {
-    id: 'company_management',
-    name: 'Company Management',
-    privileges: [
-      { id: 'CREATE_COMPANY', name: 'CREATE_COMPANY', description: 'Create new company' },
-      { id: 'UPDATE_COMPANY', name: 'UPDATE_COMPANY', description: 'Update company details' },
-      { id: 'VIEW_COMPANY', name: 'VIEW_COMPANY', description: 'View company information' },
-      { id: 'DELETE_COMPANY', name: 'DELETE_COMPANY', description: 'Delete company' },
-    ]
-  },
-  {
-    id: 'shipment_order_management',
-    name: 'Shipment Order Management',
-    privileges: [
-      { id: 'CREATE_SHIPMENT', name: 'CREATE_SHIPMENT', description: 'Create new shipment order' },
-      { id: 'UPDATE_SHIPMENT', name: 'UPDATE_SHIPMENT', description: 'Update shipment details' },
-      { id: 'VIEW_SHIPMENT', name: 'VIEW_SHIPMENT', description: 'View shipment information' },
-      { id: 'CANCEL_SHIPMENT', name: 'CANCEL_SHIPMENT', description: 'Cancel shipment order' },
-    ]
-  },
-  {
     id: 'dashboard',
     name: 'Dashboard',
     privileges: [
@@ -66,33 +34,65 @@ export const PRIVILEGE_MODULES = [
     ]
   },
   {
-    id: 'carrier_management',
-    name: 'Carrier Management',
+    id: 'rake-offering',
+    name: 'Rake Offering Management',
     privileges: [
-      { id: 'CREATE_CARRIER', name: 'CREATE_CARRIER', description: 'Create new carrier' },
-      { id: 'UPDATE_CARRIER', name: 'UPDATE_CARRIER', description: 'Update carrier details' },
-      { id: 'VIEW_CARRIER', name: 'VIEW_CARRIER', description: 'View carrier information' },
-      { id: 'DELETE_CARRIER', name: 'DELETE_CARRIER', description: 'Delete carrier' },
+      { id: 'CREATE_RAKE_OFFERING', name: 'CREATE_RAKE_OFFERING', description: 'View dashboard metrics' },
+      { id: 'EDIT_RAKE_DETAILS', name: 'EDIT_RAKE_DETAILS', description: 'View analytics data' },
+      { id: 'OVERRIDE_VALIDATIONS', name: 'OVERRIDE_VALIDATIONS', description: 'Export dashboard reports' },
+      { id: 'CANCEL_RAKE_ENTRY', name: 'CANCEL_RAKE_ENTRY', description: 'Export dashboard reports' },
+      { id: 'VIEW_ALL_RAKES', name: 'VIEW_ALL_RAKES', description: 'Export dashboard reports' },
+      { id: 'EDIT_RAKE_BEFORE_LOADING', name: 'EDIT_RAKE_BEFORE_LOADING', description: 'Export dashboard reports' },
+      { id: 'FORCE_EDIT_AFTER_LOADING', name: 'FORCE_EDIT_AFTER_LOADING', description: 'Export dashboard reports' },
     ]
   },
   {
-    id: 'supplier_management',
-    name: 'Supplier Management',
+    id: 'loading-offering',
+    name: 'Loading Management',
     privileges: [
-      { id: 'CREATE_SUPPLIER', name: 'CREATE_SUPPLIER', description: 'Create new supplier' },
-      { id: 'UPDATE_SUPPLIER', name: 'UPDATE_SUPPLIER', description: 'Update supplier details' },
-      { id: 'VIEW_SUPPLIER', name: 'VIEW_SUPPLIER', description: 'View supplier information' },
-      { id: 'DELETE_SUPPLIER', name: 'DELETE_SUPPLIER', description: 'Delete supplier' },
+      { id: 'VIEW_LOADING_PROGRESS', name: 'VIEW_LOADING_PROGRESS', description: 'View dashboard metrics' },
+      { id: 'UPDATE_LOADING_DETAILS', name: 'UPDATE_LOADING_DETAILS', description: 'View analytics data' },
+      { id: 'MODIFY_COMPLETION_CLEARANCE_TIME', name: 'MODIFY_COMPLETION_CLEARANCE_TIME', description: 'Export dashboard reports' },
+      { id: 'ADD_ADJUSTMENT', name: 'ADD_ADJUSTMENT', description: 'View analytics data' },
+      { id: 'MODIFY_ADJUSTMENT', name: 'MODIFY_ADJUSTMENT', description: 'View analytics data' },
+      { id: 'VIEW_ADJUSTMENT_HISTORY', name: 'VIEW_ADJUSTMENT_HISTORY', description: 'View analytics data' },
     ]
   },
   {
-    id: 'company_customer_mappings',
-    name: 'Company Customer Mappings',
+    id: 'delay',
+    name: 'Delay Management',
     privileges: [
-      { id: 'CREATE_MAPPING', name: 'CREATE_MAPPING', description: 'Create company-customer mapping' },
-      { id: 'UPDATE_MAPPING', name: 'UPDATE_MAPPING', description: 'Update mapping details' },
-      { id: 'VIEW_MAPPING', name: 'VIEW_MAPPING', description: 'View mapping information' },
-      { id: 'DELETE_MAPPING', name: 'DELETE_MAPPING', description: 'Delete mapping' },
+      { id: 'RECORD_DELAY_CATEGORY_AND_DURATION', name: 'Record delay category and duration', description: 'View dashboard metrics' },
+      { id: 'ALLOW_MULTIPLE_DELAY_ENTRIES', name: 'ALLOW_MULTIPLE_DELAY_ENTRIES', description: 'View analytics data' },
+      { id: 'LINK_DELAY_WITH_LOADING_TIMELINE', name: 'LINK_DELAY_WITH_LOADING_TIMELINE', description: 'Export dashboard reports' },
+      { id: 'RESTRICT_DELAY_AFTER_TRACK_CLEARANCE', name: 'RESTRICT_DELAY_AFTER_TRACK_CLEARANCE', description: 'Export dashboard reports' },
+    ]
+  },
+  {
+    id: 'e-demand',
+    name: 'E-Demand Management',
+    privileges: [
+      { id: 'CREATE_DEMAND', name: 'CREATE_DEMAND', description: 'View dashboard metrics' },
+      { id: 'MODIFY_DEMAND', name: 'MODIFY_DEMAND', description: 'View analytics data' },
+      { id: 'ALLOCATE_RAKE_TO_DEMAND', name: 'ALLOCATE_RAKE_TO_DEMAND', description: 'Export dashboard reports' },
+    ]
+  },
+  {
+    id: 'permit',
+    name: 'Permit Management',
+    privileges: [
+      { id: 'RECORD_PERMIT_NUMBER_AND_VALIDITY', name: 'RECORD_PERMIT_NUMBER_AND_VALIDITY', description: 'View dashboard metrics' },
+      { id: 'LINK_PERMIT_WITH_RAKE_DISPATCH', name: 'LINK_PERMIT_WITH_RAKE_DISPATCH', description: 'View analytics data' },
+      { id: 'VIEW_PERMIT_COMPLIANCE_DETAILS', name: 'VIEW_PERMIT_COMPLIANCE_DETAILS', description: 'Export dashboard reports' },
+    ]
+  },
+  {
+    id: 'reports',
+    name: 'Reports Management',
+    privileges: [
+      { id: 'VIEW_DASHBOARD', name: 'VIEW_DASHBOARD', description: 'View dashboard metrics' },
+      { id: 'VIEW_ANALYTICS', name: 'VIEW_ANALYTICS', description: 'View analytics data' },
+      { id: 'EXPORT_REPORTS', name: 'EXPORT_REPORTS', description: 'Export dashboard reports' },
     ]
   },
 ];
@@ -203,4 +203,12 @@ export const STATUS_COLORS = {
   active: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
   inactive: { bg: 'bg-slate-100', text: 'text-slate-600', dot: 'bg-slate-400' },
   pending: { bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-500' },
+};
+
+export const ROUTE_LABELS = {
+  "sa-roles": "Role Management",
+  "sa-add-role": "Add Role",
+  "sa-users": "User Management",
+  "sa-add-user": "Add User",
+  "sa-edit-user": "Edit User",
 };

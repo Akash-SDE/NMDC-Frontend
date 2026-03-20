@@ -2,22 +2,22 @@
    SVG ICON COMPONENTS
    All icons accept className and size props for flexibility
    ============================================================ */
+import logoImg from "../../assets/image.png";
 
-export function DashboardIcon({ className = "", size = 20 }) {
+export function Logo({ className = "", size = 40 }) {
   return (
-    <svg
+    <img
+      src={logoImg}
+      alt="Logo"
       width={size}
       height={size}
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-    >
-      <rect x="3" y="3" width="7" height="7" rx="1.5" />
-      <rect x="14" y="3" width="7" height="7" rx="1.5" />
-      <rect x="3" y="14" width="7" height="7" rx="1.5" />
-      <rect x="14" y="14" width="7" height="7" rx="1.5" />
-    </svg>
+      className={`object-contain ${className}`}
+    />
   );
+}
+
+export function DashboardIcon({ className = "", size = 20 }) {
+  return <Logo className={className} size={size} />;
 }
 
 export function RakeIcon({ className = "", size = 20 }) {
@@ -406,20 +406,7 @@ export function CloseIcon({ className = "", size = 24 }) {
 /* === STAT CARD ICONS (Filled / Colored) === */
 
 export function ActiveRakesStatIcon({ className = "" }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-    >
-      <rect x="3" y="3" width="7" height="7" rx="1.5" />
-      <rect x="14" y="3" width="7" height="7" rx="1.5" />
-      <rect x="3" y="14" width="7" height="7" rx="1.5" />
-      <rect x="14" y="14" width="7" height="7" rx="1.5" />
-    </svg>
-  );
+  return <Logo className={className} size={22} />;
 }
 
 export function DispatchStatIcon({ className = "" }) {

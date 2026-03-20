@@ -3,10 +3,11 @@ import { Users, CheckCircle, Clock, Search, UserPlus } from "lucide-react";
 import { useRouter } from "./../../../context/RouterContext";
 import { MOCK_USERS } from "../shared/superadminData";
 import UserTable from "./UserTable";
+import Breadcrumb from "../shared/Breadcrumb";
 
 function UserManagementPage() {
   const { navigate } = useRouter();
-  const [users] = useState(MOCK_USERS);
+  const [users, setUsers] = useState(MOCK_USERS);
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredUsers = users.filter(
@@ -20,17 +21,17 @@ function UserManagementPage() {
   const pendingUsers = users.filter((u) => u.status === "pending").length;
 
   const handleEdit = (user) => {
-    console.log("Edit user:", user);
-    // TODO: Navigate to edit page
+    navigate("sa-edit-user", { user });
   };
-
   const handleDelete = (user) => {
-    console.log("Delete user:", user);
-    // TODO: Show confirmation modal
+    if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+    }
   };
 
   return (
     <div>
+      <Breadcrumb />
       {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">User Management</h1>

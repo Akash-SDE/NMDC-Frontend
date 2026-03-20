@@ -36,6 +36,8 @@ function AppRoutes() {
           return <UserManagementPage />;
         case "sa-add-user":
           return <AddUserPage />;
+        case "sa-edit-user":
+          return <AddUserPage />;
         default:
           return <RoleManagementPage />;
       }

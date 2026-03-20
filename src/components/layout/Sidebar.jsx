@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { sidebarSections, signOutItem } from "../../data/navigation";
 import { useRouter } from "../../context/RouterContext";
-import { iconMap, ChevronDownIcon, CloseIcon } from "../icons";
+import { iconMap, ChevronDownIcon, CloseIcon, Logo } from "../icons";
 
 export default function Sidebar({ isOpen, onClose }) {
   const { currentRoute, navigate } = useRouter();
@@ -52,25 +52,14 @@ export default function Sidebar({ isOpen, onClose }) {
     >
       {/* Brand header */}
       <div className="flex items-center gap-3 px-5 py-5 3xl:px-7 3xl:py-7 5xl:px-10 5xl:py-10 border-b border-border-subtle">
-        <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 5xl:h-16 5xl:w-16 items-center justify-center rounded-lg bg-brand-600 text-white flex-shrink-0">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="3xl:w-6 3xl:h-6 5xl:w-8 5xl:h-8"
-          >
-            <rect x="3" y="3" width="7" height="7" rx="1.5" />
-            <rect x="14" y="3" width="7" height="7" rx="1.5" />
-            <rect x="3" y="14" width="7" height="7" rx="1.5" />
-            <rect x="14" y="14" width="7" height="7" rx="1.5" />
-          </svg>
+        <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 5xl:h-16 5xl:w-16 items-center justify-center rounded-lg overflow-hidden bg-brand-50 shrink-0">
+          <Logo size={40} className="3xl:w-12 3xl:h-12 5xl:w-16 5xl:h-16" />
         </div>
         <div className="min-w-0">
           <h1 className="text-[15px] 3xl:text-[18px] 5xl:text-[24px] font-bold text-brand-900 leading-tight truncate">
             Iron Ore Dispatch
           </h1>
-          <p className="text-[10px] 3xl:text-[12px] 5xl:text-[16px] font-semibold tracking-[0.1em] text-slate-400 uppercase">
+          <p className="text-[10px] 3xl:text-[12px] 5xl:text-[16px] font-semibold tracking-widest text-slate-400 uppercase">
             Enterprise System
           </p>
         </div>
@@ -119,7 +108,7 @@ export default function Sidebar({ isOpen, onClose }) {
                     {IconComponent && (
                       <IconComponent
                         size={20}
-                        className={`flex-shrink-0 ${
+                        className={`shrink-0 ${
                           isActive
                             ? "text-brand-600"
                             : "text-slate-400 group-hover:text-slate-500"
@@ -130,7 +119,7 @@ export default function Sidebar({ isOpen, onClose }) {
                     {(item.hasDropdown || item.subItems) && (
                       <ChevronDownIcon
                         size={16}
-                        className={`ml-auto flex-shrink-0 text-slate-400 transition-transform duration-200 ${
+                        className={`ml-auto shrink-0 text-slate-400 transition-transform duration-200 ${
                           isExpanded ? "rotate-180" : ""
                         }`}
                       />
@@ -177,7 +166,7 @@ export default function Sidebar({ isOpen, onClose }) {
         >
           {(() => {
             const Icon = iconMap[signOutItem.icon];
-            return Icon ? <Icon size={20} className="flex-shrink-0" /> : null;
+            return Icon ? <Icon size={20} className="shrink-0" /> : null;
           })()}
           <span>{signOutItem.label}</span>
         </button>

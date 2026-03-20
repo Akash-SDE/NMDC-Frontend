@@ -14,21 +14,26 @@ function AddRolePage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Creating role:", { ...formData, privileges: selectedPrivileges });
+    console.log("Creating role:", {
+      ...formData,
+      privileges: selectedPrivileges,
+    });
     // TODO: Save role via API
     navigate("sa-roles");
   };
 
   const handleTogglePrivilege = (privilegeId) => {
-    setSelectedPrivileges(prev =>
+    setSelectedPrivileges((prev) =>
       prev.includes(privilegeId)
-        ? prev.filter(id => id !== privilegeId)
-        : [...prev, privilegeId]
+        ? prev.filter((id) => id !== privilegeId)
+        : [...prev, privilegeId],
     );
   };
 
   const handleSelectAll = () => {
-    const allPrivilegeIds = filteredModules.flatMap(m => m.privileges.map(p => p.id));
+    const allPrivilegeIds = filteredModules.flatMap((m) =>
+      m.privileges.map((p) => p.id),
+    );
     setSelectedPrivileges(allPrivilegeIds);
   };
 
@@ -42,17 +47,20 @@ function AddRolePage() {
     setSelectedModule("all");
   };
 
-  const filteredModules = selectedModule === "all"
-    ? PRIVILEGE_MODULES
-    : PRIVILEGE_MODULES.filter(m => m.id === selectedModule);
+  const filteredModules =
+    selectedModule === "all"
+      ? PRIVILEGE_MODULES
+      : PRIVILEGE_MODULES.filter((m) => m.id === selectedModule);
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <form onSubmit={handleSubmit}>
         {/* Basic Details Section */}
         <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-          <h2 className="text-lg font-bold text-slate-900 mb-6">Basic Details</h2>
-          
+          <h2 className="text-lg font-bold text-slate-900 mb-6">
+            Basic Details
+          </h2>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Role Name */}
             <div>
@@ -63,7 +71,9 @@ function AddRolePage() {
                 type="text"
                 required
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, name: e.target.value }))
+                }
                 placeholder="Enter role name (e.g., Admin, Manager, User)"
                 className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
@@ -80,7 +90,7 @@ function AddRolePage() {
                 className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
               >
                 <option value="all">All Modules</option>
-                {PRIVILEGE_MODULES.map(module => (
+                {PRIVILEGE_MODULES.map((module) => (
                   <option key={module.id} value={module.id}>
                     {module.name}
                   </option>
@@ -97,7 +107,12 @@ function AddRolePage() {
             <textarea
               required
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
+              }
               placeholder="Describe the role's purpose and responsibilities..."
               rows={3}
               className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
@@ -160,8 +175,12 @@ function AddRolePage() {
           </button>
           <button
             type="submit"
-            disabled={!formData.name || !formData.description || selectedPrivileges.length === 0}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary-dark rounded-xl transition-colors shadow-lg shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={
+              !formData.name ||
+              !formData.description ||
+              selectedPrivileges.length === 0
+            }
+            className="px-6 py-2.5 text-sm font-medium text-dark bg-primary hover:bg-primary-dark rounded-xl transition-colors shadow-lg shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Create Role
           </button>
