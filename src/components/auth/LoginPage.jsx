@@ -253,40 +253,6 @@ export default function LoginPage() {
               Log In
             </button>
           </form>
-
-          {/* Credentials hint */}
-          <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4 3xl:p-5">
-            <p className="text-[11px] 3xl:text-[13px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-              Demo Credentials
-            </p>
-            <div className="space-y-1.5">
-              <p className="text-[12px] 3xl:text-[14px] text-slate-600 flex items-center gap-2">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-brand-100 text-brand-600 text-[9px] font-bold">
-                  A
-                </span>
-                <code className="font-mono bg-white px-1.5 py-0.5 rounded border text-brand-700">
-                  admin
-                </code>{" "}
-                /{" "}
-                <code className="font-mono bg-white px-1.5 py-0.5 rounded border text-brand-700">
-                  admin123
-                </code>
-              </p>
-              <p className="text-[12px] 3xl:text-[14px] text-slate-600 flex items-center gap-2">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-purple-100 text-purple-600 text-[9px] font-bold">
-                  S
-                </span>
-                <code className="font-mono bg-white px-1.5 py-0.5 rounded border text-purple-700">
-                  superadmin
-                </code>{" "}
-                /{" "}
-                <code className="font-mono bg-white px-1.5 py-0.5 rounded border text-purple-700">
-                  super123
-                </code>
-              </p>
-            </div>
-          </div>
-
           <p className="mt-5 text-center text-[13px] 3xl:text-[16px] text-slate-500">
             Don't have an account?{" "}
             <button
@@ -297,8 +263,12 @@ export default function LoginPage() {
             </button>
           </p>
         </div>
+        <div className="font-bold text-xs text-blue-600 text-center mt-10">
+          <a href="https://thinkerscave.com/">
+            Powered By @ThinkersCave Technologies
+          </a>
+        </div>
       </div>
-
       {/* Image Side */}
       <div className="hidden lg:flex lg:w-[50%] xl:w-[55%] relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900">

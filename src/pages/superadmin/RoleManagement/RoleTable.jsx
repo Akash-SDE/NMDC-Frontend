@@ -10,11 +10,30 @@ import {
 function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
   const pageSize = 10;
 
-  const totalPages = Math.ceil(roles.length / pageSize);
+  const getComparableValue = (role, field) => {
+    const value = role[field];
+    if (field.includes("On") && typeof value === "string") {
+      const parsed = Date.parse(value);
+      if (!Number.isNaN(parsed)) return parsed;
+    }
+    return typeof value === "string" ? value.toLowerCase() : (value ?? "");
+  };
+
+  const sortedRoles = [...roles].sort((a, b) => {
+    const aValue = getComparableValue(a, sortBy);
+    const bValue = getComparableValue(b, sortBy);
+    if (aValue === bValue) return 0;
+    const comparison = aValue > bValue ? 1 : -1;
+    return sortOrder === "asc" ? comparison : -comparison;
+  });
+
+  const totalPages = Math.ceil(sortedRoles.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedRoles = roles.slice(startIndex, startIndex + pageSize);
+  const paginatedRoles = sortedRoles.slice(startIndex, startIndex + pageSize);
 
   const toggleSelectAll = () => {
     if (selectedRoles.length === paginatedRoles.length) {
@@ -28,6 +47,16 @@ function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
     setSelectedRoles((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     );
+  };
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    setCurrentPage(1);
   };
 
   return (
@@ -49,25 +78,38 @@ function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
                 />
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Role Name
+                <button type="button" onClick={() => handleSort("name")}>
+                  Role Name {sortBy === "name" ? `(${sortOrder})` : ""}
+                </button>
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Role Description
+                <button type="button" onClick={() => handleSort("description")}>
+                  Role Description{" "}
+                  {sortBy === "description" ? `(${sortOrder})` : ""}
+                </button>
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Privileges
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Created By
+                <button type="button" onClick={() => handleSort("createdBy")}>
+                  Created By {sortBy === "createdBy" ? `(${sortOrder})` : ""}
+                </button>
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Created On
+                <button type="button" onClick={() => handleSort("createdOn")}>
+                  Created On {sortBy === "createdOn" ? `(${sortOrder})` : ""}
+                </button>
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Modified By
+                <button type="button" onClick={() => handleSort("modifiedBy")}>
+                  Modified By {sortBy === "modifiedBy" ? `(${sortOrder})` : ""}
+                </button>
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Modified On
+                <button type="button" onClick={() => handleSort("modifiedOn")}>
+                  Modified On {sortBy === "modifiedOn" ? `(${sortOrder})` : ""}
+                </button>
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Actions
@@ -154,8 +196,9 @@ function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
         </div>
         <div className="flex items-center gap-4 text-sm text-slate-600">
           <span>
-            {startIndex + 1} to {Math.min(startIndex + pageSize, roles.length)}{" "}
-            of {roles.length}
+            {startIndex + 1} to{" "}
+            {Math.min(startIndex + pageSize, sortedRoles.length)} of{" "}
+            {sortedRoles.length}
           </span>
           <div className="flex items-center gap-1">
             <button

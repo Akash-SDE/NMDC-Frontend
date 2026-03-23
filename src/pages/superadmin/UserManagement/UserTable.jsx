@@ -5,33 +5,62 @@ import { STATUS_COLORS } from "../shared/superadminData";
 function UserTable({ users, onEdit, onDelete }) {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
   const pageSize = 10;
-  
-  const totalPages = Math.ceil(users.length / pageSize);
+
+  const getComparableValue = (user, field) => {
+    const value = user[field];
+    if (field === "createdOn" && typeof value === "string") {
+      const parsed = Date.parse(value);
+      if (!Number.isNaN(parsed)) return parsed;
+    }
+    return typeof value === "string" ? value.toLowerCase() : (value ?? "");
+  };
+
+  const sortedUsers = [...users].sort((a, b) => {
+    const aValue = getComparableValue(a, sortBy);
+    const bValue = getComparableValue(b, sortBy);
+    if (aValue === bValue) return 0;
+    const comparison = aValue > bValue ? 1 : -1;
+    return sortOrder === "asc" ? comparison : -comparison;
+  });
+
+  const totalPages = Math.ceil(sortedUsers.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedUsers = users.slice(startIndex, startIndex + pageSize);
+  const paginatedUsers = sortedUsers.slice(startIndex, startIndex + pageSize);
 
   const toggleSelectAll = () => {
     if (selectedUsers.length === paginatedUsers.length) {
       setSelectedUsers([]);
     } else {
-      setSelectedUsers(paginatedUsers.map(u => u.id));
+      setSelectedUsers(paginatedUsers.map((u) => u.id));
     }
   };
 
   const toggleSelect = (id) => {
-    setSelectedUsers(prev => 
-      prev.includes(id) 
-        ? prev.filter(i => i !== id)
-        : [...prev, id]
+    setSelectedUsers((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     );
+  };
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    setCurrentPage(1);
   };
 
   const getStatusBadge = (status) => {
     const colors = STATUS_COLORS[status] || STATUS_COLORS.inactive;
     const label = status.charAt(0).toUpperCase() + status.slice(1);
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${colors.bg} ${colors.text}`}>
+      <span
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${colors.bg} ${colors.text}`}
+      >
         <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
         {label}
       </span>
@@ -48,25 +77,38 @@ function UserTable({ users, onEdit, onDelete }) {
               <th className="px-4 py-4 w-10">
                 <input
                   type="checkbox"
-                  checked={selectedUsers.length === paginatedUsers.length && paginatedUsers.length > 0}
+                  checked={
+                    selectedUsers.length === paginatedUsers.length &&
+                    paginatedUsers.length > 0
+                  }
                   onChange={toggleSelectAll}
                   className="rounded border-slate-300 text-primary focus:ring-primary"
                 />
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                User
+                <button type="button" onClick={() => handleSort("name")}>
+                  User {sortBy === "name" ? `(${sortOrder})` : ""}
+                </button>
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Email
+                <button type="button" onClick={() => handleSort("email")}>
+                  Email {sortBy === "email" ? `(${sortOrder})` : ""}
+                </button>
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Role
+                <button type="button" onClick={() => handleSort("role")}>
+                  Role {sortBy === "role" ? `(${sortOrder})` : ""}
+                </button>
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Status
+                <button type="button" onClick={() => handleSort("status")}>
+                  Status {sortBy === "status" ? `(${sortOrder})` : ""}
+                </button>
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Created On
+                <button type="button" onClick={() => handleSort("createdOn")}>
+                  Created On {sortBy === "createdOn" ? `(${sortOrder})` : ""}
+                </button>
               </th>
               <th className="px-4 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Actions
@@ -75,10 +117,7 @@ function UserTable({ users, onEdit, onDelete }) {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {paginatedUsers.map((user) => (
-              <tr
-                key={user.id}
-                className="hover:bg-slate-50 transition-colors"
-              >
+              <tr key={user.id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-4 py-4">
                   <input
                     type="checkbox"
@@ -92,18 +131,20 @@ function UserTable({ users, onEdit, onDelete }) {
                     <div className="w-9 h-9 bg-primary/10 text-primary rounded-full flex items-center justify-center font-semibold text-sm">
                       {user.avatar}
                     </div>
-                    <span className="font-medium text-slate-900">{user.name}</span>
+                    <span className="font-medium text-slate-900">
+                      {user.name}
+                    </span>
                   </div>
                 </td>
                 <td className="px-4 py-4 text-sm text-slate-600">
                   {user.email}
                 </td>
                 <td className="px-4 py-4">
-                  <span className="text-sm font-medium text-primary">{user.role}</span>
+                  <span className="text-sm font-medium text-primary">
+                    {user.role}
+                  </span>
                 </td>
-                <td className="px-4 py-4">
-                  {getStatusBadge(user.status)}
-                </td>
+                <td className="px-4 py-4">{getStatusBadge(user.status)}</td>
                 <td className="px-4 py-4 text-sm text-slate-600">
                   {user.createdOn}
                 </td>
@@ -143,11 +184,13 @@ function UserTable({ users, onEdit, onDelete }) {
         </div>
         <div className="flex items-center gap-4 text-sm text-slate-600">
           <span>
-            {startIndex + 1} to {Math.min(startIndex + pageSize, users.length)} of {users.length}
+            {startIndex + 1} to{" "}
+            {Math.min(startIndex + pageSize, sortedUsers.length)} of{" "}
+            {sortedUsers.length}
           </span>
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
               className="p-1 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -157,7 +200,7 @@ function UserTable({ users, onEdit, onDelete }) {
               Page {currentPage} of {totalPages || 1}
             </span>
             <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages || totalPages === 0}
               className="p-1 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >

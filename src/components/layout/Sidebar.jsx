@@ -57,10 +57,10 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
         <div className="min-w-0">
           <h1 className="text-[15px] 3xl:text-[18px] 5xl:text-[24px] font-bold text-brand-900 leading-tight truncate">
-            Iron Ore Dispatch
+            NMDC
           </h1>
           <p className="text-[10px] 3xl:text-[12px] 5xl:text-[16px] font-semibold tracking-widest text-slate-400 uppercase">
-            Enterprise System
+            Admin Panel
           </p>
         </div>
         <button

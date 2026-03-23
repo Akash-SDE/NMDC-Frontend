@@ -4,14 +4,12 @@ import {
   customersMeta,
 } from "../../../data/adminmasterdatafiles/customers";
 import useCrud from "../../../hooks/useCrud";
-import { exportToCSV } from "../../../utils/export";
 import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
 import Modal from "../../../components/shared/Modal";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Toast from "../../../components/shared/Toast";
-import FilterPanel from "../../../components/shared/FilterPanel";
 import { PlusIcon } from "../../../components/icons";
 
 function EditIcon() {
@@ -67,15 +65,6 @@ const emptyForm = {
   contractType: "Annual",
   status: "active",
 };
-const csvColumns = [
-  { key: "code", label: "Customer Code" },
-  { key: "name", label: "Customer Name" },
-  { key: "contactPerson", label: "Contact Person" },
-  { key: "location", label: "Location" },
-  { key: "contractType", label: "Contract Type" },
-  { key: "status", label: "Status" },
-];
-
 function CustomerForm({ initialData, onSave, onCancel, isEditing }) {
   const [form, setForm] = useState(initialData || { ...emptyForm });
   const [errors, setErrors] = useState({});
@@ -207,19 +196,21 @@ function CustomerForm({ initialData, onSave, onCancel, isEditing }) {
       </div>
 
       {/* Status */}
-      <div>
-        <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
-          Status
-        </label>
-        <select
-          value={form.status}
-          onChange={(e) => handleChange("status", e.target.value)}
-          className={inputClass("status") + " appearance-none cursor-pointer"}
-        >
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-      </div>
+      {!isEditing && (
+        <div>
+          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+            Status
+          </label>
+          <select
+            value={form.status}
+            onChange={(e) => handleChange("status", e.target.value)}
+            className={inputClass("status") + " appearance-none cursor-pointer"}
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 3xl:gap-4 pt-4 3xl:pt-6 border-t border-slate-100">
@@ -243,20 +234,32 @@ function CustomerForm({ initialData, onSave, onCancel, isEditing }) {
 
 export default function CustomerMaster() {
   const crud = useCrud(customersData, "code");
+  const [sortBy, setSortBy] = useState("code");
+  const [sortOrder, setSortOrder] = useState("asc");
   const pageSize = customersMeta.pageSize;
-  const totalFiltered = crud.data.length;
+  const sortedData = [...crud.data].sort((a, b) => {
+    const aValue = String(a[sortBy] ?? "").toLowerCase();
+    const bValue = String(b[sortBy] ?? "").toLowerCase();
+    if (aValue === bValue) return 0;
+    const comparison = aValue > bValue ? 1 : -1;
+    return sortOrder === "asc" ? comparison : -comparison;
+  });
+  const totalFiltered = sortedData.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
-  const paginatedData = crud.data.slice(
+  const paginatedData = sortedData.slice(
     (crud.currentPage - 1) * pageSize,
     crud.currentPage * pageSize,
   );
 
-  const activeCustomers = crud.allData.filter(
-    (c) => c.status === "active",
-  ).length;
-  const longTermCount = crud.allData.filter(
-    (c) => c.contractType === "Long Term",
-  ).length;
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    crud.setCurrentPage(1);
+  };
 
   return (
     <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
@@ -281,7 +284,6 @@ export default function CustomerMaster() {
         </button>
       </div>
 
-      {/* Search + Filters + Export */}
       <SearchBar
         placeholder={customersMeta.searchPlaceholder}
         value={crud.search}
@@ -289,26 +291,7 @@ export default function CustomerMaster() {
           crud.setSearch(v);
           crud.setCurrentPage(1);
         }}
-        showFilter
-        showExport
-        filterLabel="Filters"
-        onFilter={crud.toggleFilter}
-        onExport={() => exportToCSV(crud.data, "customers_master", csvColumns)}
-      />
-
-      <FilterPanel
-        isOpen={crud.isFilterOpen}
-        onClose={crud.toggleFilter}
-        activeFilters={crud.activeFilters}
-        onApply={crud.applyFilter}
-        onClear={crud.clearFilters}
-        filterFields={[
-          {
-            key: "contractType",
-            label: "Contract Type",
-            options: contractOptions,
-          },
-        ]}
+        showFilter={false}
       />
 
       {/* Table */}
@@ -318,22 +301,41 @@ export default function CustomerMaster() {
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Customer Code
+                  <button type="button" onClick={() => handleSort("code")}>
+                    Customer Code {sortBy === "code" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Customer Name
+                  <button type="button" onClick={() => handleSort("name")}>
+                    Customer Name {sortBy === "name" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden sm:table-cell">
-                  Contact Person
+                  <button
+                    type="button"
+                    onClick={() => handleSort("contactPerson")}
+                  >
+                    Contact Person{" "}
+                    {sortBy === "contactPerson" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden md:table-cell">
-                  Location
+                  <button type="button" onClick={() => handleSort("location")}>
+                    Location {sortBy === "location" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden lg:table-cell">
-                  Contract
+                  <button
+                    type="button"
+                    onClick={() => handleSort("contractType")}
+                  >
+                    Contract {sortBy === "contractType" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Status
+                  <button type="button" onClick={() => handleSort("status")}>
+                    Status {sortBy === "status" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-right text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   Actions
@@ -439,83 +441,6 @@ export default function CustomerMaster() {
             pageSize={pageSize}
             onPageChange={crud.setCurrentPage}
           />
-        </div>
-      </div>
-
-      {/* Dynamic bottom stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 3xl:gap-6 5xl:gap-8">
-        <div className="flex items-center gap-3 3xl:gap-4 rounded-xl border border-border-subtle bg-card p-5 3xl:p-7 5xl:p-9 shadow-sm">
-          <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 5xl:h-14 5xl:w-14 items-center justify-center rounded-xl bg-brand-100">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className="text-brand-600"
-            >
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 00-3-3.87" />
-              <path d="M16 3.13a4 4 0 010 7.75" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-[10px] 3xl:text-[12px] 5xl:text-[16px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-              Total Customers
-            </p>
-            <p className="text-[24px] 3xl:text-[30px] 5xl:text-[40px] font-bold text-brand-900">
-              {crud.allData.length}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 3xl:gap-4 rounded-xl border border-border-subtle bg-card p-5 3xl:p-7 5xl:p-9 shadow-sm">
-          <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 5xl:h-14 5xl:w-14 items-center justify-center rounded-xl bg-emerald-100">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="text-emerald-600"
-            >
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-[10px] 3xl:text-[12px] 5xl:text-[16px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-              Active Customers
-            </p>
-            <p className="text-[24px] 3xl:text-[30px] 5xl:text-[40px] font-bold text-brand-900">
-              {activeCustomers}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 3xl:gap-4 rounded-xl border border-border-subtle bg-card p-5 3xl:p-7 5xl:p-9 shadow-sm">
-          <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 5xl:h-14 5xl:w-14 items-center justify-center rounded-xl bg-brand-100">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className="text-brand-600"
-            >
-              <rect x="2" y="3" width="20" height="18" rx="2" />
-              <path d="M8 7v10" />
-              <path d="M12 10v7" />
-              <path d="M16 5v12" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-[10px] 3xl:text-[12px] 5xl:text-[16px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-              Long Term Contracts
-            </p>
-            <p className="text-[24px] 3xl:text-[30px] 5xl:text-[40px] font-bold text-brand-900">
-              {longTermCount}
-            </p>
-          </div>
         </div>
       </div>
 

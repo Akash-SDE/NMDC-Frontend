@@ -4,14 +4,12 @@ import {
   wagonTypesMeta,
 } from "../../../data/adminmasterdatafiles/wagonTypes";
 import useCrud from "../../../hooks/useCrud";
-import { exportToCSV } from "../../../utils/export";
 import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
 import Modal from "../../../components/shared/Modal";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Toast from "../../../components/shared/Toast";
-import FilterPanel from "../../../components/shared/FilterPanel";
 import { PlusIcon } from "../../../components/icons";
 
 function EditIcon() {
@@ -58,14 +56,6 @@ const emptyForm = {
   length: "",
   status: "active",
 };
-const csvColumns = [
-  { key: "code", label: "Wagon Code" },
-  { key: "name", label: "Wagon Name" },
-  { key: "capacity", label: "Capacity (Tons)" },
-  { key: "length", label: "Length (m)" },
-  { key: "status", label: "Status" },
-];
-
 function WagonTypeForm({ initialData, onSave, onCancel, isEditing }) {
   const [form, setForm] = useState(initialData || { ...emptyForm });
   const [errors, setErrors] = useState({});
@@ -117,20 +107,24 @@ function WagonTypeForm({ initialData, onSave, onCancel, isEditing }) {
             </p>
           )}
         </div>
-        <div>
-          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
-            Status
-          </label>
-          <select
-            value={form.status}
-            onChange={(e) => handleChange("status", e.target.value)}
-            className={inputClass("status") + " appearance-none cursor-pointer"}
-          >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="maintenance">Maintenance</option>
-          </select>
-        </div>
+        {!isEditing && (
+          <div>
+            <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+              Status
+            </label>
+            <select
+              value={form.status}
+              onChange={(e) => handleChange("status", e.target.value)}
+              className={
+                inputClass("status") + " appearance-none cursor-pointer"
+              }
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="maintenance">Maintenance</option>
+            </select>
+          </div>
+        )}
       </div>
       <div>
         <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
@@ -206,13 +200,40 @@ function WagonTypeForm({ initialData, onSave, onCancel, isEditing }) {
 
 export default function WagonTypeMaster() {
   const crud = useCrud(wagonTypesData, "code");
+  const [sortBy, setSortBy] = useState("code");
+  const [sortOrder, setSortOrder] = useState("asc");
   const pageSize = wagonTypesMeta.pageSize;
-  const totalFiltered = crud.data.length;
+  const sortedData = [...crud.data].sort((a, b) => {
+    const parseNumber = (val) =>
+      Number.parseFloat(String(val).replace(/,/g, "")) || 0;
+    const aValue =
+      sortBy === "capacity" || sortBy === "length"
+        ? parseNumber(a[sortBy])
+        : String(a[sortBy] ?? "").toLowerCase();
+    const bValue =
+      sortBy === "capacity" || sortBy === "length"
+        ? parseNumber(b[sortBy])
+        : String(b[sortBy] ?? "").toLowerCase();
+    if (aValue === bValue) return 0;
+    const comparison = aValue > bValue ? 1 : -1;
+    return sortOrder === "asc" ? comparison : -comparison;
+  });
+  const totalFiltered = sortedData.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
-  const paginatedData = crud.data.slice(
+  const paginatedData = sortedData.slice(
     (crud.currentPage - 1) * pageSize,
     crud.currentPage * pageSize,
   );
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    crud.setCurrentPage(1);
+  };
 
   return (
     <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
@@ -243,18 +264,7 @@ export default function WagonTypeMaster() {
           crud.setSearch(v);
           crud.setCurrentPage(1);
         }}
-        showFilter
-        showExport
-        filterLabel="Filters"
-        onFilter={crud.toggleFilter}
-        onExport={() => exportToCSV(crud.data, "wagon_types", csvColumns)}
-      />
-      <FilterPanel
-        isOpen={crud.isFilterOpen}
-        onClose={crud.toggleFilter}
-        activeFilters={crud.activeFilters}
-        onApply={crud.applyFilter}
-        onClear={crud.clearFilters}
+        showFilter={false}
       />
 
       <div className="rounded-xl border border-border-subtle bg-card shadow-sm overflow-hidden">
@@ -263,19 +273,30 @@ export default function WagonTypeMaster() {
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Wagon Code
+                  <button type="button" onClick={() => handleSort("code")}>
+                    Wagon Code {sortBy === "code" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Wagon Name
+                  <button type="button" onClick={() => handleSort("name")}>
+                    Wagon Name {sortBy === "name" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden sm:table-cell">
-                  Capacity (Tons)
+                  <button type="button" onClick={() => handleSort("capacity")}>
+                    Capacity (Tons){" "}
+                    {sortBy === "capacity" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden md:table-cell">
-                  Length (m)
+                  <button type="button" onClick={() => handleSort("length")}>
+                    Length (m) {sortBy === "length" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Status
+                  <button type="button" onClick={() => handleSort("status")}>
+                    Status {sortBy === "status" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-right text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   Actions

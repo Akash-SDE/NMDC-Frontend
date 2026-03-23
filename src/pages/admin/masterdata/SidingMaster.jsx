@@ -1,18 +1,15 @@
 import { useState } from "react";
 import {
   sidingsData,
-  sidingsStats,
   sidingsMeta,
 } from "../../../data/adminmasterdatafiles/sidings";
 import useCrud from "../../../hooks/useCrud";
-import { exportToCSV } from "../../../utils/export";
 import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
 import Modal from "../../../components/shared/Modal";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Toast from "../../../components/shared/Toast";
-import FilterPanel from "../../../components/shared/FilterPanel";
 import { PlusIcon } from "../../../components/icons";
 
 function EditIcon() {
@@ -61,15 +58,6 @@ const emptyForm = {
   railwayZone: "",
   status: "active",
 };
-
-const csvColumns = [
-  { key: "code", label: "Siding Code" },
-  { key: "name", label: "Siding Name" },
-  { key: "subName", label: "Sub Name" },
-  { key: "location", label: "Location" },
-  { key: "railwayZone", label: "Railway Zone" },
-  { key: "status", label: "Status" },
-];
 
 function SidingForm({ initialData, onSave, onCancel, isEditing }) {
   const [form, setForm] = useState(initialData || { ...emptyForm });
@@ -126,20 +114,24 @@ function SidingForm({ initialData, onSave, onCancel, isEditing }) {
             </p>
           )}
         </div>
-        <div>
-          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
-            Status
-          </label>
-          <select
-            value={form.status}
-            onChange={(e) => handleChange("status", e.target.value)}
-            className={inputClass("status") + " appearance-none cursor-pointer"}
-          >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="maintenance">Maintenance</option>
-          </select>
-        </div>
+        {!isEditing && (
+          <div>
+            <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+              Status
+            </label>
+            <select
+              value={form.status}
+              onChange={(e) => handleChange("status", e.target.value)}
+              className={
+                inputClass("status") + " appearance-none cursor-pointer"
+              }
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="maintenance">Maintenance</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Name */}
@@ -235,17 +227,32 @@ function SidingForm({ initialData, onSave, onCancel, isEditing }) {
 
 export default function SidingMaster() {
   const crud = useCrud(sidingsData, "code");
+  const [sortBy, setSortBy] = useState("code");
+  const [sortOrder, setSortOrder] = useState("asc");
   const pageSize = sidingsMeta.pageSize;
-  const totalFiltered = crud.data.length;
+  const sortedData = [...crud.data].sort((a, b) => {
+    const aValue = String(a[sortBy] ?? "").toLowerCase();
+    const bValue = String(b[sortBy] ?? "").toLowerCase();
+    if (aValue === bValue) return 0;
+    const comparison = aValue > bValue ? 1 : -1;
+    return sortOrder === "asc" ? comparison : -comparison;
+  });
+  const totalFiltered = sortedData.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
-  const paginatedData = crud.data.slice(
+  const paginatedData = sortedData.slice(
     (crud.currentPage - 1) * pageSize,
     crud.currentPage * pageSize,
   );
 
-  function handleExport() {
-    exportToCSV(crud.data, "sidings_master", csvColumns);
-  }
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    crud.setCurrentPage(1);
+  };
 
   return (
     <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
@@ -271,28 +278,14 @@ export default function SidingMaster() {
         </button>
       </div>
 
-      {/* Search & Filter bar */}
       <SearchBar
         placeholder={sidingsMeta.searchPlaceholder}
         value={crud.search}
-        onChange={(val) => {
-          crud.setSearch(val);
+        onChange={(v) => {
+          crud.setSearch(v);
           crud.setCurrentPage(1);
         }}
-        showFilter={true}
-        showExport={true}
-        filterLabel="Filter"
-        onFilter={crud.toggleFilter}
-        onExport={handleExport}
-      />
-
-      {/* Filter panel */}
-      <FilterPanel
-        isOpen={crud.isFilterOpen}
-        onClose={crud.toggleFilter}
-        activeFilters={crud.activeFilters}
-        onApply={crud.applyFilter}
-        onClear={crud.clearFilters}
+        showFilter={false}
       />
 
       {/* Table */}
@@ -301,25 +294,38 @@ export default function SidingMaster() {
           <table className="w-full" data-print-table>
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
-                {[
-                  "Siding Code",
-                  "Siding Name",
-                  "Location",
-                  "Railway Zone",
-                  "Status",
-                  "Actions",
-                ].map((header, i) => (
-                  <th
-                    key={header}
-                    className={`px-5 py-3.5 3xl:px-6 3xl:py-4 5xl:px-8 5xl:py-5 text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase
-                        ${i === 5 ? "text-right" : "text-left"}
-                        ${i === 2 ? "hidden md:table-cell" : ""}
-                        ${i === 3 ? "hidden lg:table-cell" : ""}
-                      `}
+                <th className="px-5 py-3.5 3xl:px-6 3xl:py-4 5xl:px-8 5xl:py-5 text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase text-left">
+                  <button type="button" onClick={() => handleSort("code")}>
+                    Siding Code {sortBy === "code" ? `(${sortOrder})` : ""}
+                  </button>
+                </th>
+                <th className="px-5 py-3.5 3xl:px-6 3xl:py-4 5xl:px-8 5xl:py-5 text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase text-left">
+                  <button type="button" onClick={() => handleSort("name")}>
+                    Siding Name {sortBy === "name" ? `(${sortOrder})` : ""}
+                  </button>
+                </th>
+                <th className="px-5 py-3.5 3xl:px-6 3xl:py-4 5xl:px-8 5xl:py-5 text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase text-left hidden md:table-cell">
+                  <button type="button" onClick={() => handleSort("location")}>
+                    Location {sortBy === "location" ? `(${sortOrder})` : ""}
+                  </button>
+                </th>
+                <th className="px-5 py-3.5 3xl:px-6 3xl:py-4 5xl:px-8 5xl:py-5 text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase text-left hidden lg:table-cell">
+                  <button
+                    type="button"
+                    onClick={() => handleSort("railwayZone")}
                   >
-                    {header}
-                  </th>
-                ))}
+                    Railway Zone{" "}
+                    {sortBy === "railwayZone" ? `(${sortOrder})` : ""}
+                  </button>
+                </th>
+                <th className="px-5 py-3.5 3xl:px-6 3xl:py-4 5xl:px-8 5xl:py-5 text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase text-left">
+                  <button type="button" onClick={() => handleSort("status")}>
+                    Status {sortBy === "status" ? `(${sortOrder})` : ""}
+                  </button>
+                </th>
+                <th className="px-5 py-3.5 3xl:px-6 3xl:py-4 5xl:px-8 5xl:py-5 text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -418,37 +424,6 @@ export default function SidingMaster() {
             onPageChange={crud.setCurrentPage}
           />
         </div>
-      </div>
-
-      {/* Bottom stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 3xl:gap-6 5xl:gap-8">
-        {sidingsStats.map((stat) => (
-          <div
-            key={stat.label}
-            className="flex items-center justify-between rounded-xl border border-border-subtle bg-card p-5 3xl:p-7 5xl:p-9 shadow-sm"
-          >
-            <div>
-              <p className="text-[10px] 3xl:text-[12px] 5xl:text-[16px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                {stat.label}
-              </p>
-              <p className="mt-1 text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-brand-900">
-                {stat.value}
-              </p>
-            </div>
-            <div className="flex h-12 w-12 3xl:h-14 3xl:w-14 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <rect x="3" y="12" width="4" height="9" rx="1" />
-                <rect x="10" y="8" width="4" height="13" rx="1" />
-                <rect x="17" y="4" width="4" height="17" rx="1" />
-              </svg>
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* Add/Edit Modal */}

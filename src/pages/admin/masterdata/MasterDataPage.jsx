@@ -1,6 +1,4 @@
-import { useState, useEffect } from "react";
 import { useRouter } from "../../../context/RouterContext";
-import MasterDataTabs from "./MasterDataTabs";
 import SidingMaster from "./SidingMaster";
 import OreTypeMaster from "./OreTypeMaster";
 import DestinationMaster from "./DestinationMaster";
@@ -10,38 +8,16 @@ import DelayCategoryMaster from "./DelayCategoryMaster";
 import WagonTypeMaster from "./WagonTypeMaster";
 import CustomerMaster from "./CustomerMaster";
 
-const tabMap = {
-  "master-data": "rail-sidings",
-  "wagon-types": "wagon-types",
-  "rail-sidings": "rail-sidings",
-  "ore-categories": "ore-categories",
-  "customer-master": "customer-master",
-  destinations: "destinations",
-  "route-mapping": "route-mapping",
-  "stockpile-logs": "stockpile-logs",
-  "delay-categories": "delay-categories",
-};
-
 export default function MasterDataPage() {
-  const { currentRoute, navigate } = useRouter();
-  const [activeTab, setActiveTab] = useState(
-    tabMap[currentRoute] || "rail-sidings",
-  );
-
-  useEffect(() => {
-    const mapped = tabMap[currentRoute];
-    if (mapped) setActiveTab(mapped);
-  }, [currentRoute]);
-
-  function handleTabChange(tabId) {
-    setActiveTab(tabId);
-    navigate(tabId);
-  }
+  const { currentRoute } = useRouter();
 
   function renderContent() {
-    switch (activeTab) {
+    switch (currentRoute) {
+      case "master-data":
       case "rail-sidings":
         return <SidingMaster />;
+      case "wagon-types":
+        return <WagonTypeMaster />;
       case "ore-categories":
         return <OreTypeMaster />;
       case "destinations":
@@ -52,8 +28,6 @@ export default function MasterDataPage() {
         return <StockpileMaster />;
       case "delay-categories":
         return <DelayCategoryMaster />;
-      case "wagon-types":
-        return <WagonTypeMaster />;
       case "customer-master":
         return <CustomerMaster />;
       default:
@@ -63,11 +37,7 @@ export default function MasterDataPage() {
 
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7 xl:px-10 3xl:px-14 3xl:py-10 5xl:px-20 5xl:py-14">
-      {/* Tabs navigation */}
-      <MasterDataTabs activeTab={activeTab} onTabChange={handleTabChange} />
-
-      {/* Tab content */}
-      <div className="mt-6 3xl:mt-8 5xl:mt-12">{renderContent()}</div>
+      <div>{renderContent()}</div>
     </div>
   );
 }

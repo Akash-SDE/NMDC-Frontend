@@ -1,18 +1,15 @@
 import { useState } from "react";
 import {
   oreTypesData,
-  oreTypesStats,
   oreTypesMeta,
 } from "../../../data/adminmasterdatafiles/oreTypes";
 import useCrud from "../../../hooks/useCrud";
-import { exportToCSV } from "../../../utils/export";
 import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
 import Modal from "../../../components/shared/Modal";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Toast from "../../../components/shared/Toast";
-import FilterPanel from "../../../components/shared/FilterPanel";
 import { PlusIcon } from "../../../components/icons";
 
 function EditIcon() {
@@ -59,14 +56,6 @@ const emptyForm = {
   description: "",
   status: "active",
 };
-const csvColumns = [
-  { key: "code", label: "Ore Type Code" },
-  { key: "name", label: "Ore Type Name" },
-  { key: "grade", label: "Grade (Fe %)" },
-  { key: "description", label: "Description" },
-  { key: "status", label: "Status" },
-];
-
 function OreTypeForm({ initialData, onSave, onCancel, isEditing }) {
   const [form, setForm] = useState(initialData || { ...emptyForm });
   const [errors, setErrors] = useState({});
@@ -164,19 +153,21 @@ function OreTypeForm({ initialData, onSave, onCancel, isEditing }) {
           className={inputClass("description") + " resize-none"}
         />
       </div>
-      <div>
-        <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
-          Status
-        </label>
-        <select
-          value={form.status}
-          onChange={(e) => handleChange("status", e.target.value)}
-          className={inputClass("status") + " appearance-none cursor-pointer"}
-        >
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-      </div>
+      {!isEditing && (
+        <div>
+          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+            Status
+          </label>
+          <select
+            value={form.status}
+            onChange={(e) => handleChange("status", e.target.value)}
+            className={inputClass("status") + " appearance-none cursor-pointer"}
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+      )}
       <div className="flex items-center justify-end gap-3 3xl:gap-4 pt-4 3xl:pt-6 border-t border-slate-100">
         <button
           type="button"
@@ -198,15 +189,32 @@ function OreTypeForm({ initialData, onSave, onCancel, isEditing }) {
 
 export default function OreTypeMaster() {
   const crud = useCrud(oreTypesData, "code");
+  const [sortBy, setSortBy] = useState("code");
+  const [sortOrder, setSortOrder] = useState("asc");
   const pageSize = oreTypesMeta.pageSize;
-  const totalFiltered = crud.data.length;
+  const sortedData = [...crud.data].sort((a, b) => {
+    const aValue = String(a[sortBy] ?? "").toLowerCase();
+    const bValue = String(b[sortBy] ?? "").toLowerCase();
+    if (aValue === bValue) return 0;
+    const comparison = aValue > bValue ? 1 : -1;
+    return sortOrder === "asc" ? comparison : -comparison;
+  });
+  const totalFiltered = sortedData.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
-  const paginatedData = crud.data.slice(
+  const paginatedData = sortedData.slice(
     (crud.currentPage - 1) * pageSize,
     crud.currentPage * pageSize,
   );
 
-  const activeCount = crud.allData.filter((o) => o.status === "active").length;
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    crud.setCurrentPage(1);
+  };
 
   return (
     <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
@@ -237,18 +245,7 @@ export default function OreTypeMaster() {
           crud.setSearch(v);
           crud.setCurrentPage(1);
         }}
-        showFilter
-        showExport
-        filterLabel="Filters"
-        onFilter={crud.toggleFilter}
-        onExport={() => exportToCSV(crud.data, "ore_types", csvColumns)}
-      />
-      <FilterPanel
-        isOpen={crud.isFilterOpen}
-        onClose={crud.toggleFilter}
-        activeFilters={crud.activeFilters}
-        onApply={crud.applyFilter}
-        onClear={crud.clearFilters}
+        showFilter={false}
       />
 
       <div className="rounded-xl border border-border-subtle bg-card shadow-sm overflow-hidden">
@@ -257,19 +254,27 @@ export default function OreTypeMaster() {
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Ore Type Code
+                  <button type="button" onClick={() => handleSort("code")}>
+                    Ore Type Code {sortBy === "code" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Name
+                  <button type="button" onClick={() => handleSort("name")}>
+                    Name {sortBy === "name" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden sm:table-cell">
-                  Grade
+                  <button type="button" onClick={() => handleSort("grade")}>
+                    Grade {sortBy === "grade" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden md:table-cell">
                   Description
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Status
+                  <button type="button" onClick={() => handleSort("status")}>
+                    Status {sortBy === "status" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-right text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   Actions
@@ -347,76 +352,6 @@ export default function OreTypeMaster() {
             pageSize={pageSize}
             onPageChange={crud.setCurrentPage}
           />
-        </div>
-      </div>
-
-      {/* Dynamic stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 3xl:gap-6 5xl:gap-8">
-        <div className="flex items-center gap-3 3xl:gap-4 rounded-xl border border-border-subtle bg-card p-5 3xl:p-7 5xl:p-9 shadow-sm">
-          <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 items-center justify-center rounded-xl bg-brand-100">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="text-brand-600"
-            >
-              <path d="M12 2L2 22h20L12 2z" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-[10px] 3xl:text-[12px] 5xl:text-[16px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-              Total Ore Types
-            </p>
-            <p className="text-[24px] 3xl:text-[30px] 5xl:text-[40px] font-bold text-brand-900">
-              {crud.allData.length}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 3xl:gap-4 rounded-xl border border-border-subtle bg-card p-5 3xl:p-7 5xl:p-9 shadow-sm">
-          <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 items-center justify-center rounded-xl bg-emerald-100">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="text-emerald-600"
-            >
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-[10px] 3xl:text-[12px] 5xl:text-[16px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-              Active Grades
-            </p>
-            <p className="text-[24px] 3xl:text-[30px] 5xl:text-[40px] font-bold text-brand-900">
-              {activeCount}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 3xl:gap-4 rounded-xl border border-border-subtle bg-card p-5 3xl:p-7 5xl:p-9 shadow-sm">
-          <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 items-center justify-center rounded-xl bg-red-100">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              className="text-red-500"
-            >
-              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-              <polyline points="17 6 23 6 23 12" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-[10px] 3xl:text-[12px] 5xl:text-[16px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-              Avg. Grade Fe %
-            </p>
-            <p className="text-[24px] 3xl:text-[30px] 5xl:text-[40px] font-bold text-brand-900">
-              59.7%
-            </p>
-          </div>
         </div>
       </div>
 

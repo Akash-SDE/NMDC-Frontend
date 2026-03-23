@@ -1,17 +1,15 @@
 import { useState } from "react";
 import {
   routesData,
-  routesStats,
   routesMeta,
 } from "../../../data/adminmasterdatafiles/routes";
 import useCrud from "../../../hooks/useCrud";
-import { exportToCSV } from "../../../utils/export";
+import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
 import Modal from "../../../components/shared/Modal";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Toast from "../../../components/shared/Toast";
-import FilterPanel from "../../../components/shared/FilterPanel";
 import { PlusIcon } from "../../../components/icons";
 
 function EditIcon() {
@@ -59,15 +57,6 @@ const emptyForm = {
   distance: "",
   status: "active",
 };
-const csvColumns = [
-  { key: "code", label: "Route Code" },
-  { key: "name", label: "Route Name" },
-  { key: "sourceSiding", label: "Source Siding" },
-  { key: "destination", label: "Destination" },
-  { key: "distance", label: "Distance (KM)" },
-  { key: "status", label: "Status" },
-];
-
 function RouteForm({ initialData, onSave, onCancel, isEditing }) {
   const [form, setForm] = useState(initialData || { ...emptyForm });
   const [errors, setErrors] = useState({});
@@ -191,20 +180,22 @@ function RouteForm({ initialData, onSave, onCancel, isEditing }) {
           )}
         </div>
       </div>
-      <div>
-        <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5">
-          Status
-        </label>
-        <select
-          value={form.status}
-          onChange={(e) => handleChange("status", e.target.value)}
-          className={inputClass("status") + " appearance-none cursor-pointer"}
-        >
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="maintenance">Maintenance</option>
-        </select>
-      </div>
+      {!isEditing && (
+        <div>
+          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5">
+            Status
+          </label>
+          <select
+            value={form.status}
+            onChange={(e) => handleChange("status", e.target.value)}
+            className={inputClass("status") + " appearance-none cursor-pointer"}
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="maintenance">Maintenance</option>
+          </select>
+        </div>
+      )}
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
         <button
           type="button"
@@ -226,22 +217,39 @@ function RouteForm({ initialData, onSave, onCancel, isEditing }) {
 
 export default function RouteMaster() {
   const crud = useCrud(routesData, "code");
+  const [sortBy, setSortBy] = useState("code");
+  const [sortOrder, setSortOrder] = useState("asc");
   const pageSize = routesMeta.pageSize;
-  const totalFiltered = crud.data.length;
+  const sortedData = [...crud.data].sort((a, b) => {
+    const parseNumber = (val) => Number.parseFloat(String(val)) || 0;
+    const aValue =
+      sortBy === "distance"
+        ? parseNumber(a[sortBy])
+        : String(a[sortBy] ?? "").toLowerCase();
+    const bValue =
+      sortBy === "distance"
+        ? parseNumber(b[sortBy])
+        : String(b[sortBy] ?? "").toLowerCase();
+    if (aValue === bValue) return 0;
+    const comparison = aValue > bValue ? 1 : -1;
+    return sortOrder === "asc" ? comparison : -comparison;
+  });
+  const totalFiltered = sortedData.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
-  const paginatedData = crud.data.slice(
+  const paginatedData = sortedData.slice(
     (crud.currentPage - 1) * pageSize,
     crud.currentPage * pageSize,
   );
 
-  const activeRoutes = crud.allData.filter((r) => r.status === "active").length;
-  const maintenanceRoutes = crud.allData.filter(
-    (r) => r.status === "maintenance",
-  ).length;
-  const totalKm = crud.allData
-    .filter((r) => r.status === "active")
-    .reduce((sum, r) => sum + parseFloat(r.distance || 0), 0)
-    .toFixed(1);
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    crud.setCurrentPage(1);
+  };
 
   return (
     <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
@@ -265,76 +273,14 @@ export default function RouteMaster() {
         </button>
       </div>
 
-      {/* Search + Export/Print */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 flex-1 max-w-md 3xl:max-w-lg">
-          <div className="relative flex-1">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              placeholder={routesMeta.searchPlaceholder}
-              value={crud.search}
-              onChange={(e) => {
-                crud.setSearch(e.target.value);
-                crud.setCurrentPage(1);
-              }}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 pl-11 py-2.5 3xl:py-3 text-[13px] 3xl:text-[16px] text-brand-900 placeholder-slate-400 outline-none transition-all focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:bg-white"
-            />
-          </div>
-          <button
-            onClick={crud.toggleFilter}
-            className="flex h-10 w-10 3xl:h-12 3xl:w-12 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-colors"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <line x1="4" y1="6" x2="20" y2="6" />
-              <line x1="8" y1="12" x2="16" y2="12" />
-              <line x1="11" y1="18" x2="13" y2="18" />
-            </svg>
-          </button>
-        </div>
-        <div className="flex items-center gap-2 3xl:gap-3">
-          <button
-            onClick={() => exportToCSV(crud.data, "routes_master", csvColumns)}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 3xl:px-5 3xl:py-3 text-[13px] 3xl:text-[15px] font-medium text-slate-600 shadow-sm hover:border-slate-300 hover:shadow-md transition-all"
-          >
-            Export CSV
-          </button>
-          <button
-            onClick={() => printTable(routesMeta.title)}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 3xl:px-5 3xl:py-3 text-[13px] 3xl:text-[15px] font-medium text-slate-600 shadow-sm hover:border-slate-300 hover:shadow-md transition-all"
-          >
-            Print
-          </button>
-        </div>
-      </div>
-
-      <FilterPanel
-        isOpen={crud.isFilterOpen}
-        onClose={crud.toggleFilter}
-        activeFilters={crud.activeFilters}
-        onApply={crud.applyFilter}
-        onClear={crud.clearFilters}
+      <SearchBar
+        placeholder={routesMeta.searchPlaceholder}
+        value={crud.search}
+        onChange={(v) => {
+          crud.setSearch(v);
+          crud.setCurrentPage(1);
+        }}
+        showFilter={false}
       />
 
       <div className="rounded-xl border border-border-subtle bg-card shadow-sm overflow-hidden">
@@ -343,22 +289,41 @@ export default function RouteMaster() {
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Route Code
+                  <button type="button" onClick={() => handleSort("code")}>
+                    Route Code {sortBy === "code" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Route Name
+                  <button type="button" onClick={() => handleSort("name")}>
+                    Route Name {sortBy === "name" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden sm:table-cell">
-                  Source
+                  <button
+                    type="button"
+                    onClick={() => handleSort("sourceSiding")}
+                  >
+                    Source {sortBy === "sourceSiding" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden md:table-cell">
-                  Destination
+                  <button
+                    type="button"
+                    onClick={() => handleSort("destination")}
+                  >
+                    Destination{" "}
+                    {sortBy === "destination" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden lg:table-cell">
-                  Distance
+                  <button type="button" onClick={() => handleSort("distance")}>
+                    Distance {sortBy === "distance" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Status
+                  <button type="button" onClick={() => handleSort("status")}>
+                    Status {sortBy === "status" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-right text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   Actions
@@ -441,83 +406,6 @@ export default function RouteMaster() {
             pageSize={pageSize}
             onPageChange={crud.setCurrentPage}
           />
-        </div>
-      </div>
-
-      {/* Dynamic stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 3xl:gap-6 5xl:gap-8">
-        <div className="rounded-xl border border-border-subtle bg-card p-5 3xl:p-7 5xl:p-9 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-brand-600">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="6" cy="19" r="3" />
-                <path d="M9 19h8.5a3.5 3.5 0 000-7h-11a3.5 3.5 0 010-7H15" />
-                <circle cx="18" cy="5" r="3" />
-              </svg>
-            </span>
-            <p className="text-[10px] 3xl:text-[12px] 5xl:text-[16px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-              Total Route Coverage
-            </p>
-          </div>
-          <p className="text-[26px] 3xl:text-[32px] 5xl:text-[42px] font-bold text-brand-900">
-            {totalKm} KM
-          </p>
-          <p className="mt-1 text-[12px] 3xl:text-[14px] text-slate-400">
-            Combined distance of active routes
-          </p>
-        </div>
-        <div className="rounded-xl border border-border-subtle bg-card p-5 3xl:p-7 5xl:p-9 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-emerald-600">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-              </svg>
-            </span>
-            <p className="text-[10px] 3xl:text-[12px] 5xl:text-[16px] font-bold tracking-[0.06em] text-emerald-700 uppercase">
-              Operational
-            </p>
-          </div>
-          <p className="text-[26px] 3xl:text-[32px] 5xl:text-[42px] font-bold text-brand-900">
-            {activeRoutes} Routes
-          </p>
-          <p className="mt-1 text-[12px] 3xl:text-[14px] text-slate-400">
-            Ready for dispatch assignments
-          </p>
-        </div>
-        <div className="rounded-xl border border-border-subtle bg-card p-5 3xl:p-7 5xl:p-9 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-amber-600">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
-              </svg>
-            </span>
-            <p className="text-[10px] 3xl:text-[12px] 5xl:text-[16px] font-bold tracking-[0.06em] text-amber-700 uppercase">
-              Under Maintenance
-            </p>
-          </div>
-          <p className="text-[26px] 3xl:text-[32px] 5xl:text-[42px] font-bold text-brand-900">
-            {maintenanceRoutes} Routes
-          </p>
-          <p className="mt-1 text-[12px] 3xl:text-[14px] text-slate-400">
-            Temporarily unavailable
-          </p>
         </div>
       </div>
 

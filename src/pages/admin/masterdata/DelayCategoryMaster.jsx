@@ -4,13 +4,12 @@ import {
   delayCategoriesMeta,
 } from "../../../data/adminmasterdatafiles/delayCategories";
 import useCrud from "../../../hooks/useCrud";
-import { exportToCSV } from "../../../utils/export";
+import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
 import Modal from "../../../components/shared/Modal";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Toast from "../../../components/shared/Toast";
-import FilterPanel from "../../../components/shared/FilterPanel";
 import { PlusIcon } from "../../../components/icons";
 
 function EditIcon() {
@@ -49,51 +48,7 @@ function DeleteIcon() {
     </svg>
   );
 }
-function DownloadIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="3xl:w-5 3xl:h-5"
-    >
-      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  );
-}
-function FilterIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="4" y1="6" x2="20" y2="6" />
-      <line x1="8" y1="12" x2="16" y2="12" />
-      <line x1="11" y1="18" x2="13" y2="18" />
-    </svg>
-  );
-}
-
 const emptyForm = { code: "", name: "", description: "", status: "active" };
-const csvColumns = [
-  { key: "code", label: "Delay Code" },
-  { key: "name", label: "Category Name" },
-  { key: "description", label: "Description" },
-  { key: "status", label: "Status" },
-];
 
 function DelayCategoryForm({ initialData, onSave, onCancel, isEditing }) {
   const [form, setForm] = useState(initialData || { ...emptyForm });
@@ -144,19 +99,23 @@ function DelayCategoryForm({ initialData, onSave, onCancel, isEditing }) {
             </p>
           )}
         </div>
-        <div>
-          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
-            Status
-          </label>
-          <select
-            value={form.status}
-            onChange={(e) => handleChange("status", e.target.value)}
-            className={inputClass("status") + " appearance-none cursor-pointer"}
-          >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
+        {!isEditing && (
+          <div>
+            <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+              Status
+            </label>
+            <select
+              value={form.status}
+              onChange={(e) => handleChange("status", e.target.value)}
+              className={
+                inputClass("status") + " appearance-none cursor-pointer"
+              }
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        )}
       </div>
       <div>
         <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
@@ -208,13 +167,32 @@ function DelayCategoryForm({ initialData, onSave, onCancel, isEditing }) {
 
 export default function DelayCategoryMaster() {
   const crud = useCrud(delayCategoriesData, "code");
+  const [sortBy, setSortBy] = useState("code");
+  const [sortOrder, setSortOrder] = useState("asc");
   const pageSize = delayCategoriesMeta.pageSize;
-  const totalFiltered = crud.data.length;
+  const sortedData = [...crud.data].sort((a, b) => {
+    const aValue = String(a[sortBy] ?? "").toLowerCase();
+    const bValue = String(b[sortBy] ?? "").toLowerCase();
+    if (aValue === bValue) return 0;
+    const comparison = aValue > bValue ? 1 : -1;
+    return sortOrder === "asc" ? comparison : -comparison;
+  });
+  const totalFiltered = sortedData.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
-  const paginatedData = crud.data.slice(
+  const paginatedData = sortedData.slice(
     (crud.currentPage - 1) * pageSize,
     crud.currentPage * pageSize,
   );
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    crud.setCurrentPage(1);
+  };
 
   return (
     <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
@@ -238,61 +216,14 @@ export default function DelayCategoryMaster() {
         </button>
       </div>
 
-      {/* Search + icon buttons */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md 3xl:max-w-lg">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </span>
-          <input
-            type="text"
-            placeholder={delayCategoriesMeta.searchPlaceholder}
-            value={crud.search}
-            onChange={(e) => {
-              crud.setSearch(e.target.value);
-              crud.setCurrentPage(1);
-            }}
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 pl-11 py-2.5 3xl:py-3 5xl:py-4 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-brand-900 placeholder-slate-400 outline-none transition-all focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:bg-white"
-          />
-        </div>
-        <div className="flex items-center gap-2 3xl:gap-3">
-          <button
-            onClick={crud.toggleFilter}
-            className="flex h-10 w-10 3xl:h-12 3xl:w-12 5xl:h-14 5xl:w-14 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 shadow-sm transition-colors"
-            title="Filter"
-          >
-            <FilterIcon />
-          </button>
-          <button
-            onClick={() =>
-              exportToCSV(crud.data, "delay_categories", csvColumns)
-            }
-            className="flex h-10 w-10 3xl:h-12 3xl:w-12 5xl:h-14 5xl:w-14 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 shadow-sm transition-colors"
-            title="Export"
-          >
-            <DownloadIcon />
-          </button>
-        </div>
-      </div>
-
-      <FilterPanel
-        isOpen={crud.isFilterOpen}
-        onClose={crud.toggleFilter}
-        activeFilters={crud.activeFilters}
-        onApply={crud.applyFilter}
-        onClear={crud.clearFilters}
+      <SearchBar
+        placeholder={delayCategoriesMeta.searchPlaceholder}
+        value={crud.search}
+        onChange={(v) => {
+          crud.setSearch(v);
+          crud.setCurrentPage(1);
+        }}
+        showFilter={false}
       />
 
       <div className="rounded-xl border border-border-subtle bg-card shadow-sm overflow-hidden">
@@ -301,16 +232,22 @@ export default function DelayCategoryMaster() {
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Delay Code
+                  <button type="button" onClick={() => handleSort("code")}>
+                    Delay Code {sortBy === "code" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Category Name
+                  <button type="button" onClick={() => handleSort("name")}>
+                    Category Name {sortBy === "name" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden md:table-cell">
                   Description
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  Status
+                  <button type="button" onClick={() => handleSort("status")}>
+                    Status {sortBy === "status" ? `(${sortOrder})` : ""}
+                  </button>
                 </th>
                 <th className="px-5 py-3.5 text-right text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   Actions
