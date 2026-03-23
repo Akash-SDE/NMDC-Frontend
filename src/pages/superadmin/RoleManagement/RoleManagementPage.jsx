@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { Search, UserPlus } from "lucide-react";
+import { Search, Plus } from "lucide-react";
+import { useRouter } from "./../../../context/RouterContext";
 import { MOCK_ROLES, getTotalPrivilegeCount } from "../shared/superadminData";
 import RoleStatsCards from "./RoleStatsCards";
 import RoleTable from "./RoleTable";
 import Breadcrumb from "../shared/Breadcrumb";
 
 function RoleManagementPage() {
-  const [roles] = useState(MOCK_ROLES);
+  const { navigate } = useRouter();
+  const [roles, setRoles] = useState(MOCK_ROLES);
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredRoles = roles.filter(
@@ -19,13 +21,13 @@ function RoleManagementPage() {
   const totalPrivileges = getTotalPrivilegeCount();
 
   const handleEdit = (role) => {
-    console.log("Edit role:", role);
-    // TODO: Navigate to edit page
+    navigate("sa-add-role", { role });
   };
 
   const handleDelete = (role) => {
-    console.log("Delete role:", role);
-    // TODO: Show confirmation modal
+    if (window.confirm(`Are you sure you want to delete ${role.name}?`)) {
+      setRoles((prev) => prev.filter((r) => r.id !== role.id));
+    }
   };
 
   const handleViewPrivileges = (role) => {
@@ -70,7 +72,7 @@ function RoleManagementPage() {
           onClick={() => navigate("sa-add-role")}
           className="flex items-center gap-2 px-4 py-2.5 bg-primary text-black rounded-xl font-medium text-sm hover:bg-primary-dark transition-colors shadow-lg shadow-primary/25"
         >
-          <UserPlus className="text-lg" />
+          <Plus className="text-lg" />
           Add Role
         </button>
       </div>

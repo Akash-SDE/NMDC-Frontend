@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, CheckCircle, Clock, Search, UserPlus } from "lucide-react";
+import { Users, CheckCircle, Clock, Search, Plus } from "lucide-react";
 import { useRouter } from "./../../../context/RouterContext";
 import { MOCK_USERS } from "../shared/superadminData";
 import UserTable from "./UserTable";
@@ -104,7 +104,7 @@ function UserManagementPage() {
           onClick={() => navigate("sa-add-user")}
           className="flex items-center gap-2 px-4 py-2.5 bg-primary text-black rounded-xl font-medium text-sm hover:bg-primary-dark transition-colors shadow-lg shadow-primary/25"
         >
-          <UserPlus className="text-lg" />
+          <Plus className="text-lg" />
           Add User
         </button>
       </div>

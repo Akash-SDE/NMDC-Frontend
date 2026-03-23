@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "./../../../context/RouterContext";
 import { PRIVILEGE_MODULES } from "../shared/superadminData";
 import PrivilegeGroup from "./PrivilegeGroup";
 
 function AddRolePage() {
-  const { navigate } = useRouter();
+  const { navigate, routeParams } = useRouter();
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -12,9 +12,19 @@ function AddRolePage() {
   const [selectedModule, setSelectedModule] = useState("all");
   const [selectedPrivileges, setSelectedPrivileges] = useState([]);
 
+  useEffect(() => {
+    if (routeParams?.role) {
+      setFormData({
+        name: routeParams.role.name || "",
+        description: routeParams.role.description || "",
+      });
+      setSelectedPrivileges(routeParams.role.privileges || []);
+    }
+  }, [routeParams]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Creating role:", {
+    console.log(routeParams?.role ? "Updating role:" : "Creating role:", {
       ...formData,
       privileges: selectedPrivileges,
     });
@@ -58,7 +68,7 @@ function AddRolePage() {
         {/* Basic Details Section */}
         <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
           <h2 className="text-lg font-bold text-slate-900 mb-6">
-            Basic Details
+            {routeParams?.role ? "Edit Role Details" : "Basic Details"}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -182,7 +192,7 @@ function AddRolePage() {
             }
             className="px-6 py-2.5 text-sm font-medium text-dark bg-primary hover:bg-primary-dark rounded-xl transition-colors shadow-lg shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Create Role
+            {routeParams?.role ? "Update Role" : "Create Role"}
           </button>
         </div>
       </form>
