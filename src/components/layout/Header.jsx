@@ -1,6 +1,5 @@
-import React from "react";
 import { currentUser } from "../../data/user";
-import { BellIcon, MenuIcon } from "../icons";
+import { MenuIcon } from "../icons";
 
 export default function Header({ onMenuClick }) {
   return (
