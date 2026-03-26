@@ -6,7 +6,7 @@ export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen w-full bg-surface">
+    <div className="flex min-h-screen w-full bg-[#f3f5f8]">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -20,9 +20,9 @@ export default function Layout({ children }) {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main content area */}
-      <div className="flex flex-1 flex-col min-w-0 lg:ml-[272px] 3xl:ml-[320px] 5xl:ml-[400px]">
+      <div className="flex flex-1 min-w-0 flex-col transition-[padding] duration-300 lg:pl-61.5">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6">{children}</main>
       </div>
     </div>
   );

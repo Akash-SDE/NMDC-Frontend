@@ -92,6 +92,18 @@ export default function LoginPage() {
       return;
     }
 
+    // Operator check
+    if (
+      username === DEMO_ACCOUNTS.operator.username &&
+      password === DEMO_ACCOUNTS.operator.password
+    ) {
+      login(USER_ROLES.OPERATOR, {
+        name: DEMO_ACCOUNTS.operator.name,
+        username,
+      });
+      return;
+    }
+
     // Any other credentials → admin (demo mode)
     login(USER_ROLES.ADMIN, { name: username, username });
   }
@@ -128,7 +140,7 @@ export default function LoginPage() {
           </p>
 
           {/* Quick Login Buttons */}
-          <div className="mt-6 3xl:mt-8 grid grid-cols-2 gap-3 3xl:gap-4">
+          <div className="mt-6 3xl:mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 3xl:gap-4">
             <button
               type="button"
               onClick={() => quickLogin("admin")}

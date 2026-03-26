@@ -4,6 +4,7 @@ const RouterContext = createContext(null);
 
 export const USER_ROLES = {
   ADMIN: "admin",
+  OPERATOR: "operator",
   SUPERADMIN: "superadmin",
 };
 
@@ -37,6 +38,8 @@ export function RouterProvider({ children }) {
 
       if (role === USER_ROLES.SUPERADMIN) {
         navigate("sa-roles");
+      } else if (role === USER_ROLES.OPERATOR) {
+        navigate("operator-operations");
       } else {
         navigate("dashboard");
       }

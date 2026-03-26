@@ -5,6 +5,7 @@ import SignupPage from "./components/auth/SignupPage";
 
 import Dashboard from "./pages/admin/dashboard/Dashboard";
 import MasterDataPage from "./pages/admin/masterdata/MasterDataPage";
+import RakeManagementPage from "./pages/admin/rakemanagement/RakeManagementPage";
 import SuperadminLayout from "./pages/superadmin/SuperadminLayout";
 import RoleManagementPage from "./pages/superadmin/RoleManagement/RoleManagementPage";
 import AddRolePage from "./pages/superadmin/RoleManagement/AddRolePage";
@@ -47,10 +48,25 @@ function AppRoutes() {
   }
 
   // === ADMIN ROUTES ===
+  if (userRole === USER_ROLES.OPERATOR) {
+    const renderOperatorPage = () => {
+      switch (currentRoute) {
+        case "operator-operations":
+          return <OperatorOperationsHub />;
+        default:
+          return <OperatorOperationsHub />;
+      }
+    };
+
+    return <Layout>{renderOperatorPage()}</Layout>;
+  }
+
   const renderAdminPage = () => {
     switch (currentRoute) {
       case "dashboard":
         return <Dashboard />;
+      case "rake-management":
+        return <RakeManagementPage />;
       case "master-data":
       case "wagon-types":
       case "rail-sidings":

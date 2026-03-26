@@ -1,68 +1,73 @@
-import { useState } from "react";
-import { sidebarSections, signOutItem } from "../../data/navigation";
+import { getSidebarSections, signOutItem } from "../../data/navigation";
 import { useRouter } from "../../context/RouterContext";
-import { iconMap, ChevronDownIcon, CloseIcon, Logo } from "../icons";
+import { iconMap, CloseIcon, Logo } from "../icons";
+
+function CircleHelpIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
 
 export default function Sidebar({ isOpen, onClose }) {
-  const { currentRoute, navigate } = useRouter();
-  const [expandedItems, setExpandedItems] = useState(["master-data"]);
-
-  function toggleExpand(id) {
-    setExpandedItems((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
-    );
-  }
-
-  function handleItemClick(item) {
-    if (item.subItems) {
-      toggleExpand(item.id);
-    } else {
-      navigate(item.id);
-      onClose();
-    }
-  }
-
-  function handleSignOut() {
-    navigate("login");
-    onClose();
-  }
-
-  // Determine active state — master data sub-items
-  const masterDataSubIds = [
-    "wagon-types",
+  const { currentRoute, navigate, userRole, logout } = useRouter();
+  const sidebarSections = getSidebarSections(userRole);
+  const masterDataRoutes = [
+    "master-data",
     "rail-sidings",
+    "wagon-types",
     "ore-categories",
     "customer-master",
     "destinations",
     "route-mapping",
     "stockpile-logs",
+    "delay-categories",
   ];
-  const isMasterDataActive =
-    masterDataSubIds.includes(currentRoute) || currentRoute === "master-data";
+
+  function handleItemClick(item) {
+    navigate(item.id);
+    onClose();
+  }
+
+  function handleSignOut() {
+    logout();
+    onClose();
+  }
 
   return (
     <aside
       className={`
-        fixed top-0 left-0 z-50 flex h-full w-[272px] 3xl:w-[320px] 5xl:w-[400px]
-        flex-col border-r border-border-subtle bg-card
+        fixed left-0 top-0 z-50 flex h-full w-61.5 flex-col
+        border-r border-slate-200 bg-[#eef1f5]
         transition-transform duration-300 ease-in-out
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0
       `}
     >
       {/* Brand header */}
-      <div className="flex items-center gap-3 px-5 py-5 3xl:px-7 3xl:py-7 5xl:px-10 5xl:py-10 border-b border-border-subtle">
-        <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 5xl:h-16 5xl:w-16 items-center justify-center rounded-lg overflow-hidden bg-brand-50 shrink-0">
-          <Logo size={40} className="3xl:w-12 3xl:h-12 5xl:w-16 5xl:h-16" />
+      <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-4">
+        <div className="flex h-11 w-11 items-center justify-center rounded bg-[#1d67c4] p-1.5 shadow-sm">
+          <Logo size={34} className="h-full w-full object-contain" />
         </div>
         <div className="min-w-0">
-          <h1 className="text-[15px] 3xl:text-[18px] 5xl:text-[24px] font-bold text-brand-900 leading-tight truncate">
-            NMDC
-          </h1>
-          <p className="text-[10px] 3xl:text-[12px] 5xl:text-[16px] font-semibold tracking-widest text-slate-400 uppercase">
-            Admin Panel
+          <h1 className="truncate text-[14px] font-bold text-slate-800">Iron Forge</h1>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+            Operational System
           </p>
         </div>
+
         <button
           onClick={onClose}
           className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 lg:hidden"
@@ -73,11 +78,11 @@ export default function Sidebar({ isOpen, onClose }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-3 3xl:px-4 3xl:py-4 5xl:px-6 5xl:py-6 space-y-1">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {sidebarSections.map((section) => (
           <div key={section.id}>
             {section.title && (
-              <p className="px-3 pt-5 pb-2 3xl:pt-6 3xl:pb-3 text-[10px] 3xl:text-[12px] 5xl:text-[15px] font-bold tracking-[0.08em] text-slate-400 uppercase">
+              <p className="px-3 pb-2 pt-4 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
                 {section.title}
               </p>
             )}
@@ -85,84 +90,54 @@ export default function Sidebar({ isOpen, onClose }) {
               const IconComponent = iconMap[item.icon];
               const isActive =
                 currentRoute === item.id ||
-                (item.id === "master-data" && isMasterDataActive);
-              const isExpanded = expandedItems.includes(item.id);
+                (item.id === "master-data" &&
+                  masterDataRoutes.includes(currentRoute));
 
               return (
-                <div key={item.id}>
-                  <button
-                    onClick={() => handleItemClick(item)}
-                    className={`
-                      group flex w-full items-center gap-3 rounded-lg px-3 py-2.5
-                      3xl:px-4 3xl:py-3 5xl:px-5 5xl:py-4
-                      text-[14px] 3xl:text-[16px] 5xl:text-[20px] font-medium transition-all duration-150
-                      ${
-                        isActive && !item.subItems
-                          ? "bg-sidebar-active text-brand-600 shadow-sm"
-                          : isActive && item.subItems
-                            ? "text-brand-600"
-                            : "text-slate-600 hover:bg-sidebar-hover hover:text-slate-800"
-                      }
-                    `}
-                  >
-                    {IconComponent && (
-                      <IconComponent
-                        size={20}
-                        className={`shrink-0 ${
-                          isActive
-                            ? "text-brand-600"
-                            : "text-slate-400 group-hover:text-slate-500"
-                        }`}
-                      />
-                    )}
-                    <span className="truncate">{item.label}</span>
-                    {(item.hasDropdown || item.subItems) && (
-                      <ChevronDownIcon
-                        size={16}
-                        className={`ml-auto shrink-0 text-slate-400 transition-transform duration-200 ${
-                          isExpanded ? "rotate-180" : ""
-                        }`}
-                      />
-                    )}
-                  </button>
-
-                  {item.subItems && isExpanded && (
-                    <div className="ml-5 3xl:ml-6 5xl:ml-8 mt-1 space-y-0.5 border-l-2 border-slate-200 pl-4 3xl:pl-5 5xl:pl-6">
-                      {item.subItems.map((sub) => (
-                        <button
-                          key={sub.id}
-                          onClick={() => {
-                            navigate(sub.id);
-                            onClose();
-                          }}
-                          className={`
-                            block w-full text-left rounded-md px-3 py-1.5
-                            3xl:px-4 3xl:py-2 5xl:px-5 5xl:py-3
-                            text-[13px] 3xl:text-[15px] 5xl:text-[18px] transition-colors duration-150
-                            ${
-                              currentRoute === sub.id
-                                ? "font-medium text-brand-600 bg-brand-50 rounded-md"
-                                : "text-slate-500 hover:text-slate-700"
-                            }
-                          `}
-                        >
-                          {sub.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <button
+                  key={item.id}
+                  onClick={() => handleItemClick(item)}
+                  className={`group flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-[13px] font-medium transition-colors ${
+                    isActive
+                      ? "border-l-[3px] border-blue-600 bg-white text-blue-700 shadow-sm"
+                      : "border-l-[3px] border-transparent text-slate-700 hover:bg-white"
+                  }`}
+                >
+                  {IconComponent ? (
+                    <IconComponent
+                      size={16}
+                      className={isActive ? "text-blue-600" : "text-slate-500"}
+                    />
+                  ) : null}
+                  <span className="truncate">{item.label}</span>
+                </button>
               );
             })}
           </div>
         ))}
       </nav>
 
-      {/* Sign out */}
-      <div className="border-t border-border-subtle px-3 py-3 3xl:px-4 3xl:py-4 5xl:px-6 5xl:py-5">
+      <div className="px-3 pb-3">
+        <button
+          type="button"
+          className="w-full rounded-md bg-[#1d67c4] px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-white shadow-sm hover:bg-[#1657a8]"
+        >
+          New Dispatch
+        </button>
+      </div>
+
+      {/* Footer actions */}
+      <div className="border-t border-slate-200 bg-[#e8ecf2] px-3 py-3">
+        <button
+          type="button"
+          className="mb-1 flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium text-slate-600 transition-colors hover:bg-white"
+        >
+          <CircleHelpIcon />
+          <span>Help Center</span>
+        </button>
         <button
           onClick={handleSignOut}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 3xl:px-4 3xl:py-3 5xl:px-5 5xl:py-4 text-[14px] 3xl:text-[16px] 5xl:text-[20px] font-medium text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium text-slate-600 transition-colors hover:bg-white"
         >
           {(() => {
             const Icon = iconMap[signOutItem.icon];
