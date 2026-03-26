@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function Pagination({
   currentPage = 1,
   totalPages = 3,
@@ -73,7 +71,7 @@ export default function Pagination({
             onClick={() => handlePageClick(page)}
             className={`flex h-8 w-8 3xl:h-10 3xl:w-10 5xl:h-12 5xl:w-12 items-center justify-center rounded-lg text-[13px] 3xl:text-[15px] 5xl:text-[19px] font-semibold transition-all ${
               page === currentPage
-                ? "bg-brand-600 text-white shadow-sm"
+                ? "bg-blue-600 text-white shadow-sm"
                 : "text-slate-600 hover:bg-slate-100"
             }`}
           >

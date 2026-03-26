@@ -28,6 +28,21 @@ const adminSidebarSections = [
         label: "Master Data",
         icon: "masterData",
       },
+      {
+        id: "admin-users",
+        label: "Manage Users",
+        icon: "users",
+      },
+      {
+        id: "reports",
+        label: "Reports",
+        icon: "reports",
+      },
+      {
+        id: "audit-logs",
+        label: "Audit Logs",
+        icon: "config",
+      },
     ],
   },
 ];

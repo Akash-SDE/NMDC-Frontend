@@ -1,9 +1,17 @@
 import { useMemo, useState } from "react";
+import {
+  UniformFormField,
+  UniformPageShell,
+  UniformSectionCard,
+  uniformInputClass,
+  uniformPrimaryButtonClass,
+  uniformSecondaryButtonClass,
+} from "../../../components/shared/UniformUi";
 
 const tabs = [
-  { id: "offering", label: "Rake Offering Details" },
+  { id: "offering", label: "Rake Offering" },
   { id: "offered", label: "Offered Rakes" },
-  { id: "adjustment", label: "Adjustment Rakes" },
+  { id: "adjustment", label: "Adjustment" },
 ];
 
 const wagonTypeOptions = ["BOXN", "BOXNHL", "BOBRN", "BCN"];
@@ -19,7 +27,7 @@ const adjustmentReasonOptions = [
   "Loading Delay",
 ];
 
-const offeredRakes = [
+const initialOfferedRakes = [
   {
     sno: 1,
     rakeId: "RK-7729",
@@ -31,6 +39,7 @@ const offeredRakes = [
     destination: "Visakhapatnam",
     fNote: "FN-23011",
     offerTime: "19/03/2026 09:59",
+    isDisabled: false,
   },
   {
     sno: 2,
@@ -43,6 +52,7 @@ const offeredRakes = [
     destination: "Bhilai",
     fNote: "FN-23022",
     offerTime: "19/03/2026 10:17",
+    isDisabled: false,
   },
   {
     sno: 3,
@@ -55,6 +65,7 @@ const offeredRakes = [
     destination: "Raipur",
     fNote: "FN-23041",
     offerTime: "19/03/2026 10:33",
+    isDisabled: false,
   },
 ];
 
@@ -73,39 +84,108 @@ const initialOfferingForm = {
   offerTime: "",
 };
 
-function FormField({ label, children }) {
+function SearchIcon() {
   return (
-    <div>
-      <label className="mb-1 block text-[12px] font-semibold text-slate-700">{label}</label>
-      {children}
-    </div>
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-slate-400"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+    >
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
+function DisableIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+    >
+      <rect x="3" y="11" width="18" height="10" rx="2" ry="2" />
+      <line x1="12" y1="11" x2="12" y2="7" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
+
+function EnableIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+    >
+      <path d="M17 11V7a5 5 0 0 0-10 0v4" />
+      <rect x="3" y="11" width="18" height="10" rx="2" ry="2" />
+      <polyline points="8 16 11 19 16 14" />
+    </svg>
   );
 }
 
 export default function RakeManagementPage() {
   const [activeTab, setActiveTab] = useState("offering");
+  const [offeredRows, setOfferedRows] = useState(initialOfferedRakes);
   const [offeringForm, setOfferingForm] = useState(initialOfferingForm);
   const [offerSearch, setOfferSearch] = useState("");
   const [adjustRakeNumber, setAdjustRakeNumber] = useState("");
   const [adjustOfferFor, setAdjustOfferFor] = useState("");
   const [adjustOfferTime, setAdjustOfferTime] = useState("");
 
-  const inputClass =
-    "h-8 w-full rounded border border-sky-200 bg-white px-2 text-[12px] text-slate-700 outline-none focus:border-blue-400";
+  const inputClass = uniformInputClass;
 
   const selectedRake = useMemo(
-    () => offeredRakes.find((row) => row.rakeNumber === adjustRakeNumber),
-    [adjustRakeNumber],
+    () => offeredRows.find((row) => row.rakeNumber === adjustRakeNumber),
+    [adjustRakeNumber, offeredRows],
   );
 
   const filteredRows = useMemo(() => {
-    if (!offerSearch.trim()) return offeredRakes;
+    if (!offerSearch.trim()) return offeredRows;
 
     const q = offerSearch.toLowerCase();
-    return offeredRakes.filter((row) =>
+    return offeredRows.filter((row) =>
       Object.values(row).join(" ").toLowerCase().includes(q),
     );
-  }, [offerSearch]);
+  }, [offerSearch, offeredRows]);
 
   function updateOffering(field, value) {
     setOfferingForm((prev) => ({ ...prev, [field]: value }));
@@ -119,362 +199,454 @@ export default function RakeManagementPage() {
     setOfferingForm(initialOfferingForm);
   }
 
+  function parseWagonSupply(value) {
+    if (typeof value === "number") {
+      return { wagonType: "", noOfWagons: String(value) };
+    }
+
+    const [wagonType = "", count = ""] = String(value).split("/");
+    return { wagonType, noOfWagons: count };
+  }
+
+  function handleEditOffered(row) {
+    if (row.isDisabled) return;
+
+    const [oreType = "", customer = ""] = String(row.oreTypeCustomer)
+      .split("/")
+      .map((value) => value.trim());
+    const { wagonType, noOfWagons } = parseWagonSupply(row.wagonSupply);
+
+    setOfferingForm({
+      rakeId: row.rakeId || "",
+      rakeNumber: row.rakeNumber || "",
+      wagonType,
+      noOfWagons,
+      siding: row.siding || "",
+      route: row.route || "",
+      oreType,
+      fNote: row.fNote || "",
+      customer,
+      destination: row.destination || "",
+      placementTime: "",
+      offerTime: "",
+    });
+
+    setActiveTab("offering");
+  }
+
+  function toggleOfferedStatus(rakeId) {
+    setOfferedRows((prev) =>
+      prev.map((row) =>
+        row.rakeId === rakeId
+          ? { ...row, isDisabled: !row.isDisabled }
+          : row,
+      ),
+    );
+  }
+
   function renderOfferingTab() {
     return (
-      <form onSubmit={handleOfferingSubmit} className="space-y-4">
-        <h3 className="text-center text-[19px] font-extrabold text-[#0f4ea6]">Rake Offering Details</h3>
+      <div className="space-y-4 animate-fadeIn">
+        <UniformSectionCard
+          title="Rake Offering Details"
+          subtitle="Capture complete dispatch attributes with clean validation-friendly fields."
+        >
+          <form onSubmit={handleOfferingSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <UniformFormField label="Rake ID">
+                <input
+                  type="text"
+                  value={offeringForm.rakeId}
+                  onChange={(event) => updateOffering("rakeId", event.target.value)}
+                  className={inputClass}
+                  placeholder="Enter Rake ID"
+                />
+              </UniformFormField>
+              <UniformFormField label="Rake Number">
+                <input
+                  type="text"
+                  value={offeringForm.rakeNumber}
+                  onChange={(event) => updateOffering("rakeNumber", event.target.value)}
+                  className={inputClass}
+                  placeholder="Enter Rake Number"
+                />
+              </UniformFormField>
+              <UniformFormField label="Wagon Type">
+                <select
+                  value={offeringForm.wagonType}
+                  onChange={(event) => updateOffering("wagonType", event.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Select wagon type</option>
+                  {wagonTypeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </UniformFormField>
+              <UniformFormField label="No of Wagons">
+                <input
+                  type="number"
+                  value={offeringForm.noOfWagons}
+                  onChange={(event) => updateOffering("noOfWagons", event.target.value)}
+                  className={inputClass}
+                  placeholder="Enter wagon count"
+                />
+              </UniformFormField>
+              <UniformFormField label="Siding">
+                <select
+                  value={offeringForm.siding}
+                  onChange={(event) => updateOffering("siding", event.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Select siding</option>
+                  {sidingOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </UniformFormField>
+              <UniformFormField label="Route">
+                <select
+                  value={offeringForm.route}
+                  onChange={(event) => updateOffering("route", event.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Select route</option>
+                  {routeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </UniformFormField>
+              <UniformFormField label="Ore Type">
+                <select
+                  value={offeringForm.oreType}
+                  onChange={(event) => updateOffering("oreType", event.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Select ore type</option>
+                  {oreTypeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </UniformFormField>
+              <UniformFormField label="F-Note">
+                <input
+                  type="text"
+                  value={offeringForm.fNote}
+                  onChange={(event) => updateOffering("fNote", event.target.value)}
+                  className={inputClass}
+                  placeholder="Enter F-Note"
+                />
+              </UniformFormField>
+              <UniformFormField label="Customer">
+                <select
+                  value={offeringForm.customer}
+                  onChange={(event) => updateOffering("customer", event.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Select customer</option>
+                  {customerOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </UniformFormField>
+              <UniformFormField label="Destination">
+                <select
+                  value={offeringForm.destination}
+                  onChange={(event) => updateOffering("destination", event.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Select destination</option>
+                  {destinationOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </UniformFormField>
+              <UniformFormField label="Placement Time">
+                <input
+                  type="datetime-local"
+                  value={offeringForm.placementTime}
+                  onChange={(event) => updateOffering("placementTime", event.target.value)}
+                  className={inputClass}
+                />
+              </UniformFormField>
+              <UniformFormField label="Offer Time">
+                <input
+                  type="datetime-local"
+                  value={offeringForm.offerTime}
+                  onChange={(event) => updateOffering("offerTime", event.target.value)}
+                  className={inputClass}
+                />
+              </UniformFormField>
+            </div>
 
-        <div className="rounded border border-sky-200 p-3">
-          <p className="mb-2 text-[13px] font-bold text-slate-700">Rake Details</p>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <FormField label="Rake ID:">
-              <input
-                type="text"
-                value={offeringForm.rakeId}
-                onChange={(event) => updateOffering("rakeId", event.target.value)}
-                className={inputClass}
-                placeholder="Enter Rake ID"
-              />
-            </FormField>
-            <FormField label="Rake Number:">
-              <input
-                type="text"
-                value={offeringForm.rakeNumber}
-                onChange={(event) => updateOffering("rakeNumber", event.target.value)}
-                className={inputClass}
-                placeholder="Enter Rake Number"
-              />
-            </FormField>
-            <FormField label="Wagon Type:">
-              <select
-                value={offeringForm.wagonType}
-                onChange={(event) => updateOffering("wagonType", event.target.value)}
-                className={inputClass}
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                onClick={handleOfferingClear}
+                className={uniformSecondaryButtonClass}
               >
-                <option value="">--Select--</option>
-                {wagonTypeOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="No of Wagons:">
-              <input
-                type="number"
-                value={offeringForm.noOfWagons}
-                onChange={(event) => updateOffering("noOfWagons", event.target.value)}
-                className={inputClass}
-                placeholder="--Select--"
-              />
-            </FormField>
-            <FormField label="Siding:">
-              <select
-                value={offeringForm.siding}
-                onChange={(event) => updateOffering("siding", event.target.value)}
-                className={inputClass}
+                Clear
+              </button>
+              <button
+                type="submit"
+                className={uniformPrimaryButtonClass}
               >
-                <option value="">--Select--</option>
-                {sidingOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="Route:">
-              <select
-                value={offeringForm.route}
-                onChange={(event) => updateOffering("route", event.target.value)}
-                className={inputClass}
-              >
-                <option value="">--Select--</option>
-                {routeOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="Ore Type:">
-              <select
-                value={offeringForm.oreType}
-                onChange={(event) => updateOffering("oreType", event.target.value)}
-                className={inputClass}
-              >
-                <option value="">--Select--</option>
-                {oreTypeOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="F-Note:">
-              <input
-                type="text"
-                value={offeringForm.fNote}
-                onChange={(event) => updateOffering("fNote", event.target.value)}
-                className={inputClass}
-                placeholder="Enter F-Note"
-              />
-            </FormField>
-            <FormField label="Customer:">
-              <select
-                value={offeringForm.customer}
-                onChange={(event) => updateOffering("customer", event.target.value)}
-                className={inputClass}
-              >
-                <option value="">--Select--</option>
-                {customerOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="Destination:">
-              <select
-                value={offeringForm.destination}
-                onChange={(event) => updateOffering("destination", event.target.value)}
-                className={inputClass}
-              >
-                <option value="">--Select--</option>
-                {destinationOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="Placement Time:">
-              <input
-                type="datetime-local"
-                value={offeringForm.placementTime}
-                onChange={(event) => updateOffering("placementTime", event.target.value)}
-                className={inputClass}
-              />
-            </FormField>
-            <FormField label="Offer Time:">
-              <input
-                type="datetime-local"
-                value={offeringForm.offerTime}
-                onChange={(event) => updateOffering("offerTime", event.target.value)}
-                className={inputClass}
-              />
-            </FormField>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-center gap-2">
-          <button
-            type="submit"
-            className="rounded bg-blue-600 px-4 py-1.5 text-[12px] font-bold text-white hover:bg-blue-700"
-          >
-            Submit
-          </button>
-          <button
-            type="button"
-            onClick={handleOfferingClear}
-            className="rounded bg-red-500 px-4 py-1.5 text-[12px] font-bold text-white hover:bg-red-600"
-          >
-            Clear
-          </button>
-        </div>
-      </form>
+                Submit Offering
+              </button>
+            </div>
+          </form>
+        </UniformSectionCard>
+      </div>
     );
   }
 
   function renderOfferedTab() {
     return (
-      <div className="space-y-3">
-        <h3 className="text-center text-[19px] font-extrabold text-[#0f4ea6]">Offered Rakes</h3>
+      <div className="space-y-4 animate-fadeIn">
+        <UniformSectionCard
+          title="Offered Rake Registry"
+          subtitle="Track all offered rake records with searchable production context."
+        >
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full max-w-sm">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+                <SearchIcon />
+              </span>
+              <input
+                type="text"
+                value={offerSearch}
+                onChange={(event) => setOfferSearch(event.target.value)}
+                className={`${inputClass} pl-9`}
+                placeholder="Search by rake, route, customer"
+              />
+            </div>
+            <div className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+              Total Records: {filteredRows.length}
+            </div>
+          </div>
 
-        <div className="mx-auto max-w-sm">
-          <input
-            type="text"
-            value={offerSearch}
-            onChange={(event) => setOfferSearch(event.target.value)}
-            className={inputClass}
-            placeholder="Search rake details"
-          />
-        </div>
-
-        <div className="overflow-x-auto rounded border border-sky-200 bg-white">
-          <table className="w-full min-w-245">
-            <thead>
-              <tr className="bg-[#5f7f9f] text-white">
-                {[
-                  "SNo",
-                  "Rake ID",
-                  "Rack Number",
-                  "Wagon Supply",
-                  "Siding",
-                  "Route",
-                  "Ore Type / Customer",
-                  "Destination",
-                  "FNote",
-                  "Offer Time",
-                ].map((head) => (
-                  <th
-                    key={head}
-                    className="border-r border-white/20 px-2 py-2 text-[11px] font-bold"
-                  >
-                    {head}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRows.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={10}
-                    className="px-3 py-6 text-center text-[12px] font-medium text-slate-500"
-                  >
-                    There isn&apos;t anything to display.
-                  </td>
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table className="w-full min-w-245">
+              <thead>
+                <tr className="bg-linear-to-r from-slate-700 to-slate-600 text-white">
+                  {[
+                    "SNo",
+                    "Rake ID",
+                    "Rake Number",
+                    "Wagon Supply",
+                    "Siding",
+                    "Route",
+                    "Ore Type / Customer",
+                    "Destination",
+                    "F-Note",
+                    "Offer Time",
+                    "Status",
+                    "Actions",
+                  ].map((head) => (
+                    <th
+                      key={head}
+                      className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide"
+                    >
+                      {head}
+                    </th>
+                  ))}
                 </tr>
-              ) : (
-                filteredRows.map((row) => (
-                  <tr key={row.rakeId} className="border-t border-slate-200 text-[12px] text-slate-700">
-                    <td className="px-2 py-2 text-center">{row.sno}</td>
-                    <td className="px-2 py-2 text-center">{row.rakeId}</td>
-                    <td className="px-2 py-2 text-center">{row.rakeNumber}</td>
-                    <td className="px-2 py-2 text-center">{row.wagonSupply}</td>
-                    <td className="px-2 py-2 text-center">{row.siding}</td>
-                    <td className="px-2 py-2 text-center">{row.route}</td>
-                    <td className="px-2 py-2 text-center">{row.oreTypeCustomer}</td>
-                    <td className="px-2 py-2 text-center">{row.destination}</td>
-                    <td className="px-2 py-2 text-center">{row.fNote}</td>
-                    <td className="px-2 py-2 text-center">{row.offerTime}</td>
+              </thead>
+              <tbody>
+                {filteredRows.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={12}
+                      className="px-3 py-10 text-center text-sm font-medium text-slate-500"
+                    >
+                      No records found for this search.
+                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  filteredRows.map((row, index) => (
+                    <tr
+                      key={row.rakeId}
+                      className={`border-t border-slate-200 text-sm text-slate-700 ${
+                        index % 2 === 0 ? "bg-white" : "bg-slate-50"
+                      } ${row.isDisabled ? "opacity-60" : ""}`}
+                    >
+                      <td className="px-3 py-2.5">{row.sno}</td>
+                      <td className="px-3 py-2.5 font-semibold text-blue-700">{row.rakeId}</td>
+                      <td className="px-3 py-2.5">{row.rakeNumber}</td>
+                      <td className="px-3 py-2.5">{row.wagonSupply}</td>
+                      <td className="px-3 py-2.5">{row.siding}</td>
+                      <td className="px-3 py-2.5">{row.route}</td>
+                      <td className="px-3 py-2.5">{row.oreTypeCustomer}</td>
+                      <td className="px-3 py-2.5">{row.destination}</td>
+                      <td className="px-3 py-2.5">{row.fNote}</td>
+                      <td className="px-3 py-2.5">{row.offerTime}</td>
+                      <td className="px-3 py-2.5">
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                            row.isDisabled
+                              ? "bg-slate-200 text-slate-600"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
+                          {row.isDisabled ? "Disabled" : "Enabled"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEditOffered(row)}
+                            disabled={row.isDisabled}
+                            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+                              row.isDisabled
+                                ? "cursor-not-allowed text-slate-300"
+                                : "text-slate-400 hover:bg-blue-50 hover:text-blue-600"
+                            }`}
+                            title={row.isDisabled ? "Enable to edit" : "Edit"}
+                          >
+                            <EditIcon />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => toggleOfferedStatus(row.rakeId)}
+                            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+                              row.isDisabled
+                                ? "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"
+                                : "text-slate-400 hover:bg-amber-50 hover:text-amber-600"
+                            }`}
+                            title={row.isDisabled ? "Enable" : "Disable"}
+                          >
+                            {row.isDisabled ? <EnableIcon /> : <DisableIcon />}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </UniformSectionCard>
       </div>
     );
   }
 
   function renderAdjustmentTab() {
     return (
-      <div className="space-y-4">
-        <h3 className="text-center text-[19px] font-extrabold text-[#0f4ea6]">Adjustment Rakes</h3>
-
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <select
-            value={adjustRakeNumber}
-            onChange={(event) => setAdjustRakeNumber(event.target.value)}
-            className={`${inputClass} max-w-xs`}
-          >
-            <option value="">--Select--</option>
-            {offeredRakes.map((row) => (
-              <option key={row.rakeNumber} value={row.rakeNumber}>
-                {row.rakeNumber}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="rounded bg-blue-600 px-4 py-1.5 text-[12px] font-bold text-white hover:bg-blue-700"
-          >
-            Search
-          </button>
-        </div>
-
-        <div className="rounded border border-sky-200 p-3">
-          <p className="mb-2 text-[13px] font-bold text-slate-700">Rake Details</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <FormField label="Rake No:">
-              <input value={selectedRake?.rakeNumber || ""} readOnly className={inputClass} />
-            </FormField>
-            <FormField label="Wagon:">
-              <input value={selectedRake?.wagonSupply || ""} readOnly className={inputClass} />
-            </FormField>
-            <FormField label="Customer:">
-              <input
-                value={selectedRake?.oreTypeCustomer?.split("/")[1]?.trim() || ""}
-                readOnly
-                className={inputClass}
-              />
-            </FormField>
-            <FormField label="F-Note:">
-              <input value={selectedRake?.fNote || ""} readOnly className={inputClass} />
-            </FormField>
-          </div>
-        </div>
-
-        <div className="rounded border border-sky-200 p-3">
-          <p className="mb-2 text-[13px] font-bold text-slate-700">Adjustment Details</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]">
-            <FormField label="Offer For:">
+      <div className="space-y-4 animate-fadeIn">
+        <UniformSectionCard
+          title="Adjustment Rake Control"
+          subtitle="Search an offered rake and record operational adjustments with timestamp."
+        >
+          <div className="mb-5 grid grid-cols-1 gap-3 border-b border-slate-100 pb-5 sm:grid-cols-[minmax(0,360px)_auto] sm:items-end">
+            <UniformFormField label="Rake Number">
               <select
-                value={adjustOfferFor}
-                onChange={(event) => setAdjustOfferFor(event.target.value)}
+                value={adjustRakeNumber}
+                onChange={(event) => setAdjustRakeNumber(event.target.value)}
                 className={inputClass}
               >
-                <option value="">--Select--</option>
-                {adjustmentReasonOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
+                <option value="">Select rake number</option>
+                {offeredRows.map((row) => (
+                  <option key={row.rakeNumber} value={row.rakeNumber}>
+                    {row.rakeNumber}
                   </option>
                 ))}
               </select>
-            </FormField>
-            <FormField label="Offer Time:">
-              <input
-                type="datetime-local"
-                value={adjustOfferTime}
-                onChange={(event) => setAdjustOfferTime(event.target.value)}
-                className={inputClass}
-              />
-            </FormField>
-            <div className="self-end">
-              <button
-                type="button"
-                className="rounded bg-blue-600 px-4 py-1.5 text-[12px] font-bold text-white hover:bg-blue-700"
-              >
-                Save
-              </button>
+            </UniformFormField>
+            <button
+              type="button"
+              className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              Search
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-600">Rake Details</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <UniformFormField label="Rake Number">
+                  <input value={selectedRake?.rakeNumber || ""} readOnly className={inputClass} />
+                </UniformFormField>
+                <UniformFormField label="Wagon Supply">
+                  <input value={selectedRake?.wagonSupply || ""} readOnly className={inputClass} />
+                </UniformFormField>
+                <UniformFormField label="Customer">
+                  <input
+                    value={selectedRake?.oreTypeCustomer?.split("/")[1]?.trim() || ""}
+                    readOnly
+                    className={inputClass}
+                  />
+                </UniformFormField>
+                <UniformFormField label="F-Note">
+                  <input value={selectedRake?.fNote || ""} readOnly className={inputClass} />
+                </UniformFormField>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-white p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-600">Adjustment Details</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+                <UniformFormField label="Offer For">
+                  <select
+                    value={adjustOfferFor}
+                    onChange={(event) => setAdjustOfferFor(event.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">Select adjustment reason</option>
+                    {adjustmentReasonOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </UniformFormField>
+                <UniformFormField label="Offer Time">
+                  <input
+                    type="datetime-local"
+                    value={adjustOfferTime}
+                    onChange={(event) => setAdjustOfferTime(event.target.value)}
+                    className={inputClass}
+                  />
+                </UniformFormField>
+                <button
+                  type="button"
+                  className={uniformPrimaryButtonClass}
+                >
+                  Save Adjustment
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </UniformSectionCard>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 bg-[#f9fafb] px-2 sm:px-4">
-        <div className="flex flex-wrap gap-1 py-2">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`rounded px-3 py-1.5 text-[12px] font-bold transition-colors ${
-                  isActive
-                    ? "bg-blue-700 text-white"
-                    : "bg-white text-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="bg-sky-100 p-4 sm:p-5 lg:p-6">
+    <UniformPageShell
+      title="Rake Management Workspace"
+      subtitle="Manage offering, review offered data, and submit adjustments."
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+    >
         {activeTab === "offering" ? renderOfferingTab() : null}
         {activeTab === "offered" ? renderOfferedTab() : null}
         {activeTab === "adjustment" ? renderAdjustmentTab() : null}
-      </div>
-    </div>
+    </UniformPageShell>
   );
 }

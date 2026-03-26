@@ -6,6 +6,12 @@ import SignupPage from "./components/auth/SignupPage";
 import Dashboard from "./pages/admin/dashboard/Dashboard";
 import MasterDataPage from "./pages/admin/masterdata/MasterDataPage";
 import RakeManagementPage from "./pages/admin/rakemanagement/RakeManagementPage";
+import LoadingManagementPage from "./pages/admin/loading/LoadingManagementPage";
+import DelayManagementPage from "./pages/admin/delay/DelayManagementPage";
+import AdminUserManagementPage from "./pages/admin/users/AdminUserManagementPage";
+import ReportsPage from "./pages/admin/reports/ReportsPage";
+import AuditLogsPage from "./pages/admin/audit/AuditLogsPage";
+import OperatorOperationsHub from "./pages/operator/OperatorOperationsHub";
 import SuperadminLayout from "./pages/superadmin/SuperadminLayout";
 import RoleManagementPage from "./pages/superadmin/RoleManagement/RoleManagementPage";
 import AddRolePage from "./pages/superadmin/RoleManagement/AddRolePage";
@@ -67,6 +73,16 @@ function AppRoutes() {
         return <Dashboard />;
       case "rake-management":
         return <RakeManagementPage />;
+      case "loading-management":
+        return <LoadingManagementPage />;
+      case "delay-management":
+        return <DelayManagementPage />;
+      case "admin-users":
+        return <AdminUserManagementPage />;
+      case "reports":
+        return <ReportsPage />;
+      case "audit-logs":
+        return <AuditLogsPage />;
       case "master-data":
       case "wagon-types":
       case "rail-sidings":

@@ -47,7 +47,7 @@ export default function FilterPanel({
   return (
     <div className="rounded-xl border border-border-subtle bg-card p-5 3xl:p-7 5xl:p-9 shadow-md animate-slideDown">
       <div className="flex items-center justify-between mb-4 3xl:mb-6">
-        <h4 className="text-[15px] 3xl:text-[18px] 5xl:text-[22px] font-bold text-brand-900">
+        <h4 className="text-[15px] 3xl:text-[18px] 5xl:text-[22px] font-bold text-slate-800">
           Filters
         </h4>
         <button
@@ -86,7 +86,7 @@ export default function FilterPanel({
                     text-[12px] 3xl:text-[14px] 5xl:text-[18px] font-semibold capitalize transition-all
                     ${
                       isActive
-                        ? "bg-brand-600 text-white shadow-sm"
+                        ? "bg-blue-600 text-white shadow-sm"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                     }
                   `}
@@ -107,7 +107,7 @@ export default function FilterPanel({
             <select
               value={activeFilters[field.key] || ""}
               onChange={(e) => handleFieldChange(field.key, e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 3xl:px-4 3xl:py-2 5xl:px-6 5xl:py-3 text-[13px] 3xl:text-[15px] 5xl:text-[19px] text-slate-700 outline-none focus:border-brand-500 transition-all cursor-pointer"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] text-slate-700 outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100 3xl:px-4 3xl:py-2 3xl:text-[15px] 5xl:px-6 5xl:py-3 5xl:text-[19px]"
             >
               <option value="">All</option>
               {field.options.map((opt) => (

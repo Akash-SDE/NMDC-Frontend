@@ -102,6 +102,28 @@ export default function useCrud(initialData = [], keyField = "code") {
     setCurrentPage((prev) => Math.max(1, prev));
   }, [deletingItem, keyField, showToast]);
 
+  const toggleItemStatus = useCallback(
+    (targetItem) => {
+      if (!targetItem) return;
+
+      let nextStatus = "inactive";
+      setData((prev) =>
+        prev.map((item) => {
+          if (item[keyField] !== targetItem[keyField]) return item;
+          nextStatus = item.status === "inactive" ? "active" : "inactive";
+          return { ...item, status: nextStatus };
+        }),
+      );
+
+      if (nextStatus === "inactive") {
+        showToast(`"${targetItem[keyField]}" disabled successfully.`);
+      } else {
+        showToast(`"${targetItem[keyField]}" enabled successfully.`);
+      }
+    },
+    [keyField, showToast],
+  );
+
   const toggleFilter = useCallback(() => {
     setIsFilterOpen((prev) => !prev);
   }, []);
@@ -180,6 +202,7 @@ export default function useCrud(initialData = [], keyField = "code") {
     openDeleteConfirm,
     closeDeleteConfirm,
     deleteItem,
+    toggleItemStatus,
     isFilterOpen,
     toggleFilter,
     activeFilters,

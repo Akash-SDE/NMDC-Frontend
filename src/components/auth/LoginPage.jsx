@@ -39,6 +39,11 @@ function EyeOffIcon() {
 
 const DEMO_ACCOUNTS = {
   admin: { username: "admin", password: "admin123", name: "Harish Kumar" },
+  operator: {
+    username: "operator",
+    password: "operator123",
+    name: "Operator User",
+  },
   superadmin: {
     username: "superadmin",
     password: "super123",
@@ -121,7 +126,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen w-full bg-white">
       {/* Form Side */}
       <div className="flex flex-1 flex-col justify-center px-6 py-10 sm:px-10 md:px-16 lg:px-20 xl:px-24 3xl:px-32">
-        <div className="mx-auto w-full max-w-[420px] 3xl:max-w-[520px] 5xl:max-w-[700px]">
+        <div className="mx-auto w-full max-w-105 3xl:max-w-130 5xl:max-w-175">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8 3xl:mb-12">
             <div className="flex h-11 w-11 3xl:h-14 3xl:w-14 items-center justify-center rounded-xl overflow-hidden bg-brand-50">
@@ -195,7 +200,7 @@ export default function LoginPage() {
                   height="16"
                   viewBox="0 0 24 24"
                   fill="currentColor"
-                  className="text-red-500 flex-shrink-0"
+                  className="text-red-500 shrink-0"
                 >
                   <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z" />
                 </svg>
@@ -283,7 +288,7 @@ export default function LoginPage() {
       </div>
       {/* Image Side */}
       <div className="hidden lg:flex lg:w-[50%] xl:w-[55%] relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900">
+        <div className="absolute inset-0 bg-linear-to-br from-slate-700 via-slate-800 to-slate-900">
           <div className="absolute inset-0 opacity-40">
             <svg
               viewBox="0 0 800 600"
@@ -326,7 +331,7 @@ export default function LoginPage() {
             </svg>
           </div>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-8 3xl:p-12">
+        <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 via-black/50 to-transparent p-8 3xl:p-12">
           <div className="backdrop-blur-md bg-white/10 rounded-2xl p-6 3xl:p-8 border border-white/20">
             <h3 className="text-[22px] 3xl:text-[28px] font-bold text-white">
               Efficient Industrial Logistics

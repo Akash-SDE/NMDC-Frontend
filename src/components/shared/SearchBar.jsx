@@ -1,3 +1,5 @@
+import { uniformInputClass, uniformSecondaryButtonClass } from "./UniformUi";
+
 export default function SearchBar({
   placeholder = "Search...",
   value = "",
@@ -32,7 +34,7 @@ export default function SearchBar({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 pl-11 py-2.5 3xl:py-3 5xl:py-4 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-brand-900 placeholder-slate-400 outline-none transition-all focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:bg-white"
+          className={`${uniformInputClass} py-2.5 pl-11 text-[13px] 3xl:py-3 3xl:text-[16px] 5xl:py-4 5xl:text-[20px]`}
         />
         {value && (
           <button
@@ -60,7 +62,7 @@ export default function SearchBar({
         {showFilter && (
           <button
             onClick={onFilter}
-            className="flex items-center gap-1.5 3xl:gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 3xl:px-4 3xl:py-3 5xl:px-6 5xl:py-4 text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-medium text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:shadow-md"
+            className={`${uniformSecondaryButtonClass} flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] 3xl:gap-2 3xl:px-4 3xl:py-3 3xl:text-[15px] 5xl:px-6 5xl:py-4 5xl:text-[20px]`}
           >
             <svg
               width="16"
@@ -83,7 +85,7 @@ export default function SearchBar({
         {showExport && (
           <button
             onClick={onExport}
-            className="flex items-center gap-1.5 3xl:gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 3xl:px-4 3xl:py-3 5xl:px-6 5xl:py-4 text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-medium text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:shadow-md"
+            className={`${uniformSecondaryButtonClass} flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] 3xl:gap-2 3xl:px-4 3xl:py-3 3xl:text-[15px] 5xl:px-6 5xl:py-4 5xl:text-[20px]`}
           >
             <svg
               width="16"

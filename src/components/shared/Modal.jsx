@@ -39,7 +39,7 @@ export default function Modal({
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-100 flex items-center justify-center p-4 sm:p-6"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
@@ -59,7 +59,7 @@ export default function Modal({
         {/* Header */}
         <div className="flex items-start justify-between px-6 py-5 3xl:px-8 3xl:py-6 5xl:px-10 5xl:py-8 border-b border-slate-100">
           <div>
-            <h3 className="text-[18px] sm:text-[20px] 3xl:text-[24px] 5xl:text-[32px] font-bold text-brand-900">
+            <h3 className="text-[18px] sm:text-[20px] 3xl:text-[24px] 5xl:text-[32px] font-bold text-slate-800">
               {title}
             </h3>
             {subtitle && (

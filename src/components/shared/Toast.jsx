@@ -44,12 +44,12 @@ export default function Toast({ toast }) {
       : "border-emerald-200 bg-emerald-50";
 
   return (
-    <div className="fixed top-6 right-6 3xl:top-10 3xl:right-10 z-[200] animate-slideDown">
+    <div className="fixed top-6 right-6 z-200 animate-slideDown 3xl:top-10 3xl:right-10">
       <div
         className={`flex items-center gap-3 3xl:gap-4 rounded-xl border px-5 py-3.5 3xl:px-7 3xl:py-5 5xl:px-9 5xl:py-6 shadow-lg ${bgColor}`}
       >
         {iconMap[toast.type]}
-        <span className="text-[14px] 3xl:text-[17px] 5xl:text-[22px] font-semibold text-brand-900">
+        <span className="text-[14px] 3xl:text-[17px] 5xl:text-[22px] font-semibold text-slate-800">
           {toast.message}
         </span>
         <button

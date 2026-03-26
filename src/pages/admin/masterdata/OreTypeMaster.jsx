@@ -8,7 +8,6 @@ import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
 import Modal from "../../../components/shared/Modal";
-import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Toast from "../../../components/shared/Toast";
 import { PlusIcon } from "../../../components/icons";
 
@@ -30,7 +29,7 @@ function EditIcon() {
     </svg>
   );
 }
-function DeleteIcon() {
+function DisableIcon() {
   return (
     <svg
       width="16"
@@ -41,10 +40,54 @@ function DeleteIcon() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="3xl:w-5 3xl:h-5"
+      className="3xl:w-5 3xl:h-5 5xl:w-6 5xl:h-6"
     >
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+      <rect x="3" y="11" width="18" height="10" rx="2" ry="2" />
+      <line x1="12" y1="11" x2="12" y2="7" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
+
+function EnableIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="3xl:w-5 3xl:h-5 5xl:w-6 5xl:h-6"
+    >
+      <path d="M17 11V7a5 5 0 0 0-10 0v4" />
+      <rect x="3" y="11" width="18" height="10" rx="2" ry="2" />
+      <polyline points="8 16 11 19 16 14" />
+    </svg>
+  );
+}
+
+function SortIcon({ isActive, order }) {
+  if (!isActive) {
+    return (
+      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 text-slate-300" aria-hidden="true">
+        <path d="M8 2l3 3H5l3-3z" fill="currentColor" />
+        <path d="M8 14l-3-3h6l-3 3z" fill="currentColor" />
+      </svg>
+    );
+  }
+
+  return order === "asc" ? (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 text-slate-700" aria-hidden="true">
+      <path d="M8 2l3 3H5l3-3z" fill="currentColor" />
+      <path d="M8 4.5v9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 text-slate-700" aria-hidden="true">
+      <path d="M8 14l-3-3h6l-3 3z" fill="currentColor" />
+      <path d="M8 2.5v9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
@@ -80,7 +123,7 @@ function OreTypeForm({ initialData, onSave, onCancel, isEditing }) {
   }
 
   const inputClass = (f) =>
-    `w-full rounded-lg border ${errors[f] ? "border-red-300 ring-2 ring-red-100" : "border-slate-200"} bg-slate-50 px-4 py-2.5 3xl:py-3 5xl:py-4 text-[14px] 3xl:text-[16px] 5xl:text-[20px] text-brand-900 placeholder-slate-400 outline-none transition-all focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:bg-white`;
+    `w-full rounded-lg border ${errors[f] ? "border-red-300 ring-2 ring-red-100" : "border-slate-200"} bg-slate-50 px-4 py-2.5 3xl:py-3 5xl:py-4 text-[14px] 3xl:text-[16px] 5xl:text-[20px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:bg-white`;
 
   return (
     <form
@@ -89,7 +132,7 @@ function OreTypeForm({ initialData, onSave, onCancel, isEditing }) {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 3xl:gap-5">
         <div>
-          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5 3xl:mb-2">
             Ore Type Code *
           </label>
           <input
@@ -107,7 +150,7 @@ function OreTypeForm({ initialData, onSave, onCancel, isEditing }) {
           )}
         </div>
         <div>
-          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5 3xl:mb-2">
             Grade (Fe %) *
           </label>
           <input
@@ -125,7 +168,7 @@ function OreTypeForm({ initialData, onSave, onCancel, isEditing }) {
         </div>
       </div>
       <div>
-        <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+        <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5 3xl:mb-2">
           Ore Type Name *
         </label>
         <input
@@ -142,7 +185,7 @@ function OreTypeForm({ initialData, onSave, onCancel, isEditing }) {
         )}
       </div>
       <div>
-        <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+        <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5 3xl:mb-2">
           Description
         </label>
         <textarea
@@ -155,7 +198,7 @@ function OreTypeForm({ initialData, onSave, onCancel, isEditing }) {
       </div>
       {!isEditing && (
         <div>
-          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-brand-900 mb-1.5 3xl:mb-2">
+          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5 3xl:mb-2">
             Status
           </label>
           <select
@@ -178,7 +221,7 @@ function OreTypeForm({ initialData, onSave, onCancel, isEditing }) {
         </button>
         <button
           type="submit"
-          className="rounded-lg bg-brand-600 px-5 py-2.5 3xl:px-6 3xl:py-3 text-[14px] 3xl:text-[16px] font-semibold text-white shadow-sm hover:bg-brand-700 transition-all active:scale-[0.98]"
+          className="rounded-lg bg-blue-600 px-5 py-2.5 3xl:px-6 3xl:py-3 text-[14px] 3xl:text-[16px] font-semibold text-white shadow-sm hover:bg-blue-700 transition-all active:scale-[0.98]"
         >
           {isEditing ? "Update Ore Type" : "Add Ore Type"}
         </button>
@@ -216,13 +259,29 @@ export default function OreTypeMaster() {
     crud.setCurrentPage(1);
   };
 
+  const renderSortButton = (label, field) => {
+    const isActive = sortBy === field;
+    return (
+      <button
+        type="button"
+        onClick={() => handleSort(field)}
+        className={`inline-flex items-center gap-1.5 transition-colors ${
+          isActive ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
+        }`}
+      >
+        <span>{label}</span>
+        <SortIcon isActive={isActive} order={sortOrder} />
+      </button>
+    );
+  };
+
   return (
     <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
       <Toast toast={crud.toast} />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-brand-900 italic">
+          <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800 italic">
             {oreTypesMeta.title}
           </h2>
           <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
@@ -231,7 +290,7 @@ export default function OreTypeMaster() {
         </div>
         <button
           onClick={crud.openAddForm}
-          className="flex items-center gap-2 3xl:gap-3 rounded-lg bg-brand-600 px-5 py-2.5 3xl:px-6 3xl:py-3 5xl:px-8 5xl:py-4 text-[13px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-white shadow-sm hover:bg-brand-700 transition-all self-start active:scale-[0.98]"
+          className="flex items-center gap-2 3xl:gap-3 rounded-lg bg-blue-600 px-5 py-2.5 3xl:px-6 3xl:py-3 5xl:px-8 5xl:py-4 text-[13px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-white shadow-sm hover:bg-blue-700 transition-all self-start active:scale-[0.98]"
         >
           <PlusIcon />
           <span>{oreTypesMeta.addLabel}</span>
@@ -254,27 +313,19 @@ export default function OreTypeMaster() {
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  <button type="button" onClick={() => handleSort("code")}>
-                    Ore Type Code {sortBy === "code" ? `(${sortOrder})` : ""}
-                  </button>
+                  {renderSortButton("Ore Type Code", "code")}
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  <button type="button" onClick={() => handleSort("name")}>
-                    Name {sortBy === "name" ? `(${sortOrder})` : ""}
-                  </button>
+                  {renderSortButton("Name", "name")}
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden sm:table-cell">
-                  <button type="button" onClick={() => handleSort("grade")}>
-                    Grade {sortBy === "grade" ? `(${sortOrder})` : ""}
-                  </button>
+                  {renderSortButton("Grade", "grade")}
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden md:table-cell">
                   Description
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  <button type="button" onClick={() => handleSort("status")}>
-                    Status {sortBy === "status" ? `(${sortOrder})` : ""}
-                  </button>
+                  {renderSortButton("Status", "status")}
                 </th>
                 <th className="px-5 py-3.5 text-right text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   Actions
@@ -298,12 +349,12 @@ export default function OreTypeMaster() {
                     className="hover:bg-slate-50/60 transition-colors group"
                   >
                     <td className="px-5 py-4 3xl:px-6 3xl:py-5">
-                      <span className="text-[13px] 3xl:text-[15px] 5xl:text-[19px] font-semibold text-brand-600">
+                      <span className="text-[13px] 3xl:text-[15px] 5xl:text-[19px] font-semibold text-blue-600">
                         {ore.code}
                       </span>
                     </td>
                     <td className="px-5 py-4 3xl:px-6 3xl:py-5">
-                      <span className="text-[13px] 3xl:text-[15px] 5xl:text-[19px] font-semibold text-brand-900">
+                      <span className="text-[13px] 3xl:text-[15px] 5xl:text-[19px] font-semibold text-slate-800">
                         {ore.name}
                       </span>
                     </td>
@@ -313,7 +364,7 @@ export default function OreTypeMaster() {
                       </span>
                     </td>
                     <td className="px-5 py-4 3xl:px-6 3xl:py-5 hidden md:table-cell">
-                      <span className="text-[13px] 3xl:text-[15px] 5xl:text-[19px] text-slate-500 truncate max-w-[200px] block">
+                      <span className="text-[13px] 3xl:text-[15px] 5xl:text-[19px] text-slate-500 truncate max-w-50 block">
                         {ore.description}
                       </span>
                     </td>
@@ -324,17 +375,26 @@ export default function OreTypeMaster() {
                       <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => crud.openEditForm(ore)}
-                          className="flex h-8 w-8 3xl:h-10 3xl:w-10 items-center justify-center rounded-lg text-slate-400 hover:bg-brand-50 hover:text-brand-600 transition-colors"
-                          title="Edit"
+                          disabled={ore.status === "inactive"}
+                          className={`flex h-8 w-8 3xl:h-10 3xl:w-10 items-center justify-center rounded-lg transition-colors ${
+                            ore.status === "inactive"
+                              ? "cursor-not-allowed text-slate-300"
+                              : "text-slate-400 hover:bg-blue-50 hover:text-blue-600"
+                          }`}
+                          title={ore.status === "inactive" ? "Enable to edit" : "Edit"}
                         >
                           <EditIcon />
                         </button>
                         <button
-                          onClick={() => crud.openDeleteConfirm(ore)}
-                          className="flex h-8 w-8 3xl:h-10 3xl:w-10 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-                          title="Delete"
+                          onClick={() => crud.toggleItemStatus(ore)}
+                          className={`flex h-8 w-8 3xl:h-10 3xl:w-10 items-center justify-center rounded-lg transition-colors ${
+                            ore.status === "inactive"
+                              ? "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"
+                              : "text-slate-400 hover:bg-amber-50 hover:text-amber-600"
+                          }`}
+                          title={ore.status === "inactive" ? "Enable" : "Disable"}
                         >
-                          <DeleteIcon />
+                          {ore.status === "inactive" ? <EnableIcon /> : <DisableIcon />}
                         </button>
                       </div>
                     </td>
@@ -373,15 +433,9 @@ export default function OreTypeMaster() {
           isEditing={!!crud.editingItem}
         />
       </Modal>
-
-      <ConfirmDialog
-        isOpen={crud.isDeleteOpen}
-        onClose={crud.closeDeleteConfirm}
-        onConfirm={crud.deleteItem}
-        title="Delete Ore Type"
-        message="This will permanently remove this ore type from the system."
-        itemName={crud.deletingItem?.name || ""}
-      />
-    </div>
+</div>
   );
 }
+
+
+

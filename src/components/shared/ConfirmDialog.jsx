@@ -1,4 +1,5 @@
 import Modal from "./Modal";
+import { uniformSecondaryButtonClass } from "./UniformUi";
 
 export default function ConfirmDialog({
   isOpen,
@@ -51,7 +52,7 @@ export default function ConfirmDialog({
         </div>
 
         {/* Title */}
-        <h3 className="text-[18px] 3xl:text-[22px] 5xl:text-[28px] font-bold text-brand-900 mb-2">
+        <h3 className="mb-2 text-[18px] font-bold text-slate-800 3xl:text-[22px] 5xl:text-[28px]">
           {title}
         </h3>
 
@@ -62,7 +63,7 @@ export default function ConfirmDialog({
 
         {/* Item name highlight */}
         {itemName && (
-          <p className="text-[14px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-brand-900 mb-6 3xl:mb-8">
+          <p className="mb-6 text-[14px] font-semibold text-slate-800 3xl:mb-8 3xl:text-[16px] 5xl:text-[20px]">
             "{itemName}"
           </p>
         )}
@@ -71,13 +72,13 @@ export default function ConfirmDialog({
         <div className="flex items-center gap-3 3xl:gap-4 justify-center mt-6 3xl:mt-8">
           <button
             onClick={onClose}
-            className="flex-1 rounded-lg border border-slate-200 bg-white px-5 py-2.5 3xl:px-6 3xl:py-3 5xl:px-8 5xl:py-4 text-[14px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50 transition-all"
+            className={`${uniformSecondaryButtonClass} flex-1 px-5 py-2.5 text-[14px] 3xl:px-6 3xl:py-3 3xl:text-[16px] 5xl:px-8 5xl:py-4 5xl:text-[20px]`}
           >
             {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
-            className={`flex-1 rounded-lg px-5 py-2.5 3xl:px-6 3xl:py-3 5xl:px-8 5xl:py-4 text-[14px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-white shadow-sm transition-all active:scale-[0.98] ${v.btnBg}`}
+            className={`flex-1 rounded-lg px-5 py-2.5 text-[14px] font-semibold text-white shadow-sm transition-all active:scale-[0.98] 3xl:px-6 3xl:py-3 3xl:text-[16px] 5xl:px-8 5xl:py-4 5xl:text-[20px] ${v.btnBg}`}
           >
             {confirmLabel}
           </button>

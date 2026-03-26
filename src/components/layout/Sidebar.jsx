@@ -50,7 +50,7 @@ export default function Sidebar({ isOpen, onClose }) {
     <aside
       className={`
         fixed left-0 top-0 z-50 flex h-full w-61.5 flex-col
-        border-r border-slate-200 bg-[#eef1f5]
+        border-r shadow-lg border-slate-200 bg-[#eef1f5]
         transition-transform duration-300 ease-in-out
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0
@@ -58,13 +58,13 @@ export default function Sidebar({ isOpen, onClose }) {
     >
       {/* Brand header */}
       <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-4">
-        <div className="flex h-11 w-11 items-center justify-center rounded bg-[#1d67c4] p-1.5 shadow-sm">
+        <div className="flex h-11 w-11 items-center justify-center rounded p-1.5 shadow-sm">
           <Logo size={34} className="h-full w-full object-contain" />
         </div>
         <div className="min-w-0">
-          <h1 className="truncate text-[14px] font-bold text-slate-800">Iron Forge</h1>
+          <h1 className="truncate text-[14px] font-bold text-slate-800">NMDC</h1>
           <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-            Operational System
+            Admin Panel
           </p>
         </div>
 

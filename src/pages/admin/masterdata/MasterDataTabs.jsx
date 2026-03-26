@@ -24,17 +24,17 @@ export default function MasterDataTabs({ activeTab, onTabChange }) {
               className={`
                 relative whitespace-nowrap px-4 py-3 3xl:px-6 3xl:py-4 5xl:px-8 5xl:py-5
                 text-[13px] sm:text-[14px] 3xl:text-[17px] 5xl:text-[22px] font-semibold
-                transition-all duration-200 border-b-2 flex-shrink-0
+                transition-all duration-200 border-b-2 shrink-0
                 ${
                   isActive
-                    ? "border-brand-600 text-brand-600"
+                    ? "border-brand-600 text-blue-600"
                     : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
                 }
               `}
             >
               {tab.label}
               {isActive && (
-                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-brand-600 rounded-full" />
+                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-blue-600 rounded-full" />
               )}
             </button>
           );
@@ -43,3 +43,4 @@ export default function MasterDataTabs({ activeTab, onTabChange }) {
     </div>
   );
 }
+
