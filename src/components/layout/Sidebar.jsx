@@ -311,29 +311,7 @@ export default function Sidebar({
           </div>
         ))}
       </nav>
-
-      <div className={`px-3 pb-3 ${isCollapsed ? "lg:hidden" : ""}`}>
-        <button
-          type="button"
-          className="w-full rounded-md bg-[#1d67c4] px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-white shadow-sm hover:bg-[#1657a8]"
-        >
-          New Dispatch
-        </button>
-      </div>
-
       <div className="border-t border-slate-200 bg-[#e8ecf2] px-3 py-3">
-        <div className="group relative">
-          <button
-            type="button"
-            className={`mb-1 flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium text-slate-600 transition-colors hover:bg-white ${
-              isCollapsed ? "mx-auto h-10 w-10 justify-center px-0" : ""
-            }`}
-          >
-            <CircleHelpIcon />
-            <span className={isCollapsed ? "lg:hidden" : ""}>Help Center</span>
-          </button>
-        </div>
-
         <div className="group relative">
           <button
             onClick={handleSignOut}

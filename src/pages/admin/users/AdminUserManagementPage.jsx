@@ -8,6 +8,7 @@ import {
   uniformSecondaryButtonClass,
 } from "../../../components/shared/UniformUi";
 import SearchBar from "../../../components/shared/SearchBar";
+import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 
 const initialUsers = [
   {
@@ -147,6 +148,8 @@ export default function AdminUserManagementPage() {
   const [editingId, setEditingId] = useState(null);
   const [activeTab, setActiveTab] = useState("form");
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("fullName");
+  const [sortOrder, setSortOrder] = useState("asc");
   const [message, setMessage] = useState("");
 
   const visibleUsers = useMemo(() => {
@@ -156,6 +159,25 @@ export default function AdminUserManagementPage() {
       return searchMatches;
     });
   }, [users, searchTerm]);
+
+  const sortedUsers = useMemo(() => {
+    return [...visibleUsers].sort((a, b) => {
+      const aValue = String(a[sortBy] ?? "").toLowerCase();
+      const bValue = String(b[sortBy] ?? "").toLowerCase();
+      if (aValue === bValue) return 0;
+      const comparison = aValue > bValue ? 1 : -1;
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [visibleUsers, sortBy, sortOrder]);
+
+  function handleSort(field) {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+  }
 
   const stats = useMemo(() => {
     const activeCount = users.filter((user) => user.status === "active").length;
@@ -413,16 +435,29 @@ export default function AdminUserManagementPage() {
             <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
               <table className="w-full min-w-190">
                 <thead>
-                  <tr className="bg-slate-700 text-white">
-                    {["Full Name", "Username", "Role", "Status", "Created Date", "Actions"].map((head) => (
-                      <th key={head} className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide">
-                        {head}
-                      </th>
-                    ))}
+                  <tr className="border-b border-slate-200 bg-slate-100">
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Full Name" field="fullName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Username" field="username" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Role" field="role" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Created Date" field="createdDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleUsers.map((user, index) => (
+                  {sortedUsers.map((user, index) => (
                     <tr
                       key={user.id}
                       className={`border-t border-slate-200 text-sm ${index % 2 === 0 ? "bg-white" : "bg-slate-50"} ${user.status === "inactive" ? "opacity-60" : ""}`}
@@ -471,7 +506,7 @@ export default function AdminUserManagementPage() {
                       </td>
                     </tr>
                   ))}
-                  {visibleUsers.length === 0 ? (
+                  {sortedUsers.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-3 py-8 text-center text-sm text-slate-500">
                         No users found for this search.

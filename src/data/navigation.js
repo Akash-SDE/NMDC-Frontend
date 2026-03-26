@@ -81,24 +81,7 @@ const adminSidebarSections = [
   },
 ];
 
-const operatorSidebarSections = [
-  {
-    id: "operations",
-    title: "RAKE OPERATIONS",
-    items: [
-      {
-        id: "operator-operations",
-        label: "Operations Hub",
-        icon: "rake",
-      },
-    ],
-  },
-];
-
 export function getSidebarSections(userRole) {
-  if (userRole === "operator") {
-    return operatorSidebarSections;
-  }
   return adminSidebarSections;
 }
 

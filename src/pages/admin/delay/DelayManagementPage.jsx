@@ -7,6 +7,7 @@ import {
   uniformPrimaryButtonClass,
 } from "../../../components/shared/UniformUi";
 import SearchBar from "../../../components/shared/SearchBar";
+import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 
 const categories = [
   "Mechanical",
@@ -134,6 +135,8 @@ export default function DelayManagementPage() {
   const [logs, setLogs] = useState(initialLogs);
   const [activeTab, setActiveTab] = useState("form");
   const [tableSearch, setTableSearch] = useState("");
+  const [sortBy, setSortBy] = useState("startTime");
+  const [sortOrder, setSortOrder] = useState("asc");
   const [editingLogId, setEditingLogId] = useState(null);
   const [form, setForm] = useState({
     category: "",
@@ -171,6 +174,31 @@ export default function DelayManagementPage() {
         .includes(q),
     );
   }, [logs, tableSearch]);
+
+  const sortedLogs = useMemo(() => {
+    const getComparableValue = (row, field) => {
+      if (field === "duration") return getDurationMinutes(row.startTime, row.endTime) ?? -1;
+      if (field === "status") return row.isDisabled ? "disabled" : "enabled";
+      return String(row[field] ?? "").toLowerCase();
+    };
+
+    return [...filteredLogs].sort((a, b) => {
+      const aValue = getComparableValue(a, sortBy);
+      const bValue = getComparableValue(b, sortBy);
+      if (aValue === bValue) return 0;
+      const comparison = aValue > bValue ? 1 : -1;
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [filteredLogs, sortBy, sortOrder]);
+
+  function handleSort(field) {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+  }
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -361,16 +389,32 @@ export default function DelayManagementPage() {
             <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
               <table className="w-full min-w-175">
                 <thead>
-                  <tr className="bg-slate-700 text-white">
-                    {["Category", "Start Time", "End Time", "Duration", "Reason", "Status", "Actions"].map((head) => (
-                      <th key={head} className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide">
-                        {head}
-                      </th>
-                    ))}
+                  <tr className="border-b border-slate-200 bg-slate-100">
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Category" field="category" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Start Time" field="startTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="End Time" field="endTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Duration" field="duration" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Reason" field="reason" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredLogs.map((row, index) => {
+                  {sortedLogs.map((row, index) => {
                     const duration = toDurationLabel(
                       getDurationMinutes(row.startTime, row.endTime),
                     );
@@ -435,7 +479,7 @@ export default function DelayManagementPage() {
                       </tr>
                     );
                   })}
-                  {filteredLogs.length === 0 ? (
+                  {sortedLogs.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">
                         No delay logs found for this search.

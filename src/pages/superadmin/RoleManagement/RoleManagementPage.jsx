@@ -4,7 +4,6 @@ import { useRouter } from "./../../../context/RouterContext";
 import { MOCK_ROLES, getTotalPrivilegeCount } from "../shared/superadminData";
 import RoleStatsCards from "./RoleStatsCards";
 import RoleTable from "./RoleTable";
-import Breadcrumb from "../shared/Breadcrumb";
 
 function RoleManagementPage() {
   const { navigate } = useRouter();
@@ -36,8 +35,6 @@ function RoleManagementPage() {
   };
   return (
     <div>
-      {/* Breadcrumbs */}
-      <Breadcrumb />
       {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Role Management</h1>

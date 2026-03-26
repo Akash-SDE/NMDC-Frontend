@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { PlusIcon } from "../../../components/icons";
+import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 
 const metricCards = [
   {
@@ -235,13 +236,34 @@ function SegmentBar({ offered, completed, unloading }) {
 
 export default function Dashboard() {
   const [tablePage, setTablePage] = useState(1);
+  const [sortBy, setSortBy] = useState("id");
+  const [sortOrder, setSortOrder] = useState("asc");
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    setTablePage(1);
+  };
 
   const pageSize = 4;
-  const totalPages = Math.ceil(allStatusRows.length / pageSize);
+  const sortedRows = useMemo(() => {
+    return [...allStatusRows].sort((a, b) => {
+      const aValue = String(a[sortBy] ?? "").toLowerCase();
+      const bValue = String(b[sortBy] ?? "").toLowerCase();
+      if (aValue === bValue) return 0;
+      const comparison = aValue > bValue ? 1 : -1;
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [sortBy, sortOrder]);
+  const totalPages = Math.ceil(sortedRows.length / pageSize);
   const statusRows = useMemo(() => {
     const start = (tablePage - 1) * pageSize;
-    return allStatusRows.slice(start, start + pageSize);
-  }, [tablePage]);
+    return sortedRows.slice(start, start + pageSize);
+  }, [tablePage, sortedRows]);
 
   return (
     <div className="space-y-4">
@@ -355,19 +377,21 @@ export default function Dashboard() {
               <thead>
                 <tr className="border-b border-slate-100 bg-[#f8fafd]">
                   <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                    Rake ID
+                    <SortHeaderButton label="Rake ID" field="id" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                    Operational Area
+                    <SortHeaderButton label="Operational Area" field="area" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                    Wagons
+                    <SortHeaderButton label="Wagons" field="wagons" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                    Status
+                    <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-4 py-2 text-right text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                    ETA/Completion
+                    <div className="flex justify-end">
+                      <SortHeaderButton label="ETA/Completion" field="eta" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </div>
                   </th>
                 </tr>
               </thead>
@@ -395,7 +419,7 @@ export default function Dashboard() {
 
           <div className="flex items-center justify-between px-4 py-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-400">
-              Showing {(tablePage - 1) * pageSize + 1}-{Math.min(tablePage * pageSize, allStatusRows.length)} of {allStatusRows.length} rakes
+              Showing {(tablePage - 1) * pageSize + 1}-{Math.min(tablePage * pageSize, sortedRows.length)} of {sortedRows.length} rakes
             </p>
             <div className="flex items-center gap-2">
               <button

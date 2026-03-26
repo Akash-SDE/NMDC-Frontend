@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import AppBreadcrumb from "./AppBreadcrumb";
 
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -32,6 +33,9 @@ export default function Layout({ children }) {
         }`}
       >
         <Header onMenuClick={() => setSidebarOpen(true)} />
+        <div className="px-4 pt-3 sm:px-5 lg:px-6">
+          <AppBreadcrumb />
+        </div>
         <main className="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6">{children}</main>
       </div>
     </div>

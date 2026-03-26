@@ -3,7 +3,6 @@ import { Users, CheckCircle, Clock, Search, Plus } from "lucide-react";
 import { useRouter } from "./../../../context/RouterContext";
 import { MOCK_USERS } from "../shared/superadminData";
 import UserTable from "./UserTable";
-import Breadcrumb from "../shared/Breadcrumb";
 
 function UserManagementPage() {
   const { navigate } = useRouter();
@@ -31,7 +30,6 @@ function UserManagementPage() {
 
   return (
     <div>
-      <Breadcrumb />
       {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">User Management</h1>

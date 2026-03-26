@@ -7,6 +7,7 @@ import {
   uniformPrimaryButtonClass,
   uniformSecondaryButtonClass,
 } from "../../../components/shared/UniformUi";
+import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 
 const tabs = [
   { id: "offering", label: "Rake Offering" },
@@ -167,6 +168,8 @@ export default function RakeManagementPage() {
   const [offeredRows, setOfferedRows] = useState(initialOfferedRakes);
   const [offeringForm, setOfferingForm] = useState(initialOfferingForm);
   const [offerSearch, setOfferSearch] = useState("");
+  const [sortBy, setSortBy] = useState("sno");
+  const [sortOrder, setSortOrder] = useState("asc");
   const [adjustRakeNumber, setAdjustRakeNumber] = useState("");
   const [adjustOfferFor, setAdjustOfferFor] = useState("");
   const [adjustOfferTime, setAdjustOfferTime] = useState("");
@@ -186,6 +189,34 @@ export default function RakeManagementPage() {
       Object.values(row).join(" ").toLowerCase().includes(q),
     );
   }, [offerSearch, offeredRows]);
+
+  const sortedRows = useMemo(() => {
+    const getComparableValue = (row, field) => {
+      if (field === "status") return row.isDisabled ? "disabled" : "enabled";
+      if (field === "wagonSupply" || field === "sno") {
+        const parsed = Number(row[field]);
+        return Number.isNaN(parsed) ? 0 : parsed;
+      }
+      return String(row[field] ?? "").toLowerCase();
+    };
+
+    return [...filteredRows].sort((a, b) => {
+      const aValue = getComparableValue(a, sortBy);
+      const bValue = getComparableValue(b, sortBy);
+      if (aValue === bValue) return 0;
+      const comparison = aValue > bValue ? 1 : -1;
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [filteredRows, sortBy, sortOrder]);
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+  };
 
   function updateOffering(field, value) {
     setOfferingForm((prev) => ({ ...prev, [field]: value }));
@@ -433,39 +464,54 @@ export default function RakeManagementPage() {
               />
             </div>
             <div className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
-              Total Records: {filteredRows.length}
+              Total Records: {sortedRows.length}
             </div>
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
             <table className="w-full min-w-245">
               <thead>
-                <tr className="bg-linear-to-r from-slate-700 to-slate-600 text-white">
-                  {[
-                    "SNo",
-                    "Rake ID",
-                    "Rake Number",
-                    "Wagon Supply",
-                    "Siding",
-                    "Route",
-                    "Ore Type / Customer",
-                    "Destination",
-                    "F-Note",
-                    "Offer Time",
-                    "Status",
-                    "Actions",
-                  ].map((head) => (
-                    <th
-                      key={head}
-                      className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide"
-                    >
-                      {head}
-                    </th>
-                  ))}
+                <tr className="border-b border-slate-200 bg-slate-100">
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="SNo" field="sno" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="Rake ID" field="rakeId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="Rake Number" field="rakeNumber" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="Wagon Supply" field="wagonSupply" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="Siding" field="siding" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="Route" field="route" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="Ore Type / Customer" field="oreTypeCustomer" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="Destination" field="destination" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="F-Note" field="fNote" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="Offer Time" field="offerTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {filteredRows.length === 0 ? (
+                {sortedRows.length === 0 ? (
                   <tr>
                     <td
                       colSpan={12}
@@ -475,7 +521,7 @@ export default function RakeManagementPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredRows.map((row, index) => (
+                  sortedRows.map((row, index) => (
                     <tr
                       key={row.rakeId}
                       className={`border-t border-slate-200 text-sm text-slate-700 ${

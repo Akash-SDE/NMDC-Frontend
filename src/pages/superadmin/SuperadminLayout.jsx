@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import SuperadminSidebar from "./shared/SuperadminSidebar";
 import { useRouter } from "./../../context/RouterContext";
+import Breadcrumb from "./shared/Breadcrumb";
 
 function SuperadminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -66,7 +67,7 @@ function SuperadminLayout({ children }) {
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="profile-trigger flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
               >
-                <div className="w-8 h-8 3xl:w-10 3xl:h-10 5xl:w-12 5xl:h-12 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 3xl:w-10 3xl:h-10 5xl:w-12 5xl:h-12 bg-linear-to-br from-purple-500 to-purple-700 rounded-full flex items-center justify-center">
                   <svg
                     width="18"
                     height="18"
@@ -96,6 +97,7 @@ function SuperadminLayout({ children }) {
           </div>
         </header>
         <main className="p-4 sm:p-6 lg:p-8 3xl:p-12 5xl:p-16 text-slate-900">
+          <Breadcrumb />
           {children}
         </main>
       </div>

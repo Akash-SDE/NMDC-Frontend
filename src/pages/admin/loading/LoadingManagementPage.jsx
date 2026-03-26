@@ -8,6 +8,7 @@ import {
   uniformSecondaryButtonClass,
 } from "../../../components/shared/UniformUi";
 import SearchBar from "../../../components/shared/SearchBar";
+import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 
 const initialRakes = [
   {
@@ -161,6 +162,8 @@ export default function LoadingManagementPage() {
   const [activeRakeId, setActiveRakeId] = useState(initialRakes[0].rakeId);
   const [activeTab, setActiveTab] = useState("table");
   const [tableSearch, setTableSearch] = useState("");
+  const [sortBy, setSortBy] = useState("rakeNumber");
+  const [sortOrder, setSortOrder] = useState("asc");
   const [form, setForm] = useState(initialForm);
   const [message, setMessage] = useState("");
 
@@ -194,6 +197,25 @@ export default function LoadingManagementPage() {
         .includes(q),
     );
   }, [rows, tableSearch]);
+
+  const sortedRows = useMemo(() => {
+    return [...filteredRows].sort((a, b) => {
+      const aValue = String(a[sortBy] ?? "").toLowerCase();
+      const bValue = String(b[sortBy] ?? "").toLowerCase();
+      if (aValue === bValue) return 0;
+      const comparison = aValue > bValue ? 1 : -1;
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [filteredRows, sortBy, sortOrder]);
+
+  function handleSort(field) {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+  }
 
   function onSelectRake(rakeId) {
     setActiveRakeId(rakeId);
@@ -275,28 +297,44 @@ export default function LoadingManagementPage() {
             <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
               <table className="w-full min-w-245">
                 <thead>
-                  <tr className="bg-slate-700 text-white">
-                    {[
-                      "Rake Number",
-                      "Wagon Supply",
-                      "Siding",
-                      "Route",
-                      "Customer",
-                      "Destination",
-                      "FNote",
-                      "Placement Time",
-                      "Offer Time",
-                      "Status",
-                      "Actions",
-                    ].map((head) => (
-                      <th key={head} className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide">
-                        {head}
-                      </th>
-                    ))}
+                  <tr className="border-b border-slate-200 bg-slate-100">
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Rake Number" field="rakeNumber" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Wagon Supply" field="wagonSupply" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Siding" field="siding" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Route" field="route" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Customer" field="customer" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Destination" field="destination" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="FNote" field="fNote" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Placement Time" field="placementTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Offer Time" field="offerTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRows.map((row, index) => (
+                  {sortedRows.map((row, index) => (
                     <tr
                       key={row.rakeId}
                       className={`border-t border-slate-200 text-sm ${index % 2 === 0 ? "bg-white" : "bg-slate-50"} ${row.isDisabled ? "opacity-55" : ""}`}
@@ -347,7 +385,7 @@ export default function LoadingManagementPage() {
                       </td>
                     </tr>
                   ))}
-                  {filteredRows.length === 0 ? (
+                  {sortedRows.length === 0 ? (
                     <tr>
                       <td colSpan={11} className="px-3 py-8 text-center text-sm text-slate-500">
                         No loading rows found for this search.

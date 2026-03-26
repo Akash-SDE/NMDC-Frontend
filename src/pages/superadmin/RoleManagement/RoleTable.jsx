@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 
 function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
   const [selectedRoles, setSelectedRoles] = useState([]);
@@ -78,38 +79,25 @@ function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
                 />
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                <button type="button" onClick={() => handleSort("name")}>
-                  Role Name {sortBy === "name" ? `(${sortOrder})` : ""}
-                </button>
+                <SortHeaderButton label="Role Name" field="name" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                <button type="button" onClick={() => handleSort("description")}>
-                  Role Description{" "}
-                  {sortBy === "description" ? `(${sortOrder})` : ""}
-                </button>
+                <SortHeaderButton label="Role Description" field="description" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Privileges
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                <button type="button" onClick={() => handleSort("createdBy")}>
-                  Created By {sortBy === "createdBy" ? `(${sortOrder})` : ""}
-                </button>
+                <SortHeaderButton label="Created By" field="createdBy" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                <button type="button" onClick={() => handleSort("createdOn")}>
-                  Created On {sortBy === "createdOn" ? `(${sortOrder})` : ""}
-                </button>
+                <SortHeaderButton label="Created On" field="createdOn" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                <button type="button" onClick={() => handleSort("modifiedBy")}>
-                  Modified By {sortBy === "modifiedBy" ? `(${sortOrder})` : ""}
-                </button>
+                <SortHeaderButton label="Modified By" field="modifiedBy" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                <button type="button" onClick={() => handleSort("modifiedOn")}>
-                  Modified On {sortBy === "modifiedOn" ? `(${sortOrder})` : ""}
-                </button>
+                <SortHeaderButton label="Modified On" field="modifiedOn" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Actions

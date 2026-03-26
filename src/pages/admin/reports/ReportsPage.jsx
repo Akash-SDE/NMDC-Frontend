@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   UniformPageShell,
   UniformSectionCard,
 } from "../../../components/shared/UniformUi";
 import SearchBar from "../../../components/shared/SearchBar";
+import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 
 const reportTabs = [
   { id: "daily", label: "Daily Dispatch" },
@@ -99,8 +100,55 @@ function getStatusClass(status) {
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("daily");
   const [searchValue, setSearchValue] = useState("");
+  const [sortBy, setSortBy] = useState("date");
+  const [sortOrder, setSortOrder] = useState("asc");
 
-  const tableData = useMemo(() => {
+  const columns = useMemo(() => {
+    return activeTab === "daily"
+      ? [
+          { label: "Date", field: "date" },
+          { label: "Rake Number", field: "rakeNumber" },
+          { label: "Customer", field: "customer" },
+          { label: "Destination", field: "destination" },
+          { label: "Ore Type", field: "oreType" },
+          { label: "Wagon Count", field: "wagonCount" },
+          { label: "Total Tonnage", field: "totalTonnage" },
+          { label: "Loading Duration", field: "loadingDuration" },
+          { label: "Delay Duration", field: "delayDuration" },
+          { label: "Status", field: "status" },
+        ]
+      : activeTab === "monthly"
+        ? [
+            { label: "Date", field: "date" },
+            { label: "Total Rakes", field: "totalRakes" },
+            { label: "Total Tonnage", field: "totalTonnage" },
+            { label: "Avg Loading Time", field: "avgLoadingTime" },
+            { label: "Total Delays", field: "totalDelays" },
+          ]
+        : activeTab === "customer"
+          ? [
+              { label: "Customer", field: "customer" },
+              { label: "No. of Rakes", field: "noOfRakes" },
+              { label: "Total Tonnage", field: "totalTonnage" },
+              { label: "Avg Tonnage per Rake", field: "avgTonnagePerRake" },
+            ]
+          : activeTab === "delay"
+            ? [
+                { label: "Delay Category", field: "category" },
+                { label: "Occurrence Count", field: "occurrenceCount" },
+                { label: "Total Delay Duration", field: "totalDelayDuration" },
+                { label: "Avg Delay Duration", field: "avgDelayDuration" },
+                { label: "Percentage Share", field: "percentageShare" },
+              ]
+            : [
+                { label: "Wagon Type", field: "wagonType" },
+                { label: "Total Wagons Used", field: "totalWagonsUsed" },
+                { label: "Avg Load per Wagon", field: "avgLoadPerWagon" },
+                { label: "Sick Wagons Count", field: "sickWagonsCount" },
+              ];
+  }, [activeTab]);
+
+  const filteredData = useMemo(() => {
     let source = wagonRows;
 
     if (activeTab === "daily") source = dailyRows;
@@ -119,53 +167,78 @@ export default function ReportsPage() {
     );
   }, [activeTab, searchValue]);
 
+  useEffect(() => {
+    const firstField = columns[0]?.field;
+    if (!firstField) return;
+
+    setSortBy((prev) => {
+      if (columns.some((column) => column.field === prev)) {
+        return prev;
+      }
+      return firstField;
+    });
+    setSortOrder("asc");
+  }, [columns]);
+
+  const sortedData = useMemo(() => {
+    return [...filteredData].sort((a, b) => {
+      const aRaw = a[sortBy];
+      const bRaw = b[sortBy];
+
+      const aValue = typeof aRaw === "number" ? aRaw : String(aRaw ?? "").toLowerCase();
+      const bValue = typeof bRaw === "number" ? bRaw : String(bRaw ?? "").toLowerCase();
+
+      if (aValue === bValue) return 0;
+      const comparison = aValue > bValue ? 1 : -1;
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [filteredData, sortBy, sortOrder]);
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+  };
+
   const summary = useMemo(() => {
     if (activeTab === "daily") {
-      const totalTonnage = tableData.reduce((sum, row) => sum + row.totalTonnage, 0);
+      const totalTonnage = filteredData.reduce((sum, row) => sum + row.totalTonnage, 0);
       return [
-        { title: "Rows", value: tableData.length, tone: "border-slate-200 bg-white" },
+        { title: "Rows", value: filteredData.length, tone: "border-slate-200 bg-white" },
         {
           title: "Tonnage",
           value: `${totalTonnage.toLocaleString("en-IN")} t`,
           tone: "border-blue-200 bg-blue-50",
         },
-        { title: "Completed", value: tableData.filter((row) => row.status === "Completed").length, tone: "border-emerald-200 bg-emerald-50" },
+        { title: "Completed", value: filteredData.filter((row) => row.status === "Completed").length, tone: "border-emerald-200 bg-emerald-50" },
       ];
     }
 
     if (activeTab === "monthly") {
       return [
-        { title: "Days", value: tableData.length, tone: "border-slate-200 bg-white" },
+        { title: "Days", value: filteredData.length, tone: "border-slate-200 bg-white" },
         {
           title: "Total Rakes",
-          value: tableData.reduce((sum, row) => sum + row.totalRakes, 0),
+          value: filteredData.reduce((sum, row) => sum + row.totalRakes, 0),
           tone: "border-blue-200 bg-blue-50",
         },
         {
           title: "Total Tonnage",
-          value: `${tableData.reduce((sum, row) => sum + row.totalTonnage, 0).toLocaleString("en-IN")} t`,
+          value: `${filteredData.reduce((sum, row) => sum + row.totalTonnage, 0).toLocaleString("en-IN")} t`,
           tone: "border-emerald-200 bg-emerald-50",
         },
       ];
     }
 
     return [
-      { title: "Rows", value: tableData.length, tone: "border-slate-200 bg-white" },
+      { title: "Rows", value: filteredData.length, tone: "border-slate-200 bg-white" },
       { title: "View", value: "Live", tone: "border-blue-200 bg-blue-50" },
       { title: "Search", value: "Enabled", tone: "border-emerald-200 bg-emerald-50" },
     ];
-  }, [activeTab, tableData]);
-
-  const columns =
-    activeTab === "daily"
-      ? ["Date", "Rake Number", "Customer", "Destination", "Ore Type", "Wagon Count", "Total Tonnage", "Loading Duration", "Delay Duration", "Status"]
-      : activeTab === "monthly"
-        ? ["Date", "Total Rakes", "Total Tonnage", "Avg Loading Time", "Total Delays"]
-        : activeTab === "customer"
-          ? ["Customer", "No. of Rakes", "Total Tonnage", "Avg Tonnage per Rake"]
-          : activeTab === "delay"
-            ? ["Delay Category", "Occurrence Count", "Total Delay Duration", "Avg Delay Duration", "Percentage Share"]
-            : ["Wagon Type", "Total Wagons Used", "Avg Load per Wagon", "Sick Wagons Count"];
+  }, [activeTab, filteredData]);
 
   return (
     <UniformPageShell
@@ -184,7 +257,7 @@ export default function ReportsPage() {
 
         <UniformSectionCard
           title="Report Preview"
-          subtitle={`Showing ${columns.length} columns with ${tableData.length} records.`}
+          subtitle={`Showing ${columns.length} columns with ${sortedData.length} records.`}
         >
           <SearchBar
             placeholder="Search current report data"
@@ -196,16 +269,16 @@ export default function ReportsPage() {
           <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
             <table className="w-full min-w-230">
               <thead>
-                <tr className="bg-slate-700 text-white">
+                <tr className="border-b border-slate-200 bg-slate-100">
                   {columns.map((column) => (
-                    <th key={column} className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide">
-                      {column}
+                    <th key={column.field} className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <SortHeaderButton label={column.label} field={column.field} sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {tableData.map((row, index) => (
+                {sortedData.map((row, index) => (
                   <tr
                     key={`${activeTab}-${index}`}
                     className={`border-t border-slate-200 text-sm ${index % 2 === 0 ? "bg-white" : "bg-slate-50"}`}
@@ -268,7 +341,7 @@ export default function ReportsPage() {
                     ) : null}
                   </tr>
                 ))}
-                {tableData.length === 0 ? (
+                {sortedData.length === 0 ? (
                   <tr>
                     <td colSpan={columns.length} className="px-3 py-8 text-center text-sm text-slate-500">
                       No report rows match this search.

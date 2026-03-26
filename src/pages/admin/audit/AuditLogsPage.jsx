@@ -4,6 +4,7 @@ import {
   UniformSectionCard,
 } from "../../../components/shared/UniformUi";
 import SearchBar from "../../../components/shared/SearchBar";
+import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 
 const logs = [
   {
@@ -97,6 +98,8 @@ function Metric({ title, value, tone }) {
 
 export default function AuditLogsPage() {
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("timestamp");
+  const [sortOrder, setSortOrder] = useState("desc");
 
   const filteredLogs = useMemo(() => {
     return logs.filter((entry) => {
@@ -106,6 +109,25 @@ export default function AuditLogsPage() {
       return searchMatches;
     });
   }, [search]);
+
+  const sortedLogs = useMemo(() => {
+    return [...filteredLogs].sort((a, b) => {
+      const aValue = String(a[sortBy] ?? "").toLowerCase();
+      const bValue = String(b[sortBy] ?? "").toLowerCase();
+      if (aValue === bValue) return 0;
+      const comparison = aValue > bValue ? 1 : -1;
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [filteredLogs, sortBy, sortOrder]);
+
+  function handleSort(field) {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+  }
 
   const summary = useMemo(() => {
     const warningCount = filteredLogs.filter((entry) => entry.severity === "warning").length;
@@ -143,16 +165,32 @@ export default function AuditLogsPage() {
           <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
             <table className="w-full min-w-210">
               <thead>
-                <tr className="bg-slate-700 text-white">
-                  {["Timestamp", "User", "Action", "Module", "Target", "Severity", "IP Address"].map((head) => (
-                    <th key={head} className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide">
-                      {head}
-                    </th>
-                  ))}
+                <tr className="border-b border-slate-200 bg-slate-100">
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="Timestamp" field="timestamp" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="User" field="user" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="Action" field="action" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="Module" field="module" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="Target" field="target" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="Severity" field="severity" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    <SortHeaderButton label="IP Address" field="ipAddress" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {filteredLogs.map((entry, index) => (
+                {sortedLogs.map((entry, index) => (
                   <tr
                     key={entry.id}
                     className={`border-t border-slate-200 text-sm ${index % 2 === 0 ? "bg-white" : "bg-slate-50"}`}
@@ -170,7 +208,7 @@ export default function AuditLogsPage() {
                     <td className="px-3 py-2.5">{entry.ipAddress}</td>
                   </tr>
                 ))}
-                {filteredLogs.length === 0 ? (
+                {sortedLogs.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">
                       No events found for this search.
