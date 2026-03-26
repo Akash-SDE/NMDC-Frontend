@@ -10,6 +10,7 @@ import Pagination from "../../../components/shared/Pagination";
 import Modal from "../../../components/shared/Modal";
 import Toast from "../../../components/shared/Toast";
 import { PlusIcon } from "../../../components/icons";
+import { useRouter } from "../../../context/RouterContext";
 
 function EditIcon() {
   return (
@@ -241,7 +242,11 @@ function DestinationForm({ initialData, onSave, onCancel, isEditing }) {
 }
 
 export default function DestinationMaster() {
+  const { navigate, currentRoute } = useRouter();
   const crud = useCrud(destinationsData, "code");
+  const addRoute = "destinations-add";
+  const baseRoute = "destinations";
+  const isAddPage = currentRoute === addRoute;
   const [sortBy, setSortBy] = useState("code");
   const [sortOrder, setSortOrder] = useState("asc");
   const pageSize = destinationsMeta.pageSize;
@@ -285,6 +290,53 @@ export default function DestinationMaster() {
     );
   };
 
+  const handleAddClick = () => {
+    crud.closeForm();
+    navigate(addRoute);
+  };
+
+  const handleAddSave = (formData) => {
+    const success = crud.saveItem(formData);
+    if (success) {
+      navigate(baseRoute);
+    }
+  };
+
+  if (isAddPage) {
+    return (
+      <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
+        <Toast toast={crud.toast} />
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
+              Add New Destination
+            </h2>
+            <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
+              Fill in destination details.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate(baseRoute)}
+            className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[14px] 3xl:text-[16px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
+          >
+            Back to List
+          </button>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <DestinationForm
+            initialData={{ ...emptyForm }}
+            onSave={handleAddSave}
+            onCancel={() => navigate(baseRoute)}
+            isEditing={false}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
       <Toast toast={crud.toast} />
@@ -299,7 +351,7 @@ export default function DestinationMaster() {
           </p>
         </div>
         <button
-          onClick={crud.openAddForm}
+          onClick={handleAddClick}
           className="flex items-center gap-2 3xl:gap-3 rounded-lg bg-blue-600 px-5 py-2.5 3xl:px-6 3xl:py-3 5xl:px-8 5xl:py-4 text-[13px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-white shadow-sm hover:bg-blue-700 transition-all self-start active:scale-[0.98]"
         >
           <PlusIcon />
@@ -426,7 +478,7 @@ export default function DestinationMaster() {
       </div>
 
       <Modal
-        isOpen={crud.isFormOpen}
+        isOpen={crud.isFormOpen && !isAddPage}
         onClose={crud.closeForm}
         title={crud.editingItem ? "Edit Destination" : "Add New Destination"}
         subtitle={

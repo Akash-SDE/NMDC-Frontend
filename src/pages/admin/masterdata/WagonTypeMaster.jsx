@@ -10,6 +10,7 @@ import Pagination from "../../../components/shared/Pagination";
 import Modal from "../../../components/shared/Modal";
 import Toast from "../../../components/shared/Toast";
 import { PlusIcon } from "../../../components/icons";
+import { useRouter } from "../../../context/RouterContext";
 
 function EditIcon() {
   return (
@@ -242,7 +243,11 @@ function WagonTypeForm({ initialData, onSave, onCancel, isEditing }) {
 }
 
 export default function WagonTypeMaster() {
+  const { navigate, currentRoute } = useRouter();
   const crud = useCrud(wagonTypesData, "code");
+  const addRoute = "wagon-types-add";
+  const baseRoute = "wagon-types";
+  const isAddPage = currentRoute === addRoute;
   const [sortBy, setSortBy] = useState("code");
   const [sortOrder, setSortOrder] = useState("asc");
   const pageSize = wagonTypesMeta.pageSize;
@@ -294,6 +299,53 @@ export default function WagonTypeMaster() {
     );
   };
 
+  const handleAddClick = () => {
+    crud.closeForm();
+    navigate(addRoute);
+  };
+
+  const handleAddSave = (formData) => {
+    const success = crud.saveItem(formData);
+    if (success) {
+      navigate(baseRoute);
+    }
+  };
+
+  if (isAddPage) {
+    return (
+      <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
+        <Toast toast={crud.toast} />
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
+              Add New Wagon Type
+            </h2>
+            <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
+              Configure wagon type specifications.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate(baseRoute)}
+            className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[14px] 3xl:text-[16px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
+          >
+            Back to List
+          </button>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <WagonTypeForm
+            initialData={{ ...emptyForm }}
+            onSave={handleAddSave}
+            onCancel={() => navigate(baseRoute)}
+            isEditing={false}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
       <Toast toast={crud.toast} />
@@ -308,7 +360,7 @@ export default function WagonTypeMaster() {
           </p>
         </div>
         <button
-          onClick={crud.openAddForm}
+          onClick={handleAddClick}
           className="flex items-center gap-2 3xl:gap-3 rounded-lg bg-blue-600 px-5 py-2.5 3xl:px-6 3xl:py-3 5xl:px-8 5xl:py-4 text-[13px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-white shadow-sm hover:bg-blue-700 transition-all self-start active:scale-[0.98]"
         >
           <PlusIcon />
@@ -434,7 +486,7 @@ export default function WagonTypeMaster() {
       </div>
 
       <Modal
-        isOpen={crud.isFormOpen}
+        isOpen={crud.isFormOpen && !isAddPage}
         onClose={crud.closeForm}
         title={crud.editingItem ? "Edit Wagon Type" : "Add New Wagon Type"}
         subtitle={

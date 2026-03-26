@@ -73,6 +73,10 @@ function AppRoutes() {
         return <Dashboard />;
       case "rake-management":
         return <RakeManagementPage />;
+      case "rake-offering":
+        return <RakeManagementPage />;
+      case "rake-adjustment":
+        return <RakeManagementPage />;
       case "loading-management":
         return <LoadingManagementPage />;
       case "delay-management":
@@ -85,13 +89,21 @@ function AppRoutes() {
         return <AuditLogsPage />;
       case "master-data":
       case "wagon-types":
+      case "wagon-types-add":
       case "rail-sidings":
+      case "rail-sidings-add":
       case "ore-categories":
+      case "ore-categories-add":
       case "customer-master":
+      case "customer-master-add":
       case "destinations":
+      case "destinations-add":
       case "route-mapping":
+      case "route-mapping-add":
       case "stockpile-logs":
+      case "stockpile-logs-add":
       case "delay-categories":
+      case "delay-categories-add":
         return <MasterDataPage />;
       default:
         return <Dashboard />;

@@ -17,20 +17,28 @@ export default function MasterDataPage() {
     switch (activeTab) {
       case "master-data":
       case "rail-sidings":
+      case "rail-sidings-add":
         return <SidingMaster />;
       case "wagon-types":
+      case "wagon-types-add":
         return <WagonTypeMaster />;
       case "ore-categories":
+      case "ore-categories-add":
         return <OreTypeMaster />;
       case "destinations":
+      case "destinations-add":
         return <DestinationMaster />;
       case "route-mapping":
+      case "route-mapping-add":
         return <RouteMaster />;
       case "stockpile-logs":
+      case "stockpile-logs-add":
         return <StockpileMaster />;
       case "delay-categories":
+      case "delay-categories-add":
         return <DelayCategoryMaster />;
       case "customer-master":
+      case "customer-master-add":
         return <CustomerMaster />;
       default:
         return <SidingMaster />;
