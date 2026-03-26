@@ -40,7 +40,7 @@ export const stockpilesMeta = {
   title: "Stockpile Master",
   subtitle:
     "Manage and monitor stockpile inventory across all storage locations.",
-  addLabel: "Add New Stockpile",
+  addLabel: "Add Stockpile",
   searchPlaceholder: "Search Stockpile by name or code...",
   totalCount: 24,
   pageSize: 5,

@@ -58,7 +58,7 @@ export const sidingsMeta = {
   title: "Siding Master",
   subtitle:
     "Manage and monitor all railway siding assets across the regional infrastructure.",
-  addLabel: "Add New Siding",
+  addLabel: "Add Siding",
   searchPlaceholder: "Search by code, name or location...",
   totalCount: 28,
   pageSize: 4,

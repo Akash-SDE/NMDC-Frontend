@@ -44,7 +44,7 @@ export const customersData = [
 export const customersMeta = {
   title: "Customer Master",
   subtitle: "Manage customer records, contracts and contact information.",
-  addLabel: "Add New Customer",
+  addLabel: "Add Customer",
   searchPlaceholder: "Search Customer by name, code or location...",
   totalCount: 20,
   pageSize: 5,

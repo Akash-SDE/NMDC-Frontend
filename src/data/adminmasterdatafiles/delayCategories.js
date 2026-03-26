@@ -35,7 +35,7 @@ export const delayCategoriesMeta = {
   title: "Delay Category Master",
   subtitle:
     "Manage and categorize all delay types for dispatch operations tracking.",
-  addLabel: "Add New Category",
+  addLabel: "Add Delay Category",
   searchPlaceholder: "Search Delay Category...",
   totalCount: 24,
   pageSize: 5,

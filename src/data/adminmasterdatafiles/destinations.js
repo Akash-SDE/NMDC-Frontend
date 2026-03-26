@@ -39,7 +39,7 @@ export const destinationsData = [
 export const destinationsMeta = {
   title: "Destination Master",
   subtitle: "Manage and configure delivery locations across the network.",
-  addLabel: "Add New Destination",
+  addLabel: "Add Destination",
   searchPlaceholder: "Search Destination by name, code or state...",
   totalCount: 24,
   pageSize: 5,

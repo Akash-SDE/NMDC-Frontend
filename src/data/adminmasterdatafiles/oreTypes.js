@@ -61,7 +61,7 @@ export const oreTypesMeta = {
   title: "Ore Type Master",
   subtitle:
     "Configure and manage various grades and types of iron ore for dispatching.",
-  addLabel: "Add New Ore Type",
+  addLabel: "Add Ore Type",
   searchPlaceholder: "Search Ore Type by code or name...",
   totalCount: 12,
   pageSize: 5,

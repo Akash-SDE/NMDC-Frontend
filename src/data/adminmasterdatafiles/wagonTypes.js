@@ -39,7 +39,7 @@ export const wagonTypesData = [
 export const wagonTypesMeta = {
   title: "Wagon Type Master",
   subtitle: "Configure and manage all wagon types used in dispatch operations.",
-  addLabel: "Add New Wagon Type",
+  addLabel: "Add Wagon Type",
   searchPlaceholder: "Search Wagon Type by code or name...",
   totalCount: 18,
   pageSize: 5,

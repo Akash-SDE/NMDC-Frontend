@@ -69,7 +69,7 @@ export const routesMeta = {
   title: "Route Master",
   subtitle:
     "Manage and configure transport routes for iron ore dispatch operations.",
-  addLabel: "Add New Route",
+  addLabel: "Add Route",
   searchPlaceholder: "Search by Route Code or Name...",
   totalCount: 24,
   pageSize: 5,

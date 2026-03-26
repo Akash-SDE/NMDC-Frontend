@@ -7,22 +7,9 @@ import StockpileMaster from "./StockpileMaster";
 import DelayCategoryMaster from "./DelayCategoryMaster";
 import WagonTypeMaster from "./WagonTypeMaster";
 import CustomerMaster from "./CustomerMaster";
-import MasterDataTabs from "./MasterDataTabs";
-
-const masterDataRoutes = [
-  "master-data",
-  "rail-sidings",
-  "wagon-types",
-  "ore-categories",
-  "customer-master",
-  "destinations",
-  "route-mapping",
-  "stockpile-logs",
-  "delay-categories",
-];
 
 export default function MasterDataPage() {
-  const { currentRoute, navigate } = useRouter();
+  const { currentRoute } = useRouter();
 
   const activeTab = currentRoute === "master-data" ? "rail-sidings" : currentRoute;
 
@@ -50,20 +37,9 @@ export default function MasterDataPage() {
     }
   }
 
-  function handleTabChange(route) {
-    if (masterDataRoutes.includes(route)) {
-      navigate(route);
-    }
-  }
-
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7 xl:px-10 3xl:px-14 3xl:py-10 5xl:px-20 5xl:py-14">
-      <div className="space-y-4 3xl:space-y-6">
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-          <MasterDataTabs activeTab={activeTab} onTabChange={handleTabChange} />
-        </div>
-        <div>{renderContent()}</div>
-      </div>
+      {renderContent()}
     </div>
   );
 }

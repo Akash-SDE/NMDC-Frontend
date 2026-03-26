@@ -4,6 +4,7 @@ import Header from "./Header";
 
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <div className="flex min-h-screen w-full bg-[#f3f5f8]">
@@ -17,10 +18,19 @@ export default function Layout({ children }) {
       )}
 
       {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+      />
 
       {/* Main content area */}
-      <div className="flex flex-1 min-w-0 flex-col transition-[padding] duration-300 lg:pl-61.5">
+      <div
+        className={`flex flex-1 min-w-0 flex-col transition-[padding] duration-300 ${
+          sidebarCollapsed ? "lg:pl-20" : "lg:pl-61.5"
+        }`}
+      >
         <Header onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6">{children}</main>
       </div>

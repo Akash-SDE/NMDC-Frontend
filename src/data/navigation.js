@@ -27,6 +27,40 @@ const adminSidebarSections = [
         id: "master-data",
         label: "Master Data",
         icon: "masterData",
+        children: [
+          {
+            id: "rail-sidings",
+            label: "Rail Sidings",
+          },
+          {
+            id: "wagon-types",
+            label: "Wagon Types",
+          },
+          {
+            id: "ore-categories",
+            label: "Ore Categories",
+          },
+          {
+            id: "customer-master",
+            label: "Customers",
+          },
+          {
+            id: "destinations",
+            label: "Destinations",
+          },
+          {
+            id: "route-mapping",
+            label: "Routes",
+          },
+          {
+            id: "stockpile-logs",
+            label: "Stockpiles",
+          },
+          {
+            id: "delay-categories",
+            label: "Delay Categories",
+          },
+        ],
       },
       {
         id: "admin-users",
@@ -70,6 +104,6 @@ export function getSidebarSections(userRole) {
 
 export const signOutItem = {
   id: "sign-out",
-  label: "Log Out",
+  label: "Sign Out",
   icon: "signOut",
 };
