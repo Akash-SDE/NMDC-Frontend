@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import SuperadminSidebar from "./shared/SuperadminSidebar";
 import { useRouter } from "./../../context/RouterContext";
 import Breadcrumb from "./shared/Breadcrumb";
@@ -8,13 +8,30 @@ function SuperadminLayout({ children }) {
   const [profileOpen, setProfileOpen] = useState(false);
 
   const { user } = useRouter();
+  const initials = (user?.name || "Super Admin")
+    .split(" ")
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+
+  const roleLabel = (user?.role || "superadmin")
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((value) => value.charAt(0).toUpperCase() + value.slice(1))
+    .join(" ");
+
+  const normalizedUsername = (user?.username || "superadmin")
+    .toLowerCase()
+    .replace(/\s+/g, ".");
+  const email = user?.email || `${normalizedUsername}@nmdc.local`;
 
   return (
-    <div className="min-h-screen bg-slate-50 transition-colors">
+    <div className="flex min-h-screen w-full bg-[#f3f5f8]">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -26,15 +43,16 @@ function SuperadminLayout({ children }) {
       />
 
       {/* Main Content Area */}
-      <div className="lg:pl-64 3xl:lg:pl-80 5xl:lg:pl-96">
+      <div className="flex flex-1 min-w-0 flex-col lg:pl-64">
         {/* Header */}
-        <header className="h-16 3xl:h-20 5xl:h-24 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 3xl:px-10 5xl:px-14 sticky top-0 z-30 transition-colors">
+        <header className="sticky top-0 z-100 shadow-lg bg-[#F3F5F8] py-2">
+          <div className="flex h-15.5 items-center justify-between rounded-xl px-3 sm:px-4 lg:px-5">
           {/* Left Side - Mobile Menu + Breadcrumbs */}
-          <div className="flex items-center gap-4 3xl:gap-6">
+          <div className="flex items-center gap-4 pr-3">
             {/* Mobile Menu Button */}
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-slate-100"
+              className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-slate-100 transition-colors"
             >
               <svg
                 width="24"
@@ -51,52 +69,40 @@ function SuperadminLayout({ children }) {
               </svg>
             </button>
           </div>
-          <div className="flex-1 flex flex-col justify-start items-start px-4 overflow-hidden">
-            <h2 className="font-extrabold text-sm sm:text-base md:text-xl lg:text-2xl text-[#1D4ED8] text-center truncate">
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-[18px] font-extrabold leading-none text-[#1f4ec9] sm:text-[26px]">
               RAKE DISPATCH MANAGEMENT SYSTEM
             </h2>
-            <small className="text-lg text-black font-bold">
+            <p className="mt-1 truncate text-[14px] font-bold leading-none text-black sm:text-[22px]">
               BIOM Bacheli Complex, Dantewada(C.G.)
-            </small>
+            </p>
           </div>
           {/* Right Side */}
-          <div className="flex items-center gap-2 3xl:gap-3 5xl:gap-4">
+          <div className="flex items-center gap-2">
             {/* Profile */}
             <div className="relative">
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className="profile-trigger flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                className="profile-trigger flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-linear-to-br from-[#164ba5] to-[#0f2f67] text-[12px] font-bold text-white"
               >
-                <div className="w-8 h-8 3xl:w-10 3xl:h-10 5xl:w-12 5xl:h-12 bg-linear-to-br from-purple-500 to-purple-700 rounded-full flex items-center justify-center">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="text-white 3xl:w-5 3xl:h-5"
-                  >
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                  </svg>
-                </div>
+                {initials}
               </button>
 
               {/* Profile Dropdown */}
               {profileOpen && (
-                <div className="profile-dropdown absolute right-0 mt-2 w-56 3xl:w-64 5xl:w-72 bg-white rounded-xl shadow-lg border border-slate-200 py-2 z-50 animate-slideDown">
-                  <div className="px-4 py-3 3xl:px-5 3xl:py-4 border-b border-slate-200">
-                    <p className="text-[14px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-slate-800">
-                      {user?.name || "Super Admin"}
-                    </p>
-                    <p className="text-[12px] 3xl:text-[14px] 5xl:text-[18px] text-slate-500">
-                      {user?.username || "superadmin"}@system.com
-                    </p>
+                <div className="profile-dropdown absolute right-0 top-12 z-40 w-56 rounded-lg border border-slate-200 bg-white p-3 shadow-lg animate-slideDown">
+                  <div className="border-b border-slate-100 pb-2">
+                    <p className="text-xs font-semibold text-slate-800">{user?.name || "Super Admin"}</p>
+                    <p className="mt-1 text-xs font-medium text-slate-500">{roleLabel}</p>
                   </div>
+                  <p className="pt-2 text-xs text-slate-500">{email}</p>
                 </div>
               )}
             </div>
           </div>
+          </div>
         </header>
-        <main className="p-4 sm:p-6 lg:p-8 3xl:p-12 5xl:p-16 text-slate-900">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6 text-slate-900">
           <Breadcrumb />
           {children}
         </main>

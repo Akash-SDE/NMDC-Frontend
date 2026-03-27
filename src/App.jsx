@@ -4,6 +4,7 @@ import LoginPage from "./components/auth/LoginPage";
 import SignupPage from "./components/auth/SignupPage";
 
 import Dashboard from "./pages/admin/dashboard/Dashboard";
+import EDemandManagementPage from "./pages/admin/edemand/EDemandManagementPage";
 import MasterDataPage from "./pages/admin/masterdata/MasterDataPage";
 import RakeManagementPage from "./pages/admin/rakemanagement/RakeManagementPage";
 import LoadingManagementPage from "./pages/admin/loading/LoadingManagementPage";
@@ -70,6 +71,10 @@ function AppRoutes() {
     switch (currentRoute) {
       case "dashboard":
         return <Dashboard />;
+      case "e-demand":
+      case "manage-e-demand":
+      case "manage-e-permit":
+        return <EDemandManagementPage />;
       case "rake-management":
         return <RakeManagementPage />;
       case "rake-offering":
@@ -82,26 +87,35 @@ function AppRoutes() {
         return <DelayManagementPage />;
       case "admin-users":
       case "admin-users-add":
+      case "admin-users-edit":
         return <AdminUserManagementPage />;
       case "reports":
         return <ReportsPage />;
       case "master-data":
       case "wagon-types":
       case "wagon-types-add":
+      case "wagon-types-edit":
       case "rail-sidings":
       case "rail-sidings-add":
+      case "rail-sidings-edit":
       case "ore-categories":
       case "ore-categories-add":
+      case "ore-categories-edit":
       case "customer-master":
       case "customer-master-add":
+      case "customer-master-edit":
       case "destinations":
       case "destinations-add":
+      case "destinations-edit":
       case "route-mapping":
       case "route-mapping-add":
+      case "route-mapping-edit":
       case "stockpile-logs":
       case "stockpile-logs-add":
+      case "stockpile-logs-edit":
       case "delay-categories":
       case "delay-categories-add":
+      case "delay-categories-edit":
         return <MasterDataPage />;
       default:
         return <Dashboard />;

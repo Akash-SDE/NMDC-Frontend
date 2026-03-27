@@ -61,7 +61,7 @@ function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       {/* Desktop Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -75,7 +75,7 @@ function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
                     paginatedRoles.length > 0
                   }
                   onChange={toggleSelectAll}
-                  className="rounded border-slate-300 text-primary focus:ring-primary"
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-200"
                 />
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -112,13 +112,13 @@ function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
                     type="checkbox"
                     checked={selectedRoles.includes(role.id)}
                     onChange={() => toggleSelect(role.id)}
-                    className="rounded border-slate-300 text-primary focus:ring-primary"
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-200"
                   />
                 </td>
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className="text-primary text-lg" />
-                    <span className="font-medium text-primary">
+                    <ShieldCheck size={18} className="text-blue-600" />
+                    <span className="font-medium text-blue-600">
                       {role.name}
                     </span>
                   </div>
@@ -129,19 +129,19 @@ function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
                 <td className="px-4 py-4">
                   <button
                     onClick={() => onViewPrivileges?.(role)}
-                    className="text-sm text-primary hover:text-primary-dark hover:underline"
+                    className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
                   >
                     View privileges
                   </button>
                 </td>
                 <td className="px-4 py-4">
-                  <span className="text-sm text-primary">{role.createdBy}</span>
+                    <span className="text-sm text-blue-600">{role.createdBy}</span>
                 </td>
                 <td className="px-4 py-4 text-sm text-slate-600">
                   {role.createdOn}
                 </td>
                 <td className="px-4 py-4">
-                  <span className="text-sm text-primary">
+                    <span className="text-sm text-blue-600">
                     {role.modifiedBy}
                   </span>
                 </td>
@@ -152,17 +152,17 @@ function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => onEdit?.(role)}
-                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-primary transition-colors"
+                      className="p-1.5 hover:bg-blue-50 rounded-lg text-slate-500 hover:text-blue-600 transition-colors"
                       title="Edit"
                     >
-                      <Pencil className="text-lg" />
+                      <Pencil size={18} />
                     </button>
                     <button
                       onClick={() => onDelete?.(role)}
                       className="p-1.5 hover:bg-red-50 rounded-lg text-slate-500 hover:text-red-600 transition-colors"
                       title="Delete"
                     >
-                      <Trash2 className="text-lg" />
+                      <Trash2 size={18} />
                     </button>
                   </div>
                 </td>
@@ -176,7 +176,7 @@ function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
       <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
         <div className="flex items-center gap-2 text-sm text-slate-600">
           <span>Page Size:</span>
-          <select className="px-2 py-1 border border-slate-300 rounded-lg text-sm focus:ring-primary focus:border-primary">
+          <select className="px-2 py-1 border border-slate-300 rounded-lg text-sm focus:ring-blue-200 focus:border-blue-500">
             <option value="10">10</option>
             <option value="25">25</option>
             <option value="50">50</option>

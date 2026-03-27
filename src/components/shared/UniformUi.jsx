@@ -23,8 +23,8 @@ export function UniformSectionCard({ title, subtitle, children, rightSlot }) {
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-wide text-slate-800">{title}</h3>
-          {subtitle ? <p className="mt-1 text-xs text-slate-500">{subtitle}</p> : null}
+          <h3 className="text-[17px] font-extrabold tracking-tight text-[#102a57]">{title}</h3>
+          {subtitle ? <p className="mt-1 text-[12px] font-medium text-slate-500">{subtitle}</p> : null}
         </div>
         {rightSlot ? <div>{rightSlot}</div> : null}
       </div>
@@ -35,11 +35,11 @@ export function UniformSectionCard({ title, subtitle, children, rightSlot }) {
 
 export function UniformPageShell({ title, subtitle, tabs, activeTab, onTabChange, children }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-linear-to-b from-sky-50 to-white shadow-sm">
-      <div className="border-b border-slate-200 bg-white px-4 py-4 sm:px-5">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-100 bg-white px-4 py-4 sm:px-5">
         <div className="mb-3">
-          <h2 className="text-lg font-extrabold text-slate-800">{title}</h2>
-          {subtitle ? <p className="text-xs text-slate-500">{subtitle}</p> : null}
+          <h2 className="text-[24px] font-extrabold leading-tight tracking-tight text-[#102a57]">{title}</h2>
+          {subtitle ? <p className="text-[12px] font-medium text-slate-500">{subtitle}</p> : null}
         </div>
         {tabs && tabs.length > 0 ? (
           <div className="flex flex-wrap gap-2">

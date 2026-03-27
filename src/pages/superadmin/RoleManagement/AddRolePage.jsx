@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "./../../../context/RouterContext";
 import { PRIVILEGE_MODULES } from "../shared/superadminData";
 import PrivilegeGroup from "./PrivilegeGroup";
+import {
+  uniformInputClass,
+  uniformPrimaryButtonClass,
+  uniformSecondaryButtonClass,
+} from "../../../components/shared/UniformUi";
 
 function AddRolePage() {
   const { navigate, routeParams } = useRouter();
@@ -66,7 +71,7 @@ function AddRolePage() {
     <div className="w-full">
       <form onSubmit={handleSubmit}>
         {/* Basic Details Section */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm mb-6">
           <h2 className="text-lg font-bold text-slate-900 mb-6">
             {routeParams?.role ? "Edit Role Details" : "Basic Details"}
           </h2>
@@ -85,7 +90,7 @@ function AddRolePage() {
                   setFormData((prev) => ({ ...prev, name: e.target.value }))
                 }
                 placeholder="Enter role name (e.g., Admin, Manager, User)"
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                className={uniformInputClass}
               />
             </div>
 
@@ -97,7 +102,7 @@ function AddRolePage() {
               <select
                 value={selectedModule}
                 onChange={(e) => setSelectedModule(e.target.value)}
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
+                className={`${uniformInputClass} bg-white`}
               >
                 <option value="all">All Modules</option>
                 {PRIVILEGE_MODULES.map((module) => (
@@ -125,13 +130,13 @@ function AddRolePage() {
               }
               placeholder="Describe the role's purpose and responsibilities..."
               rows={3}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+              className={`${uniformInputClass} h-auto min-h-21 resize-none py-2.5`}
             />
           </div>
         </div>
 
         {/* Privileges Section */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm mb-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold text-slate-900">
               Privileges <span className="text-red-500">*</span>
@@ -140,21 +145,21 @@ function AddRolePage() {
               <button
                 type="button"
                 onClick={handleRefresh}
-                className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                className={uniformSecondaryButtonClass}
               >
                 Refresh
               </button>
               <button
                 type="button"
                 onClick={handleSelectAll}
-                className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                className={uniformSecondaryButtonClass}
               >
                 Select All
               </button>
               <button
                 type="button"
                 onClick={handleClearAll}
-                className="px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors border border-primary"
+                className="rounded-lg border border-blue-500 bg-white px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50"
               >
                 Clear All
               </button>
@@ -179,7 +184,7 @@ function AddRolePage() {
           <button
             type="button"
             onClick={() => navigate("sa-roles")}
-            className="px-6 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200"
+            className={uniformSecondaryButtonClass}
           >
             Cancel
           </button>
@@ -190,7 +195,7 @@ function AddRolePage() {
               !formData.description ||
               selectedPrivileges.length === 0
             }
-            className="px-6 py-2.5 text-sm font-medium text-dark bg-primary hover:bg-primary-dark rounded-xl transition-colors shadow-lg shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`${uniformPrimaryButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
           >
             {routeParams?.role ? "Update Role" : "Create Role"}
           </button>

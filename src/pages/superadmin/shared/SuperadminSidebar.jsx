@@ -3,19 +3,20 @@ import { Logo } from "./../../../components/icons";
 
 const navSections = [
   {
+    id: "management",
     title: "MANAGEMENT",
     items: [
       {
         id: "sa-roles",
         label: "Role Management",
         icon: "shield",
-        children: ["sa-add-role"],
+        matchRoutes: ["sa-roles", "sa-add-role"],
       },
       {
         id: "sa-users",
         label: "User Management",
         icon: "users",
-        children: ["sa-add-user"],
+        matchRoutes: ["sa-users", "sa-add-user", "sa-edit-user"],
       },
     ],
   },
@@ -63,44 +64,46 @@ function NavIcon({ type, className = "" }) {
 export default function SuperadminSidebar({ isOpen, onClose }) {
   const { currentRoute, navigate, logout } = useRouter();
 
-  function handleNavClick(routeId) {
-    navigate(routeId);
-    onClose();
+  function isItemActive(item) {
+    return (item.matchRoutes || [item.id]).includes(currentRoute);
   }
 
-  function isActive(item) {
-    return (
-      currentRoute === item.id ||
-      (item.children && item.children.includes(currentRoute))
-    );
+  function handleItemClick(item) {
+    navigate(item.id);
+    onClose?.();
+  }
+
+  function handleSignOut() {
+    logout();
+    onClose?.();
   }
 
   return (
     <aside
       className={`
-        fixed top-0 left-0 z-50 flex h-full w-64 3xl:w-80 5xl:w-96
-        flex-col bg-white border-r border-slate-200
+        fixed top-0 left-0 z-50 flex h-full w-64
+        flex-col bg-[#eef1f5] border-r border-slate-200 shadow-lg
         transition-transform duration-300 ease-in-out
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0
       `}
     >
       {/* Brand */}
-      <div className="flex items-center gap-3 px-5 py-5 3xl:px-7 3xl:py-7 border-b border-slate-200">
-        <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 items-center justify-center rounded-xl overflow-hidden bg-brand-50 shrink-0">
+      <div className="flex items-center gap-3 px-5 py-5 3xl:px-7 3xl:py-7 border-b border-slate-200 bg-[#eef1f5]">
+        <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 items-center justify-center rounded-none overflow-hidden bg-brand-50 shrink-0">
           <Logo size={40} className="3xl:w-12 3xl:h-12" />
         </div>
         <div className="min-w-0">
-          <h1 className="text-[15px] 3xl:text-[18px] font-bold text-slate-900 leading-tight truncate">
-            Super Admin
+          <h1 className="text-[15px] 3xl:text-[18px] font-bold text-slate-800 leading-tight truncate">
+            NMDC
           </h1>
-          <p className="text-[10px] 3xl:text-[12px] font-semibold tracking-[0.1em] text-slate-400 uppercase">
-            System Control
+          <p className="text-[10px] 3xl:text-[12px] font-semibold tracking-widest text-slate-500 uppercase">
+            Super Admin Panel
           </p>
         </div>
         <button
           onClick={onClose}
-          className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 lg:hidden"
+          className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 lg:hidden"
         >
           <svg
             width="20"
@@ -117,38 +120,44 @@ export default function SuperadminSidebar({ isOpen, onClose }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 3xl:px-4 3xl:py-5 space-y-1">
+      <nav
+        className="
+          flex-1 overflow-x-visible overflow-y-auto px-3 py-3
+          [&::-webkit-scrollbar]:w-0.75
+          [&::-webkit-scrollbar-thumb]:rounded-full
+          [&::-webkit-scrollbar-thumb]:bg-slate-300/60
+          [&::-webkit-scrollbar-track]:bg-transparent
+        "
+      >
         {navSections.map((section) => (
-          <div key={section.title}>
-            <p className="px-3 pt-4 pb-2 text-[10px] 3xl:text-[12px] font-bold tracking-[0.08em] text-slate-400 uppercase">
+          <div key={section.id} className="space-y-0.5">
+            <p className="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
               {section.title}
             </p>
             {section.items.map((item) => {
-              const active = isActive(item);
+              const active = isItemActive(item);
+
               return (
                 <button
                   key={item.id}
-                  onClick={() => handleNavClick(item.id)}
+                  onClick={() => handleItemClick(item)}
                   className={`
-                    group flex w-full items-center gap-3 rounded-lg px-3 py-2.5
-                    3xl:px-4 3xl:py-3 5xl:px-5 5xl:py-4
-                    text-[14px] 3xl:text-[16px] 5xl:text-[20px] font-medium transition-all duration-150
+                    relative flex w-full items-center gap-3 rounded-lg border-l-[3px] px-3 py-2.5
+                    text-[13px] font-medium transition-all duration-200 ease-out
                     ${
                       active
-                        ? "bg-purple-50 text-purple-700 shadow-sm"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"
+                        ? "border-blue-600 bg-white text-blue-700 shadow-sm"
+                        : "border-transparent text-slate-700 hover:bg-white"
                     }
                   `}
                 >
-                  <NavIcon
-                    type={item.icon}
-                    className={`flex-shrink-0 ${
-                      active
-                        ? "text-purple-600"
-                        : "text-slate-400 group-hover:text-slate-500"
-                    }`}
-                  />
-                  <span className="truncate">{item.label}</span>
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+                    <NavIcon
+                      type={item.icon}
+                      className={active ? "text-blue-600" : "text-slate-500"}
+                    />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
                 </button>
               );
             })}
@@ -157,11 +166,11 @@ export default function SuperadminSidebar({ isOpen, onClose }) {
       </nav>
 
       {/* Bottom actions */}
-      <div className="border-t border-slate-200 px-3 py-3 3xl:px-4 3xl:py-4 space-y-1">
+      <div className="shrink-0 space-y-0.5 border-t border-slate-200 bg-[#e8ecf2] px-3 py-3">
         {/* Sign Out */}
         <button
-          onClick={logout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 3xl:px-4 3xl:py-3 text-[14px] 3xl:text-[16px] font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+          onClick={handleSignOut}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-red-600 transition-colors duration-150 hover:bg-white"
         >
           <svg
             width="20"
@@ -170,7 +179,7 @@ export default function SuperadminSidebar({ isOpen, onClose }) {
             fill="none"
             stroke="currentColor"
             strokeWidth="1.8"
-            className="flex-shrink-0"
+            className="shrink-0"
           >
             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
             <polyline points="16 17 21 12 16 7" />

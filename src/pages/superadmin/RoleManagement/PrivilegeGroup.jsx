@@ -23,7 +23,7 @@ function PrivilegeGroup({ module, selectedPrivileges, onToggle }) {
           </span>
         </div>
         {selectedCount > 0 && (
-          <span className="px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
+          <span className="px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-600 rounded-full">
             {selectedCount} selected
           </span>
         )}
@@ -41,7 +41,7 @@ function PrivilegeGroup({ module, selectedPrivileges, onToggle }) {
                 type="checkbox"
                 checked={selectedPrivileges.includes(privilege.id)}
                 onChange={() => onToggle(privilege.id)}
-                className="mt-0.5 rounded border-slate-300 text-primary focus:ring-primary"
+                className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-200"
               />
               <div>
                 <p className="font-medium text-slate-900">{privilege.name}</p>

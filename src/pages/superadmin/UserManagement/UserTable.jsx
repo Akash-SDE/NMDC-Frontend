@@ -69,7 +69,7 @@ function UserTable({ users, onEdit, onDelete }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       {/* Desktop Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -83,7 +83,7 @@ function UserTable({ users, onEdit, onDelete }) {
                     paginatedUsers.length > 0
                   }
                   onChange={toggleSelectAll}
-                  className="rounded border-slate-300 text-primary focus:ring-primary"
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-200"
                 />
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -114,12 +114,12 @@ function UserTable({ users, onEdit, onDelete }) {
                     type="checkbox"
                     checked={selectedUsers.includes(user.id)}
                     onChange={() => toggleSelect(user.id)}
-                    className="rounded border-slate-300 text-primary focus:ring-primary"
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-200"
                   />
                 </td>
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-primary/10 text-primary rounded-full flex items-center justify-center font-semibold text-sm">
+                    <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center font-semibold text-sm">
                       {user.avatar}
                     </div>
                     <span className="font-medium text-slate-900">
@@ -131,7 +131,7 @@ function UserTable({ users, onEdit, onDelete }) {
                   {user.email}
                 </td>
                 <td className="px-4 py-4">
-                  <span className="text-sm font-medium text-primary">
+                  <span className="text-sm font-medium text-blue-600">
                     {user.role}
                   </span>
                 </td>
@@ -143,17 +143,17 @@ function UserTable({ users, onEdit, onDelete }) {
                   <div className="flex items-center justify-end gap-1">
                     <button
                       onClick={() => onEdit?.(user)}
-                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-primary transition-colors"
+                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-blue-600 transition-colors"
                       title="Edit"
                     >
-                      <Pencil className="text-lg" />
+                      <Pencil size={18} />
                     </button>
                     <button
                       onClick={() => onDelete?.(user)}
                       className="p-1.5 hover:bg-red-50 rounded-lg text-slate-500 hover:text-red-600 transition-colors"
                       title="Delete"
                     >
-                      <Trash2 className="text-lg" />
+                      <Trash2 size={18} />
                     </button>
                   </div>
                 </td>
@@ -167,7 +167,7 @@ function UserTable({ users, onEdit, onDelete }) {
       <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
         <div className="flex items-center gap-2 text-sm text-slate-600">
           <span>Page Size:</span>
-          <select className="px-2 py-1 border border-slate-300 rounded-lg text-sm focus:ring-primary focus:border-primary">
+          <select className="px-2 py-1 border border-slate-300 rounded-lg text-sm focus:ring-blue-200 focus:border-blue-500">
             <option value="10">10</option>
             <option value="25">25</option>
             <option value="50">50</option>
@@ -185,7 +185,7 @@ function UserTable({ users, onEdit, onDelete }) {
               disabled={currentPage === 1}
               className="p-1 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ChevronLeft className="text-lg" />
+              <ChevronLeft size={18} />
             </button>
             <span className="px-2">
               Page {currentPage} of {totalPages || 1}
@@ -195,7 +195,7 @@ function UserTable({ users, onEdit, onDelete }) {
               disabled={currentPage === totalPages || totalPages === 0}
               className="p-1 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ChevronRight className="text-lg" />
+              <ChevronRight size={18} />
             </button>
           </div>
         </div>

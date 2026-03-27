@@ -9,7 +9,6 @@ import {
   ChevronDown,
   Check,
 } from "lucide-react";
-import Modal from "../../../components/shared/Modal";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import {
   uniformInputClass,
@@ -60,7 +59,6 @@ const initialUsers = [
 
 const emptyForm = {
   fullName: "",
-  username: "",
   password: "",
   email: "",
   role: "Operator",
@@ -222,15 +220,16 @@ export default function AdminUserManagementPage() {
   const [sortBy, setSortBy] = useState("fullName");
   const [sortOrder, setSortOrder] = useState("asc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [message, setMessage] = useState("");
   const [statusConfirmUserId, setStatusConfirmUserId] = useState(null);
   const pageSize = 8;
   const addRoute = "admin-users-add";
+  const editRoute = "admin-users-edit";
   const baseRoute = "admin-users";
   const isAddPage = currentRoute === addRoute;
+  const isEditPage = currentRoute === editRoute;
 
   const filteredUsers = useMemo(() => {
     if (!searchQuery.trim()) return users;
@@ -271,7 +270,6 @@ export default function AdminUserManagementPage() {
     if (isAddPage) {
       setForm(emptyForm);
       setEditingId(null);
-      setIsFormOpen(false);
     }
   }, [isAddPage]);
 
@@ -319,41 +317,24 @@ export default function AdminUserManagementPage() {
     setEditingId(user.id);
     setForm({
       fullName: user.fullName,
-      username: user.username,
       password: "",
       email: user.email,
       role: user.role,
     });
-    setIsFormOpen(true);
+    navigate(editRoute);
   }
 
   function closeForm() {
-    setIsFormOpen(false);
     resetForm();
   }
 
   function validateForm() {
     if (form.fullName.trim().length < 2) return "Full name must be at least 2 characters.";
-    if (editingId && !/^[a-z0-9.]+$/i.test(form.username.trim())) {
-      return "Username must be alphanumeric (dot allowed).";
-    }
     if (!editingId && form.password.trim().length < 8) {
       return "Password must be at least 8 characters for new users.";
     }
     if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) {
       return "Please enter a valid email address.";
-    }
-
-    if (editingId) {
-      const duplicate = users.find(
-        (user) =>
-          user.username.toLowerCase() === form.username.trim().toLowerCase() &&
-          user.id !== editingId,
-      );
-
-      if (duplicate) {
-        return "Username already exists. Please choose another username.";
-      }
     }
 
     return "";
@@ -399,7 +380,6 @@ export default function AdminUserManagementPage() {
             ? {
                 ...user,
                 fullName: form.fullName.trim(),
-                username: form.username.trim(),
                 email: form.email.trim(),
                 role: form.role,
               }
@@ -408,6 +388,7 @@ export default function AdminUserManagementPage() {
       );
       setMessage("User updated successfully.");
       closeForm();
+      navigate(baseRoute);
       return;
     } else {
       const nextId = `USR-${1000 + users.length + 1}`;
@@ -430,6 +411,110 @@ export default function AdminUserManagementPage() {
       navigate(baseRoute);
       return;
     }
+  }
+
+  if (isEditPage && !editingId) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-600">Select a user from the list to edit.</p>
+          <button
+            type="button"
+            onClick={() => navigate(baseRoute)}
+            className="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
+          >
+            Back to User Management
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isEditPage) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Edit User</h1>
+            <p className="mt-1 text-slate-500">Update account details and permissions.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              closeForm();
+              navigate(baseRoute);
+            }}
+            className={uniformSecondaryButtonClass}
+          >
+            Back to User Management
+          </button>
+        </div>
+
+        {message ? (
+          <p className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
+            {message}
+          </p>
+        ) : null}
+
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wide text-slate-600">Full Name</label>
+                <input
+                  value={form.fullName}
+                  onChange={(event) => updateField("fullName", event.target.value)}
+                  placeholder="Enter full name"
+                  className={uniformInputClass}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wide text-slate-600">Role</label>
+                <RoleDropdown value={form.role} onChange={(value) => updateField("role", value)} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wide text-slate-600">Email</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(event) => updateField("email", event.target.value)}
+                  placeholder="user@nmdc.local"
+                  className={uniformInputClass}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wide text-slate-600">
+                  Password (Optional)
+                </label>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(event) => updateField("password", event.target.value)}
+                  placeholder="Leave blank to keep unchanged"
+                  className={uniformInputClass}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  closeForm();
+                  navigate(baseRoute);
+                }}
+                className={uniformSecondaryButtonClass}
+              >
+                Cancel
+              </button>
+              <button type="submit" className={uniformPrimaryButtonClass}>
+                Update User
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
   }
 
   function requestStatusToggle(userId) {
@@ -710,72 +795,6 @@ export default function AdminUserManagementPage() {
           </div>
         </div>
       </div>
-
-      <Modal
-        isOpen={isFormOpen}
-        onClose={closeForm}
-        title={editingId ? "Edit User" : "Add User"}
-        subtitle={editingId ? "Update account details and permissions." : "Create a new account with role and access state."}
-        size="lg"
-      >
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wide text-slate-600">Full Name</label>
-              <input
-                value={form.fullName}
-                onChange={(event) => updateField("fullName", event.target.value)}
-                placeholder="Enter full name"
-                className={uniformInputClass}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wide text-slate-600">Username</label>
-              <input
-                value={form.username}
-                onChange={(event) => updateField("username", event.target.value)}
-                placeholder="Unique username"
-                className={uniformInputClass}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wide text-slate-600">Email</label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(event) => updateField("email", event.target.value)}
-                placeholder="user@nmdc.local"
-                className={uniformInputClass}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wide text-slate-600">
-                {editingId ? "Password (Optional)" : "Password"}
-              </label>
-              <input
-                type="password"
-                value={form.password}
-                onChange={(event) => updateField("password", event.target.value)}
-                placeholder={editingId ? "Leave blank to keep unchanged" : "Minimum 8 characters"}
-                className={uniformInputClass}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wide text-slate-600">Role</label>
-              <RoleDropdown value={form.role} onChange={(value) => updateField("role", value)} />
-            </div>
-          </div>
-
-          <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
-            <button type="button" onClick={closeForm} className={uniformSecondaryButtonClass}>
-              Cancel
-            </button>
-            <button type="submit" className={uniformPrimaryButtonClass}>
-              {editingId ? "Update User" : "Save User"}
-            </button>
-          </div>
-        </form>
-      </Modal>
 
       <ConfirmDialog
         isOpen={Boolean(statusConfirmUser)}

@@ -12,21 +12,21 @@ const Breadcrumb = () => {
   }
 
   return (
-    <nav className="flex items-center mb-6 gap-2 3xl:gap-3 text-[13px] 3xl:text-[16px] 5xl:text-[20px]">
+    <nav className="mb-3 flex items-center gap-2 text-[12px] font-semibold text-slate-600 sm:text-[13px]">
       {crumbs.map((crumb, index) => (
         <div
           key={`${index}-${crumb.route}`}
-          className="flex items-center gap-2 3xl:gap-3"
+          className="flex items-center gap-2"
         >
           {index > 0 && (
             <svg
-              width="16"
-              height="16"
+              width="14"
+              height="14"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
-              className="text-slate-400 3xl:w-5 3xl:h-5"
+              className="text-slate-400"
             >
               <polyline points="9 18 15 12 9 6" />
             </svg>
@@ -34,27 +34,16 @@ const Breadcrumb = () => {
           {index === 0 ? (
             <button
               onClick={() => navigate(crumb.route)}
-              className="text-brand-600 hover:text-brand-700 transition-colors flex items-center gap-1"
+              className="text-blue-700 transition-colors hover:text-blue-800"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="3xl:w-5 3xl:h-5"
-              >
-                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
+              {crumb.label}
             </button>
           ) : index === crumbs.length - 1 ? (
-            <span className="text-slate-900 font-medium">{crumb.label}</span>
+            <span className="font-bold text-slate-800">{crumb.label}</span>
           ) : (
             <button
               onClick={() => navigate(crumb.route)}
-              className="text-brand-600 hover:text-brand-700 transition-colors"
+              className="text-blue-700 transition-colors hover:text-blue-800"
             >
               {crumb.label}
             </button>

@@ -9,6 +9,21 @@ const adminSidebarSections = [
         active: true,
       },
       {
+        id: "e-demand",
+        label: "E-Demand",
+        icon: "demand",
+        children: [
+          {
+            id: "manage-e-demand",
+            label: "Manage E-Demand",
+          },
+          {
+            id: "manage-e-permit",
+            label: "Manage E-Permit",
+          },
+        ],
+      },
+      {
         id: "rake-management",
         label: "Rake Management",
         icon: "rake",

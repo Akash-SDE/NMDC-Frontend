@@ -1,4 +1,4 @@
-﻿import ThemedSelect from "./ThemedSelect";
+import ThemedSelect from "./ThemedSelect";
 
 export default function FilterPanel({
   isOpen,
@@ -47,7 +47,7 @@ export default function FilterPanel({
   );
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-card p-5 3xl:p-7 5xl:p-9 shadow-md animate-slideDown">
+    <div className="rounded-xl border border-slate-200 bg-white p-5 3xl:p-7 5xl:p-9 shadow-md animate-slideDown">
       <div className="flex items-center justify-between mb-4 3xl:mb-6">
         <h4 className="text-[15px] 3xl:text-[18px] 5xl:text-[22px] font-bold text-slate-800">
           Filters
@@ -146,4 +146,5 @@ export default function FilterPanel({
     </div>
   );
 }
+
 

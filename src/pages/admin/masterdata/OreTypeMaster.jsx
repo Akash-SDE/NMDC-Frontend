@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import {
   oreTypesData,
   oreTypesMeta,
@@ -7,7 +7,6 @@ import useCrud from "../../../hooks/useCrud";
 import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
-import Modal from "../../../components/shared/Modal";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Toast from "../../../components/shared/Toast";
 import { PlusIcon } from "../../../components/icons";
@@ -237,8 +236,10 @@ export default function OreTypeMaster() {
   const { navigate, currentRoute } = useRouter();
   const crud = useCrud(oreTypesData, "code");
   const addRoute = "ore-categories-add";
+  const editRoute = "ore-categories-edit";
   const baseRoute = "ore-categories";
   const isAddPage = currentRoute === addRoute;
+  const isEditPage = currentRoute === editRoute;
   const [sortBy, setSortBy] = useState("code");
   const [sortOrder, setSortOrder] = useState("asc");
   const pageSize = oreTypesMeta.pageSize;
@@ -294,7 +295,40 @@ export default function OreTypeMaster() {
     }
   };
 
-  if (isAddPage) {
+  const handleEditClick = (item) => {
+    crud.openEditForm(item);
+    navigate(editRoute);
+  };
+
+  const handleEditSave = (formData) => {
+    const success = crud.saveItem(formData);
+    if (success) {
+      navigate(baseRoute);
+    }
+  };
+
+  if (isEditPage && !crud.editingItem) {
+    return (
+      <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
+        <Toast toast={crud.toast} />
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-[14px] 3xl:text-[16px] text-slate-600">
+            Select an ore type from the list to edit.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(baseRoute)}
+            className="mt-4 rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[14px] 3xl:text-[16px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
+          >
+            Back to List
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAddPage || isEditPage) {
+    const isEditing = isEditPage;
     return (
       <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
         <Toast toast={crud.toast} />
@@ -302,7 +336,7 @@ export default function OreTypeMaster() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
-              Add New Ore Type
+              {isEditing ? "Edit Ore Type" : "Add New Ore Type"}
             </h2>
             <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
               Fill in the ore type details.
@@ -310,7 +344,10 @@ export default function OreTypeMaster() {
           </div>
           <button
             type="button"
-            onClick={() => navigate(baseRoute)}
+            onClick={() => {
+              if (isEditing) crud.closeForm();
+              navigate(baseRoute);
+            }}
             className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[14px] 3xl:text-[16px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
           >
             Back to List
@@ -319,10 +356,13 @@ export default function OreTypeMaster() {
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <OreTypeForm
-            initialData={{ ...emptyForm }}
-            onSave={handleAddSave}
-            onCancel={() => navigate(baseRoute)}
-            isEditing={false}
+            initialData={isEditing ? crud.editingItem : { ...emptyForm }}
+            onSave={isEditing ? handleEditSave : handleAddSave}
+            onCancel={() => {
+              if (isEditing) crud.closeForm();
+              navigate(baseRoute);
+            }}
+            isEditing={isEditing}
           />
         </div>
       </div>
@@ -335,7 +375,7 @@ export default function OreTypeMaster() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800 italic">
+          <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
             {oreTypesMeta.title}
           </h2>
           <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
@@ -361,7 +401,7 @@ export default function OreTypeMaster() {
         showFilter={false}
       />
 
-      <div className="rounded-xl border border-border-subtle bg-card shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full" data-print-table>
             <thead>
@@ -428,7 +468,7 @@ export default function OreTypeMaster() {
                     <td className="px-5 py-4 3xl:px-6 3xl:py-5">
                       <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                         <button
-                          onClick={() => crud.openEditForm(ore)}
+                          onClick={() => handleEditClick(ore)}
                           disabled={ore.status === "inactive"}
                           className={`flex h-8 w-8 3xl:h-10 3xl:w-10 items-center justify-center rounded-lg transition-colors ${
                             ore.status === "inactive"
@@ -469,25 +509,6 @@ export default function OreTypeMaster() {
         </div>
       </div>
 
-      <Modal
-        isOpen={crud.isFormOpen && !isAddPage}
-        onClose={crud.closeForm}
-        title={crud.editingItem ? "Edit Ore Type" : "Add New Ore Type"}
-        subtitle={
-          crud.editingItem
-            ? `Editing ${crud.editingItem.code}`
-            : "Fill in the ore type details"
-        }
-        size="lg"
-      >
-        <OreTypeForm
-          initialData={crud.editingItem}
-          onSave={crud.saveItem}
-          onCancel={crud.closeForm}
-          isEditing={!!crud.editingItem}
-        />
-      </Modal>
-
       <ConfirmDialog
         isOpen={crud.isStatusToggleOpen}
         onClose={crud.closeStatusToggleConfirm}
@@ -505,6 +526,7 @@ export default function OreTypeMaster() {
 </div>
   );
 }
+
 
 
 

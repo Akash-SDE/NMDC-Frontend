@@ -18,7 +18,7 @@ function RoleStatsCards({ totalRoles, activeRoles, totalPrivileges }) {
       label: "Total Privileges",
       value: totalPrivileges,
       icon: LockOpen,
-      color: "text-primary",
+      color: "text-blue-600",
     },
   ];
 
@@ -27,7 +27,7 @@ function RoleStatsCards({ totalRoles, activeRoles, totalPrivileges }) {
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="bg-white rounded-xl border border-slate-200 p-5 flex items-center justify-between"
+          className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center justify-between"
         >
           <div>
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -38,7 +38,7 @@ function RoleStatsCards({ totalRoles, activeRoles, totalPrivileges }) {
             </p>
           </div>
           <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center">
-            <stat.icon className={`text-2xl ${stat.color}`} />
+            <stat.icon size={20} className={stat.color} />
           </div>
         </div>
       ))}

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   UniformFormField,
   UniformSectionCard,
@@ -562,7 +562,7 @@ export default function RakeManagementPage() {
           showFilter={false}
         />
 
-        <div className="rounded-xl border border-border-subtle bg-card shadow-sm overflow-hidden">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-280">
               <thead>
@@ -890,4 +890,5 @@ export default function RakeManagementPage() {
 
   return isOfferingPage ? renderOfferingTab() : renderAdjustmentPage();
 }
+
 

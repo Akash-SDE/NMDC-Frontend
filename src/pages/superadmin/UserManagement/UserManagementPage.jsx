@@ -3,6 +3,10 @@ import { Users, CheckCircle, Clock, Search, Plus } from "lucide-react";
 import { useRouter } from "./../../../context/RouterContext";
 import { MOCK_USERS } from "../shared/superadminData";
 import UserTable from "./UserTable";
+import {
+  uniformInputClass,
+  uniformPrimaryButtonClass,
+} from "../../../components/shared/UniformUi";
 
 function UserManagementPage() {
   const { navigate } = useRouter();
@@ -29,9 +33,9 @@ function UserManagementPage() {
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* Page Header */}
-      <div className="mb-6">
+      <div>
         <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
         <p className="text-slate-500 mt-1">
           Manage user accounts and role assignments
@@ -39,8 +43,8 @@ function UserManagementPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl border border-slate-200 p-5 flex items-center justify-between">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
               Total Users
@@ -54,7 +58,7 @@ function UserManagementPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-5 flex items-center justify-between">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
               Active Users
@@ -68,7 +72,7 @@ function UserManagementPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-5 flex items-center justify-between">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
               Pending Invites
@@ -84,7 +88,7 @@ function UserManagementPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Search */}
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl" />
@@ -93,16 +97,16 @@ function UserManagementPage() {
             placeholder="Search users..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+            className={`${uniformInputClass} pl-10 pr-4`}
           />
         </div>
 
         {/* Add User Button */}
         <button
           onClick={() => navigate("sa-add-user")}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-black rounded-xl font-medium text-sm hover:bg-primary-dark transition-colors shadow-lg shadow-primary/25"
+          className={`${uniformPrimaryButtonClass} flex items-center gap-2`}
         >
-          <Plus className="text-lg" />
+          <Plus size={18} />
           Add User
         </button>
       </div>

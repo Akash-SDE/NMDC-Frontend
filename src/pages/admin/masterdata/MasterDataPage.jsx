@@ -18,27 +18,35 @@ export default function MasterDataPage() {
       case "master-data":
       case "rail-sidings":
       case "rail-sidings-add":
+      case "rail-sidings-edit":
         return <SidingMaster />;
       case "wagon-types":
       case "wagon-types-add":
+      case "wagon-types-edit":
         return <WagonTypeMaster />;
       case "ore-categories":
       case "ore-categories-add":
+      case "ore-categories-edit":
         return <OreTypeMaster />;
       case "destinations":
       case "destinations-add":
+      case "destinations-edit":
         return <DestinationMaster />;
       case "route-mapping":
       case "route-mapping-add":
+      case "route-mapping-edit":
         return <RouteMaster />;
       case "stockpile-logs":
       case "stockpile-logs-add":
+      case "stockpile-logs-edit":
         return <StockpileMaster />;
       case "delay-categories":
       case "delay-categories-add":
+      case "delay-categories-edit":
         return <DelayCategoryMaster />;
       case "customer-master":
       case "customer-master-add":
+      case "customer-master-edit":
         return <CustomerMaster />;
       default:
         return <SidingMaster />;

@@ -90,23 +90,32 @@ export default function Sidebar({
   const { currentRoute, navigate, userRole, logout } = useRouter();
   const sidebarSections = getSidebarSections(userRole);
 
-  const [openSubmenus, setOpenSubmenus] = useState({ "master-data": true });
+  const [openSubmenus, setOpenSubmenus] = useState({
+    "master-data": true,
+    "e-demand": true,
+  });
   const [floatingSubmenu, setFloatingSubmenu] = useState(null);
   const floatingCloseTimerRef = useRef(null);
 
   /* ── derived data ── */
-  const masterDataRoutes = useMemo(() => {
-    const allItems = sidebarSections.flatMap((s) => s.items);
-    const md = allItems.find((i) => i.id === "master-data");
-    return (md?.children || []).map((c) => c.id);
+  const submenuParentByRoute = useMemo(() => {
+    const parentMap = {};
+    sidebarSections
+      .flatMap((section) => section.items)
+      .forEach((item) => {
+        (item.children || []).forEach((child) => {
+          parentMap[child.id] = item.id;
+        });
+      });
+    return parentMap;
   }, [sidebarSections]);
 
   /* ── effects ── */
   useEffect(() => {
-    if (masterDataRoutes.includes(currentRoute)) {
-      setOpenSubmenus((p) => ({ ...p, "master-data": true }));
-    }
-  }, [currentRoute, masterDataRoutes]);
+    const parentId = submenuParentByRoute[currentRoute];
+    if (!parentId) return;
+    setOpenSubmenus((p) => ({ ...p, [parentId]: true }));
+  }, [currentRoute, submenuParentByRoute]);
 
   useEffect(() => {
     return () => {

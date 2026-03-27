@@ -12,6 +12,11 @@ import {
 } from "lucide-react";
 import { useRouter } from "./../../../context/RouterContext";
 import { MOCK_ROLES } from "../shared/superadminData";
+import {
+  uniformInputClass,
+  uniformPrimaryButtonClass,
+  uniformSecondaryButtonClass,
+} from "../../../components/shared/UniformUi";
 
 function AddUserPage() {
   const { navigate, routeParams } = useRouter();
@@ -57,7 +62,7 @@ function AddUserPage() {
     <div className="">
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         {/* Profile Details Section */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
           <h2 className="text-lg font-bold text-slate-900 mb-6">
             {routeParams?.user ? "Edit User Details" : "Profile Details"}
           </h2>
@@ -77,7 +82,7 @@ function AddUserPage() {
                     value={formData.name}
                     onChange={(e) => handleChange("name", e.target.value)}
                     placeholder="Enter full name"
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className={`${uniformInputClass} pl-10 pr-4`}
                   />
                 </div>
               </div>
@@ -95,7 +100,7 @@ function AddUserPage() {
                     value={formData.email}
                     onChange={(e) => handleChange("email", e.target.value)}
                     placeholder="Enter email address"
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className={`${uniformInputClass} pl-10 pr-4`}
                   />
                 </div>
               </div>
@@ -113,7 +118,7 @@ function AddUserPage() {
                     value={formData.phone}
                     onChange={(e) => handleChange("phone", e.target.value)}
                     placeholder="Enter phone number"
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className={`${uniformInputClass} pl-10 pr-4`}
                   />
                 </div>
               </div>
@@ -129,7 +134,7 @@ function AddUserPage() {
                     required
                     value={formData.role}
                     onChange={(e) => handleChange("role", e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white appearance-none"
+                    className={`${uniformInputClass} appearance-none bg-white pl-10 pr-8`}
                   >
                     <option value="">Select a role</option>
                     {MOCK_ROLES.map((role) => (
@@ -147,7 +152,7 @@ function AddUserPage() {
 
         {/* Security Section */}
 
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
           <h2 className="text-lg font-bold text-slate-900 mb-6">
             {routeParams?.user ? "Security & Access" : "Security"}
           </h2>
@@ -166,7 +171,7 @@ function AddUserPage() {
                     value={formData.password}
                     onChange={(e) => handleChange("password", e.target.value)}
                     placeholder="Enter password"
-                    className="w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className={`${uniformInputClass} pl-10 pr-10`}
                   />
                   <button
                     type="button"
@@ -197,7 +202,7 @@ function AddUserPage() {
                       handleChange("confirmPassword", e.target.value)
                     }
                     placeholder="Confirm password"
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className={`${uniformInputClass} pl-10 pr-4`}
                   />
                 </div>
               </div>
@@ -214,13 +219,13 @@ function AddUserPage() {
           <button
             type="button"
             onClick={() => navigate("sa-users")}
-            className="px-6 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200"
+            className={uniformSecondaryButtonClass}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-6 py-2.5 text-sm font-medium text-black bg-primary hover:bg-primary-dark rounded-xl transition-colors shadow-lg shadow-primary/25"
+            className={uniformPrimaryButtonClass}
           >
             {routeParams?.user ? "Update User" : "Create User"}
           </button>
