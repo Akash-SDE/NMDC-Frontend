@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import {
   stockpilesData,
   stockpilesMeta,
@@ -8,9 +8,11 @@ import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
 import Modal from "../../../components/shared/Modal";
+import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Toast from "../../../components/shared/Toast";
 import { PlusIcon } from "../../../components/icons";
 import { useRouter } from "../../../context/RouterContext";
+import ThemedSelect from "../../../components/shared/ThemedSelect";
 
 function EditIcon() {
   return (
@@ -208,7 +210,7 @@ function StockpileForm({ initialData, onSave, onCancel, isEditing }) {
           <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5 3xl:mb-2">
             Ore Type
           </label>
-          <select
+          <ThemedSelect
             value={form.oreType}
             onChange={(e) => handleChange("oreType", e.target.value)}
             className={
@@ -220,14 +222,14 @@ function StockpileForm({ initialData, onSave, onCancel, isEditing }) {
                 {ot}
               </option>
             ))}
-          </select>
+          </ThemedSelect>
         </div>
         {!isEditing && (
           <div>
             <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5 3xl:mb-2">
               Status
             </label>
-            <select
+            <ThemedSelect
               value={form.status}
               onChange={(e) => handleChange("status", e.target.value)}
               className={
@@ -237,7 +239,7 @@ function StockpileForm({ initialData, onSave, onCancel, isEditing }) {
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
               <option value="maintenance">Maintenance</option>
-            </select>
+            </ThemedSelect>
           </div>
         )}
       </div>
@@ -493,7 +495,7 @@ export default function StockpileMaster() {
                           <EditIcon />
                         </button>
                         <button
-                          onClick={() => crud.toggleItemStatus(sp)}
+                          onClick={() => crud.openStatusToggleConfirm(sp)}
                           className={`flex h-8 w-8 3xl:h-10 3xl:w-10 items-center justify-center rounded-lg transition-colors ${
                             sp.status === "inactive"
                               ? "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"
@@ -541,9 +543,25 @@ export default function StockpileMaster() {
           isEditing={!!crud.editingItem}
         />
       </Modal>
+
+      <ConfirmDialog
+        isOpen={crud.isStatusToggleOpen}
+        onClose={crud.closeStatusToggleConfirm}
+        onConfirm={crud.confirmStatusToggle}
+        title={crud.statusToggleItem?.status === "inactive" ? "Enable Stockpile" : "Disable Stockpile"}
+        message={
+          crud.statusToggleItem?.status === "inactive"
+            ? "Are you sure you want to enable this stockpile?"
+            : "Are you sure you want to disable this stockpile?"
+        }
+        itemName={crud.statusToggleItem?.code || ""}
+        confirmLabel={crud.statusToggleItem?.status === "inactive" ? "Enable" : "Disable"}
+        variant={crud.statusToggleItem?.status === "inactive" ? "warning" : "danger"}
+      />
 </div>
   );
 }
+
 
 
 

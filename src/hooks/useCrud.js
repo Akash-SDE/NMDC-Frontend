@@ -8,6 +8,8 @@ export default function useCrud(initialData = [], keyField = "code") {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState(null);
+  const [isStatusToggleOpen, setIsStatusToggleOpen] = useState(false);
+  const [statusToggleItem, setStatusToggleItem] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState({});
   const [toast, setToast] = useState(null);
@@ -102,7 +104,7 @@ export default function useCrud(initialData = [], keyField = "code") {
     setCurrentPage((prev) => Math.max(1, prev));
   }, [deletingItem, keyField, showToast]);
 
-  const toggleItemStatus = useCallback(
+  const applyStatusToggle = useCallback(
     (targetItem) => {
       if (!targetItem) return;
 
@@ -123,6 +125,31 @@ export default function useCrud(initialData = [], keyField = "code") {
     },
     [keyField, showToast],
   );
+
+  const toggleItemStatus = useCallback(
+    (targetItem) => {
+      applyStatusToggle(targetItem);
+    },
+    [applyStatusToggle],
+  );
+
+  const openStatusToggleConfirm = useCallback((targetItem) => {
+    if (!targetItem) return;
+    setStatusToggleItem(targetItem);
+    setIsStatusToggleOpen(true);
+  }, []);
+
+  const closeStatusToggleConfirm = useCallback(() => {
+    setStatusToggleItem(null);
+    setIsStatusToggleOpen(false);
+  }, []);
+
+  const confirmStatusToggle = useCallback(() => {
+    if (!statusToggleItem) return;
+    applyStatusToggle(statusToggleItem);
+    setStatusToggleItem(null);
+    setIsStatusToggleOpen(false);
+  }, [applyStatusToggle, statusToggleItem]);
 
   const toggleFilter = useCallback(() => {
     setIsFilterOpen((prev) => !prev);
@@ -203,6 +230,11 @@ export default function useCrud(initialData = [], keyField = "code") {
     closeDeleteConfirm,
     deleteItem,
     toggleItemStatus,
+    isStatusToggleOpen,
+    statusToggleItem,
+    openStatusToggleConfirm,
+    closeStatusToggleConfirm,
+    confirmStatusToggle,
     isFilterOpen,
     toggleFilter,
     activeFilters,

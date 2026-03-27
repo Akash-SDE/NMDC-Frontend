@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   UniformFormField,
   UniformSectionCard,
@@ -10,6 +10,8 @@ import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import { useRouter } from "../../../context/RouterContext";
 import SearchBar from "../../../components/shared/SearchBar";
 import { PlusIcon } from "../../../components/icons";
+import ConfirmDialog from "../../../components/shared/ConfirmDialog";
+import ThemedSelect from "../../../components/shared/ThemedSelect";
 
 const wagonTypeOptions = ["BOXN", "BOXNHL", "BOBRN", "BCN"];
 const sidingOptions = ["Siding-A", "Siding-B", "Siding-C", "Siding-D"];
@@ -177,6 +179,7 @@ export default function RakeManagementPage() {
   const [adjustOfferFor, setAdjustOfferFor] = useState("");
   const [adjustOfferTime, setAdjustOfferTime] = useState("");
   const [adjustSearchRakeNumber, setAdjustSearchRakeNumber] = useState("");
+  const [statusConfirmRakeId, setStatusConfirmRakeId] = useState("");
 
   const inputClass = uniformInputClass;
   const isOfferingPage = currentRoute === "rake-offering";
@@ -185,6 +188,11 @@ export default function RakeManagementPage() {
   const selectedRake = useMemo(
     () => offeredRows.find((row) => row.rakeNumber === adjustRakeNumber),
     [adjustRakeNumber, offeredRows],
+  );
+
+  const statusConfirmRake = useMemo(
+    () => offeredRows.find((row) => row.rakeId === statusConfirmRakeId),
+    [offeredRows, statusConfirmRakeId],
   );
 
   const filteredRows = useMemo(() => {
@@ -312,6 +320,20 @@ export default function RakeManagementPage() {
     );
   }
 
+  function requestOfferedStatusToggle(rakeId) {
+    setStatusConfirmRakeId(rakeId);
+  }
+
+  function closeOfferedStatusDialog() {
+    setStatusConfirmRakeId("");
+  }
+
+  function confirmOfferedStatusToggle() {
+    if (!statusConfirmRakeId) return;
+    toggleOfferedStatus(statusConfirmRakeId);
+    setStatusConfirmRakeId("");
+  }
+
   function renderOfferingTab() {
     return (
       <div className="space-y-6 3xl:space-y-8 5xl:space-y-12 animate-fadeIn">
@@ -362,7 +384,7 @@ export default function RakeManagementPage() {
                   />
                 </UniformFormField>
                 <UniformFormField label="Wagon Type">
-                  <select
+                  <ThemedSelect
                     value={offeringForm.wagonType}
                     onChange={(event) => updateOffering("wagonType", event.target.value)}
                     className={inputClass}
@@ -373,7 +395,7 @@ export default function RakeManagementPage() {
                         {option}
                       </option>
                     ))}
-                  </select>
+                  </ThemedSelect>
                 </UniformFormField>
                 <UniformFormField label="No of Wagons">
                   <input
@@ -385,7 +407,7 @@ export default function RakeManagementPage() {
                   />
                 </UniformFormField>
                 <UniformFormField label="Siding">
-                  <select
+                  <ThemedSelect
                     value={offeringForm.siding}
                     onChange={(event) => updateOffering("siding", event.target.value)}
                     className={inputClass}
@@ -396,10 +418,10 @@ export default function RakeManagementPage() {
                         {option}
                       </option>
                     ))}
-                  </select>
+                  </ThemedSelect>
                 </UniformFormField>
                 <UniformFormField label="Route">
-                  <select
+                  <ThemedSelect
                     value={offeringForm.route}
                     onChange={(event) => updateOffering("route", event.target.value)}
                     className={inputClass}
@@ -410,7 +432,7 @@ export default function RakeManagementPage() {
                         {option}
                       </option>
                     ))}
-                  </select>
+                  </ThemedSelect>
                 </UniformFormField>
               </div>
             </div>
@@ -421,7 +443,7 @@ export default function RakeManagementPage() {
               </p>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <UniformFormField label="Ore Type">
-                  <select
+                  <ThemedSelect
                     value={offeringForm.oreType}
                     onChange={(event) => updateOffering("oreType", event.target.value)}
                     className={inputClass}
@@ -432,10 +454,10 @@ export default function RakeManagementPage() {
                         {option}
                       </option>
                     ))}
-                  </select>
+                  </ThemedSelect>
                 </UniformFormField>
                 <UniformFormField label="Customer">
-                  <select
+                  <ThemedSelect
                     value={offeringForm.customer}
                     onChange={(event) => updateOffering("customer", event.target.value)}
                     className={inputClass}
@@ -446,10 +468,10 @@ export default function RakeManagementPage() {
                         {option}
                       </option>
                     ))}
-                  </select>
+                  </ThemedSelect>
                 </UniformFormField>
                 <UniformFormField label="Destination">
-                  <select
+                  <ThemedSelect
                     value={offeringForm.destination}
                     onChange={(event) => updateOffering("destination", event.target.value)}
                     className={inputClass}
@@ -460,7 +482,7 @@ export default function RakeManagementPage() {
                         {option}
                       </option>
                     ))}
-                  </select>
+                  </ThemedSelect>
                 </UniformFormField>
                 <UniformFormField label="F-Note">
                   <input
@@ -689,7 +711,7 @@ export default function RakeManagementPage() {
 
                             <button
                               type="button"
-                              onClick={() => toggleOfferedStatus(row.rakeId)}
+                              onClick={() => requestOfferedStatusToggle(row.rakeId)}
                               className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
                                 row.isDisabled
                                   ? "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"
@@ -745,7 +767,7 @@ export default function RakeManagementPage() {
           <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,320px)_max-content] sm:items-end">
               <UniformFormField label="Rake Number">
-                <select
+                <ThemedSelect
                   value={adjustSearchRakeNumber}
                   onChange={(event) => setAdjustSearchRakeNumber(event.target.value)}
                   className={inputClass}
@@ -756,7 +778,7 @@ export default function RakeManagementPage() {
                       {row.rakeNumber}
                     </option>
                   ))}
-                </select>
+                </ThemedSelect>
               </UniformFormField>
               <button
                 type="button"
@@ -795,7 +817,7 @@ export default function RakeManagementPage() {
               <p className="mb-3 text-xs font-bold uppercase tracking-[0.08em] text-slate-600">Adjustment Details</p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <UniformFormField label="Offer For">
-                  <select
+                  <ThemedSelect
                     value={adjustOfferFor}
                     onChange={(event) => setAdjustOfferFor(event.target.value)}
                     className={inputClass}
@@ -806,7 +828,7 @@ export default function RakeManagementPage() {
                         {option}
                       </option>
                     ))}
-                  </select>
+                  </ThemedSelect>
                 </UniformFormField>
                 <UniformFormField label="Offer Time">
                   <input
@@ -845,8 +867,27 @@ export default function RakeManagementPage() {
   }
 
   if (!isOfferingPage && !isAdjustmentPage) {
-    return renderOfferedTab();
+    return (
+      <>
+        {renderOfferedTab()}
+        <ConfirmDialog
+          isOpen={Boolean(statusConfirmRake)}
+          onClose={closeOfferedStatusDialog}
+          onConfirm={confirmOfferedStatusToggle}
+          title={statusConfirmRake?.isDisabled ? "Enable Rake" : "Disable Rake"}
+          message={
+            statusConfirmRake?.isDisabled
+              ? "Are you sure you want to enable this rake?"
+              : "Are you sure you want to disable this rake?"
+          }
+          itemName={statusConfirmRake?.rakeNumber || ""}
+          confirmLabel={statusConfirmRake?.isDisabled ? "Enable" : "Disable"}
+          variant={statusConfirmRake?.isDisabled ? "warning" : "danger"}
+        />
+      </>
+    );
   }
 
   return isOfferingPage ? renderOfferingTab() : renderAdjustmentPage();
 }
+

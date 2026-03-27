@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import {
   destinationsData,
   destinationsMeta,
@@ -8,9 +8,11 @@ import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
 import Modal from "../../../components/shared/Modal";
+import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Toast from "../../../components/shared/Toast";
 import { PlusIcon } from "../../../components/icons";
 import { useRouter } from "../../../context/RouterContext";
+import ThemedSelect from "../../../components/shared/ThemedSelect";
 
 function EditIcon() {
   return (
@@ -209,7 +211,7 @@ function DestinationForm({ initialData, onSave, onCancel, isEditing }) {
             <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5">
               Status
             </label>
-            <select
+            <ThemedSelect
               value={form.status}
               onChange={(e) => handleChange("status", e.target.value)}
               className={
@@ -218,7 +220,7 @@ function DestinationForm({ initialData, onSave, onCancel, isEditing }) {
             >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
-            </select>
+            </ThemedSelect>
           </div>
         )}
       </div>
@@ -448,7 +450,7 @@ export default function DestinationMaster() {
                           <EditIcon />
                         </button>
                         <button
-                          onClick={() => crud.toggleItemStatus(dest)}
+                          onClick={() => crud.openStatusToggleConfirm(dest)}
                           className={`flex h-8 w-8 3xl:h-10 3xl:w-10 items-center justify-center rounded-lg transition-colors ${
                             dest.status === "inactive"
                               ? "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"
@@ -495,9 +497,25 @@ export default function DestinationMaster() {
           isEditing={!!crud.editingItem}
         />
       </Modal>
+
+      <ConfirmDialog
+        isOpen={crud.isStatusToggleOpen}
+        onClose={crud.closeStatusToggleConfirm}
+        onConfirm={crud.confirmStatusToggle}
+        title={crud.statusToggleItem?.status === "inactive" ? "Enable Destination" : "Disable Destination"}
+        message={
+          crud.statusToggleItem?.status === "inactive"
+            ? "Are you sure you want to enable this destination?"
+            : "Are you sure you want to disable this destination?"
+        }
+        itemName={crud.statusToggleItem?.code || ""}
+        confirmLabel={crud.statusToggleItem?.status === "inactive" ? "Enable" : "Disable"}
+        variant={crud.statusToggleItem?.status === "inactive" ? "warning" : "danger"}
+      />
 </div>
   );
 }
+
 
 
 

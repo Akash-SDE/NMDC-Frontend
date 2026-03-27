@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import {
   routesData,
   routesMeta,
@@ -8,9 +8,11 @@ import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
 import Modal from "../../../components/shared/Modal";
+import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Toast from "../../../components/shared/Toast";
 import { PlusIcon } from "../../../components/icons";
 import { useRouter } from "../../../context/RouterContext";
+import ThemedSelect from "../../../components/shared/ThemedSelect";
 
 function EditIcon() {
   return (
@@ -229,7 +231,7 @@ function RouteForm({ initialData, onSave, onCancel, isEditing }) {
           <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5">
             Status
           </label>
-          <select
+          <ThemedSelect
             value={form.status}
             onChange={(e) => handleChange("status", e.target.value)}
             className={inputClass("status") + " appearance-none cursor-pointer"}
@@ -237,7 +239,7 @@ function RouteForm({ initialData, onSave, onCancel, isEditing }) {
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
             <option value="maintenance">Maintenance</option>
-          </select>
+          </ThemedSelect>
         </div>
       )}
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
@@ -481,7 +483,7 @@ export default function RouteMaster() {
                           <EditIcon />
                         </button>
                         <button
-                          onClick={() => crud.toggleItemStatus(route)}
+                          onClick={() => crud.openStatusToggleConfirm(route)}
                           className={`flex h-8 w-8 3xl:h-10 3xl:w-10 items-center justify-center rounded-lg transition-colors ${
                             route.status === "inactive"
                               ? "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"
@@ -528,9 +530,25 @@ export default function RouteMaster() {
           isEditing={!!crud.editingItem}
         />
       </Modal>
+
+      <ConfirmDialog
+        isOpen={crud.isStatusToggleOpen}
+        onClose={crud.closeStatusToggleConfirm}
+        onConfirm={crud.confirmStatusToggle}
+        title={crud.statusToggleItem?.status === "inactive" ? "Enable Route" : "Disable Route"}
+        message={
+          crud.statusToggleItem?.status === "inactive"
+            ? "Are you sure you want to enable this route?"
+            : "Are you sure you want to disable this route?"
+        }
+        itemName={crud.statusToggleItem?.code || ""}
+        confirmLabel={crud.statusToggleItem?.status === "inactive" ? "Enable" : "Disable"}
+        variant={crud.statusToggleItem?.status === "inactive" ? "warning" : "danger"}
+      />
 </div>
   );
 }
+
 
 
 

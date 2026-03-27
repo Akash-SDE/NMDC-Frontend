@@ -1,3 +1,5 @@
+﻿import ThemedSelect from "./ThemedSelect";
+
 export default function FilterPanel({
   isOpen,
   onClose,
@@ -69,7 +71,7 @@ export default function FilterPanel({
       </div>
 
       <div className="flex flex-wrap gap-6 3xl:gap-8 5xl:gap-10">
-        {/* Status filter — always shown */}
+        {/* Status filter â€” always shown */}
         <div>
           <label className="block text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase mb-2 3xl:mb-3">
             Status
@@ -104,7 +106,7 @@ export default function FilterPanel({
             <label className="block text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase mb-2 3xl:mb-3">
               {field.label}
             </label>
-            <select
+            <ThemedSelect
               value={activeFilters[field.key] || ""}
               onChange={(e) => handleFieldChange(field.key, e.target.value)}
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] text-slate-700 outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100 3xl:px-4 3xl:py-2 3xl:text-[15px] 5xl:px-6 5xl:py-3 5xl:text-[19px]"
@@ -115,7 +117,7 @@ export default function FilterPanel({
                   {opt}
                 </option>
               ))}
-            </select>
+            </ThemedSelect>
           </div>
         ))}
       </div>
@@ -144,3 +146,4 @@ export default function FilterPanel({
     </div>
   );
 }
+

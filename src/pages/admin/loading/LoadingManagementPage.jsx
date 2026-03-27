@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import {
   UniformFormField,
   UniformPageShell,
@@ -9,6 +9,8 @@ import {
 } from "../../../components/shared/UniformUi";
 import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
+import ConfirmDialog from "../../../components/shared/ConfirmDialog";
+import ThemedSelect from "../../../components/shared/ThemedSelect";
 
 const initialRakes = [
   {
@@ -166,10 +168,16 @@ export default function LoadingManagementPage() {
   const [sortOrder, setSortOrder] = useState("asc");
   const [form, setForm] = useState(initialForm);
   const [message, setMessage] = useState("");
+  const [statusConfirmRakeId, setStatusConfirmRakeId] = useState("");
 
   const activeRake = useMemo(
     () => rows.find((item) => item.rakeId === activeRakeId),
     [rows, activeRakeId],
+  );
+
+  const statusConfirmRake = useMemo(
+    () => rows.find((item) => item.rakeId === statusConfirmRakeId),
+    [rows, statusConfirmRakeId],
   );
 
   const loadingDuration = useMemo(
@@ -231,6 +239,20 @@ export default function LoadingManagementPage() {
           : item,
       ),
     );
+  }
+
+  function requestRakeStatusToggle(rakeId) {
+    setStatusConfirmRakeId(rakeId);
+  }
+
+  function closeRakeStatusDialog() {
+    setStatusConfirmRakeId("");
+  }
+
+  function confirmRakeStatusToggle() {
+    if (!statusConfirmRakeId) return;
+    toggleRakeStatus(statusConfirmRakeId);
+    setStatusConfirmRakeId("");
   }
 
   function updateField(field, value) {
@@ -371,7 +393,7 @@ export default function LoadingManagementPage() {
 
                           <button
                             type="button"
-                            onClick={() => toggleRakeStatus(row.rakeId)}
+                            onClick={() => requestRakeStatusToggle(row.rakeId)}
                             className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
                               row.isDisabled
                                 ? "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"
@@ -425,14 +447,14 @@ export default function LoadingManagementPage() {
               </UniformFormField>
 
               <UniformFormField label="Wagon Sick?">
-                <select
+                <ThemedSelect
                   value={form.wagonSick}
                   onChange={(event) => updateField("wagonSick", event.target.value)}
                   className={inputClass}
                 >
                   <option>No</option>
                   <option>Yes</option>
-                </select>
+                </ThemedSelect>
               </UniformFormField>
 
               <UniformFormField label="Tonnage">
@@ -491,7 +513,23 @@ export default function LoadingManagementPage() {
             </form>
           </UniformSectionCard>
         ) : null}
+
+        <ConfirmDialog
+          isOpen={Boolean(statusConfirmRake)}
+          onClose={closeRakeStatusDialog}
+          onConfirm={confirmRakeStatusToggle}
+          title={statusConfirmRake?.isDisabled ? "Enable Loading Row" : "Disable Loading Row"}
+          message={
+            statusConfirmRake?.isDisabled
+              ? "Are you sure you want to enable this loading row?"
+              : "Are you sure you want to disable this loading row?"
+          }
+          itemName={statusConfirmRake?.rakeNumber || ""}
+          confirmLabel={statusConfirmRake?.isDisabled ? "Enable" : "Disable"}
+          variant={statusConfirmRake?.isDisabled ? "warning" : "danger"}
+        />
       </div>
     </UniformPageShell>
   );
 }
+

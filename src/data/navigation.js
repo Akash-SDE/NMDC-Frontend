@@ -72,11 +72,6 @@ const adminSidebarSections = [
         label: "Reports",
         icon: "reports",
       },
-      {
-        id: "audit-logs",
-        label: "Audit Logs",
-        icon: "config",
-      },
     ],
   },
 ];

@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
 
 const RouterContext = createContext(null);
+const AUTH_STORAGE_KEY = "nmdc_auth_session";
 
 export const USER_ROLES = {
   ADMIN: "admin",
@@ -8,12 +9,70 @@ export const USER_ROLES = {
   SUPERADMIN: "superadmin",
 };
 
+function getDefaultRouteForRole(role) {
+  if (role === USER_ROLES.SUPERADMIN) return "sa-roles";
+  if (role === USER_ROLES.OPERATOR) return "operator-operations";
+  return "dashboard";
+}
+
+function readStoredSession() {
+  try {
+    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.isAuthenticated || !parsed?.userRole) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredSession(session) {
+  try {
+    window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+  } catch {
+    // Ignore storage failures and continue with in-memory state.
+  }
+}
+
+function clearStoredSession() {
+  try {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures and continue with in-memory state.
+  }
+}
+
 export function RouterProvider({ children }) {
   const [currentRoute, setCurrentRoute] = useState("login");
   const [routeParams, setRouteParams] = useState({});
   const [userRole, setUserRole] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const storedSession = readStoredSession();
+    if (!storedSession) return;
+
+    setUserRole(storedSession.userRole);
+    setIsAuthenticated(true);
+    setUser(storedSession.user || null);
+    setCurrentRoute(
+      storedSession.lastRoute || getDefaultRouteForRole(storedSession.userRole),
+    );
+    setRouteParams({});
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !userRole || !user) return;
+
+    writeStoredSession({
+      isAuthenticated: true,
+      userRole,
+      user,
+      lastRoute: currentRoute,
+    });
+  }, [isAuthenticated, userRole, user, currentRoute]);
 
   const navigate = useCallback((route, params = {}) => {
     setCurrentRoute(route);
@@ -23,9 +82,7 @@ export function RouterProvider({ children }) {
 
   const login = useCallback(
     (role, userData = {}) => {
-      setUserRole(role);
-      setIsAuthenticated(true);
-      setUser({
+      const resolvedUser = {
         name:
           userData.name ||
           (role === USER_ROLES.SUPERADMIN ? "Super Admin" : "Harish Kumar"),
@@ -34,15 +91,22 @@ export function RouterProvider({ children }) {
           (role === USER_ROLES.SUPERADMIN ? "superadmin" : "admin"),
         role: role,
         ...userData,
+      };
+
+      const targetRoute = getDefaultRouteForRole(role);
+
+      setUserRole(role);
+      setIsAuthenticated(true);
+      setUser(resolvedUser);
+
+      writeStoredSession({
+        isAuthenticated: true,
+        userRole: role,
+        user: resolvedUser,
+        lastRoute: targetRoute,
       });
 
-      if (role === USER_ROLES.SUPERADMIN) {
-        navigate("sa-roles");
-      } else if (role === USER_ROLES.OPERATOR) {
-        navigate("operator-operations");
-      } else {
-        navigate("dashboard");
-      }
+      navigate(targetRoute);
     },
     [navigate],
   );
@@ -52,6 +116,7 @@ export function RouterProvider({ children }) {
     setIsAuthenticated(false);
     setUser(null);
     setRouteParams({});
+    clearStoredSession();
     navigate("login");
   }, [navigate]);
 

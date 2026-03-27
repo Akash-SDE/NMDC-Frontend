@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import {
   UniformFormField,
   UniformPageShell,
@@ -8,6 +8,8 @@ import {
 } from "../../../components/shared/UniformUi";
 import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
+import ConfirmDialog from "../../../components/shared/ConfirmDialog";
+import ThemedSelect from "../../../components/shared/ThemedSelect";
 
 const categories = [
   "Mechanical",
@@ -145,10 +147,16 @@ export default function DelayManagementPage() {
     reason: "",
   });
   const [message, setMessage] = useState("");
+  const [statusConfirmLogId, setStatusConfirmLogId] = useState(null);
 
   const previewDuration = useMemo(
     () => toDurationLabel(getDurationMinutes(form.startTime, form.endTime)),
     [form.startTime, form.endTime],
+  );
+
+  const statusConfirmLog = useMemo(
+    () => logs.find((item) => item.id === statusConfirmLogId),
+    [logs, statusConfirmLogId],
   );
 
   const summary = useMemo(() => {
@@ -225,6 +233,20 @@ export default function DelayManagementPage() {
           : item,
       ),
     );
+  }
+
+  function requestLogStatusToggle(logId) {
+    setStatusConfirmLogId(logId);
+  }
+
+  function closeLogStatusDialog() {
+    setStatusConfirmLogId(null);
+  }
+
+  function confirmLogStatusToggle() {
+    if (statusConfirmLogId === null) return;
+    toggleLogStatus(statusConfirmLogId);
+    setStatusConfirmLogId(null);
   }
 
   function handleAdd(event) {
@@ -319,7 +341,7 @@ export default function DelayManagementPage() {
 
               <form onSubmit={handleAdd} className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <UniformFormField label="Delay Category">
-                  <select
+                  <ThemedSelect
                     value={form.category}
                     onChange={(event) => updateField("category", event.target.value)}
                     className={inputClass}
@@ -330,7 +352,7 @@ export default function DelayManagementPage() {
                         {item}
                       </option>
                     ))}
-                  </select>
+                  </ThemedSelect>
                 </UniformFormField>
 
                 <UniformFormField label="Start Time">
@@ -464,7 +486,7 @@ export default function DelayManagementPage() {
 
                             <button
                               type="button"
-                              onClick={() => toggleLogStatus(row.id)}
+                              onClick={() => requestLogStatusToggle(row.id)}
                               className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
                                 row.isDisabled
                                   ? "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"
@@ -491,7 +513,23 @@ export default function DelayManagementPage() {
             </div>
           </UniformSectionCard>
         ) : null}
+
+        <ConfirmDialog
+          isOpen={Boolean(statusConfirmLog)}
+          onClose={closeLogStatusDialog}
+          onConfirm={confirmLogStatusToggle}
+          title={statusConfirmLog?.isDisabled ? "Enable Delay Log" : "Disable Delay Log"}
+          message={
+            statusConfirmLog?.isDisabled
+              ? "Are you sure you want to enable this delay log?"
+              : "Are you sure you want to disable this delay log?"
+          }
+          itemName={statusConfirmLog ? `${statusConfirmLog.category} - ${statusConfirmLog.id}` : ""}
+          confirmLabel={statusConfirmLog?.isDisabled ? "Enable" : "Disable"}
+          variant={statusConfirmLog?.isDisabled ? "warning" : "danger"}
+        />
       </div>
     </UniformPageShell>
   );
 }
+
