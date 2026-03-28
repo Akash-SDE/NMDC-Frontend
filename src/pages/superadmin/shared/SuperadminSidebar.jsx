@@ -90,8 +90,8 @@ export default function SuperadminSidebar({ isOpen, onClose }) {
     >
       {/* Brand */}
       <div className="flex items-center gap-3 px-5 py-5 3xl:px-7 3xl:py-7 border-b border-slate-200 bg-[#eef1f5]">
-        <div className="flex h-10 w-10 3xl:h-12 3xl:w-12 items-center justify-center rounded-none overflow-hidden bg-brand-50 shrink-0">
-          <Logo size={40} className="3xl:w-12 3xl:h-12" />
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg shadow-sm">
+          <Logo size={34} className="h-full w-full object-contain" />
         </div>
         <div className="min-w-0">
           <h1 className="text-[15px] 3xl:text-[18px] font-bold text-slate-800 leading-tight truncate">

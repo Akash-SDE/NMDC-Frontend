@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
+import { getWagonTypesMasterData } from "../../../data/adminmasterdatafiles/wagonTypes";
 
 const baseMetricCards = [
   {
@@ -50,19 +51,44 @@ const transactionSegmentMeta = [
   { key: "completed", label: "COMPLETED", color: "bg-[#1664bc]" },
 ];
 
-const hourlySeries = [
-  { hour: "08:00", lump: 55, fines: 42 },
-  { hour: "10:00", lump: 68, fines: 47 },
-  { hour: "12:00", lump: 74, fines: 60 },
-  { hour: "14:00", lump: 66, fines: 58 },
-  { hour: "16:00", lump: 61, fines: 46 },
-  { hour: "18:00", lump: 49, fines: 39 },
+const baseHourlySeries = [
+  { hour: "08:00", lump: 55, fines: 42, pellet: 28, rom: 22 },
+  { hour: "09:00", lump: 62, fines: 49, pellet: 31, rom: 24 },
+  { hour: "10:00", lump: 68, fines: 47, pellet: 34, rom: 26 },
+  { hour: "11:00", lump: 71, fines: 56, pellet: 37, rom: 29 },
+  { hour: "12:00", lump: 74, fines: 60, pellet: 39, rom: 30 },
+  { hour: "13:00", lump: 70, fines: 57, pellet: 36, rom: 28 },
+  { hour: "14:00", lump: 66, fines: 58, pellet: 35, rom: 27 },
+  { hour: "15:00", lump: 63, fines: 52, pellet: 33, rom: 25 },
+  { hour: "16:00", lump: 61, fines: 46, pellet: 31, rom: 24 },
+  { hour: "17:00", lump: 56, fines: 43, pellet: 29, rom: 22 },
+  { hour: "18:00", lump: 49, fines: 39, pellet: 26, rom: 20 },
 ];
 
-const hourlySeriesMeta = [
+const baseHourlySeriesMeta = [
   { key: "lump", label: "LUMP WAGONS", color: "bg-[#1f3d72]" },
   { key: "fines", label: "FINES WAGONS", color: "bg-[#4787e0]" },
+  { key: "pellet", label: "PELLET WAGONS", color: "bg-[#16a34a]" },
+  { key: "rom", label: "ROM WAGONS", color: "bg-[#d97706]" },
 ];
+
+const extraWagonSeriesColors = [
+  "bg-[#7c3aed]",
+  "bg-[#0f766e]",
+  "bg-[#c026d3]",
+  "bg-[#ea580c]",
+  "bg-[#0891b2]",
+  "bg-[#be123c]",
+  "bg-[#4f46e5]",
+  "bg-[#166534]",
+];
+
+function toWagonSeriesKey(code) {
+  return `wagon_${String(code || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")}`;
+}
 
 const activeRakeRows = [
   {
@@ -333,6 +359,41 @@ function SegmentBar({ row, activeSegments, onHoverChange }) {
 }
 
 export default function Dashboard() {
+  const storedWagonTypes = useMemo(() => {
+    return getWagonTypesMasterData().filter(
+      (item) => item?.code && item?.name && item.status !== "inactive",
+    );
+  }, []);
+
+  const hourlySeriesMeta = useMemo(() => {
+    const baseSeries = [...baseHourlySeriesMeta];
+    const existingKeys = new Set(baseSeries.map((series) => series.key));
+
+    const dynamicSeries = storedWagonTypes
+      .map((item, index) => ({
+        key: toWagonSeriesKey(item.code),
+        label: `${item.name.toUpperCase()} WAGONS`,
+        color: extraWagonSeriesColors[index % extraWagonSeriesColors.length],
+      }))
+      .filter((series) => !existingKeys.has(series.key));
+
+    return [...baseSeries, ...dynamicSeries];
+  }, [storedWagonTypes]);
+
+  const hourlySeries = useMemo(() => {
+    return baseHourlySeries.map((item) => {
+      const normalized = { ...item };
+
+      hourlySeriesMeta.forEach((series) => {
+        if (normalized[series.key] == null) {
+          normalized[series.key] = 0;
+        }
+      });
+
+      return normalized;
+    });
+  }, [hourlySeriesMeta]);
+
   const [tablePage, setTablePage] = useState(1);
   const [sortBy, setSortBy] = useState("rakeNumber");
   const [sortOrder, setSortOrder] = useState("asc");
@@ -342,9 +403,11 @@ export default function Dashboard() {
     completed: true,
   });
   const [hoveredTransaction, setHoveredTransaction] = useState(null);
-  const [activeHourlySeries, setActiveHourlySeries] = useState({
-    lump: true,
-    fines: true,
+  const [activeHourlySeries, setActiveHourlySeries] = useState(() => {
+    return hourlySeriesMeta.reduce((accumulator, series) => {
+      accumulator[series.key] = true;
+      return accumulator;
+    }, {});
   });
   const [hoveredHourlySeries, setHoveredHourlySeries] = useState(null);
   const [hoveredOfferPoint, setHoveredOfferPoint] = useState(null);
@@ -583,7 +646,7 @@ export default function Dashboard() {
       bars,
       totals,
     };
-  }, [activeHourlySeries]);
+  }, [activeHourlySeries, hourlySeries, hourlySeriesMeta]);
 
   const hourlyHoverSummary = useMemo(() => {
     if (!hoveredHourlySeries || !activeHourlySeries[hoveredHourlySeries.key]) {
@@ -596,7 +659,8 @@ export default function Dashboard() {
       label: seriesLabel,
       value: hoveredHourlySeries.value,
     };
-  }, [hoveredHourlySeries, activeHourlySeries]);
+  }, [hoveredHourlySeries, activeHourlySeries, hourlySeriesMeta]);
+
   const offerHoverSummary = useMemo(() => {
     if (!hoveredOfferPoint) {
       return null;
@@ -619,7 +683,7 @@ export default function Dashboard() {
         ))}
       </section>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(270px,1fr)]">
+      <section className="space-y-4">
         <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -655,7 +719,15 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="space-y-6 pt-2">
+          <div className="relative space-y-6 pt-2">
+            {hoverSummary ? (
+              <div className="pointer-events-none absolute right-0 top-0 z-20 max-w-[calc(100%-1rem)] rounded-md border border-blue-200 bg-white/95 px-2.5 py-1.5 shadow-sm backdrop-blur-sm">
+                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-blue-700">Transaction Detail</p>
+                <p className="mt-0.5 text-[11px] font-semibold leading-snug text-[#102a57] sm:text-[12px]">
+                  {hoverSummary.ore} • {hoverSummary.segmentLabel}: {hoverSummary.value} rakes ({hoverSummary.percent}% of {hoverSummary.activeTotalCount})
+                </p>
+              </div>
+            ) : null}
             {transactionRows.map((row) => (
               <div key={row.ore}>
                 <div className="mb-2 flex items-center justify-between">
@@ -674,52 +746,49 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
-
-          <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Interactive Insight</p>
-            {hoverSummary ? (
-              <p className="mt-1 text-[12px] font-semibold text-[#102a57]">
-                {hoverSummary.ore} • {hoverSummary.segmentLabel}: {hoverSummary.value} rakes ({hoverSummary.percent}% of {hoverSummary.activeTotalCount})
-              </p>
-            ) : (
-              <p className="mt-1 text-[12px] font-medium text-slate-500">
-                Hover or focus any bar segment to inspect status contribution for each ore type.
-              </p>
-            )}
-          </div>
         </article>
 
         <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-[24px] font-extrabold leading-tight text-[#102a57]">Hourly Wagon Count</h3>
-              <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">LUMP VS FINES PRODUCTION</p>
+              <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">MULTI-TYPE WAGON PRODUCTION</p>
             </div>
-            <div className="flex items-center gap-2 pt-1">
-              {hourlySeriesMeta.map((series) => {
-                const isActive = activeHourlySeries[series.key];
-                return (
-                  <button
-                    key={series.key}
-                    type="button"
-                    onClick={() => toggleHourlySeries(series.key)}
-                    className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-bold transition-colors ${
-                      isActive
-                        ? "border-slate-300 bg-white text-slate-600"
-                        : "border-slate-200 bg-slate-100 text-slate-400"
-                    }`}
-                    aria-pressed={isActive}
-                    title={isActive ? "Click to hide" : "Click to show"}
-                  >
-                    <span className={`h-2.5 w-2.5 rounded-full ${series.color}`} />
-                    {series.label}
-                  </button>
-                );
-              })}
+            <div className="flex flex-col items-end gap-2 pt-1">
+              <div className="flex items-center gap-2">
+                {hourlySeriesMeta.map((series) => {
+                  const isActive = activeHourlySeries[series.key];
+                  return (
+                    <button
+                      key={series.key}
+                      type="button"
+                      onClick={() => toggleHourlySeries(series.key)}
+                      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-bold transition-colors ${
+                        isActive
+                          ? "border-slate-300 bg-white text-slate-600"
+                          : "border-slate-200 bg-slate-100 text-slate-400"
+                      }`}
+                      aria-pressed={isActive}
+                      title={isActive ? "Click to hide" : "Click to show"}
+                    >
+                      <span className={`h-2.5 w-2.5 rounded-full ${series.color}`} />
+                      {series.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
           <div className="relative mt-4 h-65 rounded-lg border border-slate-100 bg-[#fafbfe] p-3">
+            {hourlyHoverSummary ? (
+              <div className="pointer-events-none absolute right-3 top-3 z-20 max-w-[calc(100%-1.5rem)] rounded-md border border-blue-200 bg-white/95 px-2.5 py-1.5 shadow-sm backdrop-blur-sm">
+                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-blue-700">Hourly Detail</p>
+                <p className="mt-0.5 text-[11px] font-semibold leading-snug text-[#102a57] sm:text-[12px]">
+                  {hourlyHoverSummary.hour} • {hourlyHoverSummary.label}: {hourlyHoverSummary.value} wagons
+                </p>
+              </div>
+            ) : null}
             <div className="absolute inset-x-3 top-8 h-px bg-slate-200" />
             <div className="absolute inset-x-3 top-1/2 h-px bg-slate-200" />
             <div className="absolute inset-x-3 bottom-10 h-px bg-slate-200" />
@@ -762,33 +831,15 @@ export default function Dashboard() {
           </div>
 
           <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
-            <div className="flex items-center justify-between text-[12px]">
-              <span className="inline-flex items-center gap-2 font-semibold text-slate-600">
-                <span className="h-2 w-2 rounded-full bg-[#1f3d72]" />
-                LUMP WAGONS
-              </span>
-              <span className="font-bold text-[#0f2f67]">{hourlyChartData.totals.lump}</span>
-            </div>
-            <div className="flex items-center justify-between text-[12px]">
-              <span className="inline-flex items-center gap-2 font-semibold text-slate-600">
-                <span className="h-2 w-2 rounded-full bg-[#4787e0]" />
-                FINES WAGONS
-              </span>
-              <span className="font-bold text-[#0f2f67]">{hourlyChartData.totals.fines}</span>
-            </div>
-          </div>
-
-          <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Hourly Insight</p>
-            {hourlyHoverSummary ? (
-              <p className="mt-1 text-[12px] font-semibold text-[#102a57]">
-                {hourlyHoverSummary.hour} • {hourlyHoverSummary.label}: {hourlyHoverSummary.value} wagons
-              </p>
-            ) : (
-              <p className="mt-1 text-[12px] font-medium text-slate-500">
-                Hover or focus any hourly column to inspect wagon count details.
-              </p>
-            )}
+            {hourlySeriesMeta.map((series) => (
+              <div key={series.key} className="flex items-center justify-between text-[12px]">
+                <span className="inline-flex items-center gap-2 font-semibold text-slate-600">
+                  <span className={`h-2 w-2 rounded-full ${series.color}`} />
+                  {series.label}
+                </span>
+                <span className="font-bold text-[#0f2f67]">{hourlyChartData.totals[series.key]}</span>
+              </div>
+            ))}
           </div>
         </article>
       </section>
@@ -918,7 +969,18 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="mt-4 rounded-lg border border-slate-100 bg-[#f8fbff] p-2">
+          <div className="relative mt-4 rounded-lg border border-slate-100 bg-[#f8fbff] p-2">
+            {offerHoverSummary ? (
+              <div className="pointer-events-none absolute right-3 top-3 z-20 max-w-[calc(100%-1.5rem)] rounded-md border border-blue-200 bg-white/95 px-2.5 py-1.5 shadow-sm backdrop-blur-sm">
+                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-blue-700">Trend Detail</p>
+                <p className="mt-0.5 text-[11px] font-semibold leading-snug text-[#102a57] sm:text-[12px]">
+                  {offerHoverSummary.day}: {offerHoverSummary.offers} offers
+                  {offerHoverSummary.index > 0
+                    ? ` (${offerHoverSummary.delta >= 0 ? "+" : ""}${offerHoverSummary.delta} vs previous day)`
+                    : ""}
+                </p>
+              </div>
+            ) : null}
             <svg viewBox={`0 0 ${chartData.chartWidth} ${chartData.chartHeight}`} className="h-52 w-full">
               <defs>
                 <linearGradient id="offerAreaGradient" x1="0" y1="0" x2="0" y2="1">
@@ -970,20 +1032,6 @@ export default function Dashboard() {
                 <span key={item.day}>{item.day}</span>
               ))}
             </div>
-          </div>
-
-          <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Trend Insight</p>
-            {offerHoverSummary ? (
-              <p className="mt-1 text-[12px] font-semibold text-[#102a57]">
-                {offerHoverSummary.day}: {offerHoverSummary.offers} offers
-                {offerHoverSummary.index > 0 ? ` (${offerHoverSummary.delta >= 0 ? "+" : ""}${offerHoverSummary.delta} vs previous day)` : ""}
-              </p>
-            ) : (
-              <p className="mt-1 text-[12px] font-medium text-slate-500">
-                Hover any point to inspect daily offering movement.
-              </p>
-            )}
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-2 border-t border-slate-100 pt-3 sm:grid-cols-3">

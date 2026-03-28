@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  wagonTypesData,
+  getWagonTypesMasterData,
   wagonTypesMeta,
+  saveWagonTypesMasterData,
 } from "../../../data/adminmasterdatafiles/wagonTypes";
 import useCrud from "../../../hooks/useCrud";
 import SearchBar from "../../../components/shared/SearchBar";
@@ -245,7 +246,8 @@ function WagonTypeForm({ initialData, onSave, onCancel, isEditing }) {
 
 export default function WagonTypeMaster() {
   const { navigate, currentRoute } = useRouter();
-  const crud = useCrud(wagonTypesData, "code");
+  const initialWagonTypes = useMemo(() => getWagonTypesMasterData(), []);
+  const crud = useCrud(initialWagonTypes, "code");
   const addRoute = "wagon-types-add";
   const editRoute = "wagon-types-edit";
   const baseRoute = "wagon-types";
@@ -275,6 +277,10 @@ export default function WagonTypeMaster() {
     (crud.currentPage - 1) * pageSize,
     crud.currentPage * pageSize,
   );
+
+  useEffect(() => {
+    saveWagonTypesMasterData(crud.allData);
+  }, [crud.allData]);
 
   const handleSort = (field) => {
     if (sortBy === field) {

@@ -1,7 +1,6 @@
 import { RouterProvider, useRouter, USER_ROLES } from "./context/RouterContext";
 import Layout from "./components/layout/Layout";
 import LoginPage from "./components/auth/LoginPage";
-import SignupPage from "./components/auth/SignupPage";
 
 import Dashboard from "./pages/admin/dashboard/Dashboard";
 import EDemandManagementPage from "./pages/admin/edemand/EDemandManagementPage";
@@ -23,7 +22,6 @@ function AppRoutes() {
 
   // === AUTH PAGES ===
   if (currentRoute === "login") return <LoginPage />;
-  if (currentRoute === "signup") return <SignupPage />;
 
   // === GUARD ===
   if (!isAuthenticated) return <LoginPage />;
@@ -73,6 +71,7 @@ function AppRoutes() {
         return <Dashboard />;
       case "e-demand":
       case "manage-e-demand":
+      case "manage-e-demand-add":
       case "manage-e-permit":
         return <EDemandManagementPage />;
       case "rake-management":

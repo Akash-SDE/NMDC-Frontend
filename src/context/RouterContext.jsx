@@ -49,6 +49,7 @@ export function RouterProvider({ children }) {
   const [userRole, setUserRole] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [persistSession, setPersistSession] = useState(false);
 
   useEffect(() => {
     const storedSession = readStoredSession();
@@ -57,6 +58,7 @@ export function RouterProvider({ children }) {
     setUserRole(storedSession.userRole);
     setIsAuthenticated(true);
     setUser(storedSession.user || null);
+    setPersistSession(true);
     setCurrentRoute(
       storedSession.lastRoute || getDefaultRouteForRole(storedSession.userRole),
     );
@@ -64,7 +66,12 @@ export function RouterProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated || !userRole || !user) return;
+    if (!isAuthenticated || !userRole || !user || !persistSession) {
+      if (!persistSession) {
+        clearStoredSession();
+      }
+      return;
+    }
 
     writeStoredSession({
       isAuthenticated: true,
@@ -72,7 +79,7 @@ export function RouterProvider({ children }) {
       user,
       lastRoute: currentRoute,
     });
-  }, [isAuthenticated, userRole, user, currentRoute]);
+  }, [isAuthenticated, userRole, user, currentRoute, persistSession]);
 
   const navigate = useCallback((route, params = {}) => {
     setCurrentRoute(route);
@@ -81,7 +88,7 @@ export function RouterProvider({ children }) {
   }, []);
 
   const login = useCallback(
-    (role, userData = {}) => {
+    (role, userData = {}, rememberSession = false) => {
       const resolvedUser = {
         name:
           userData.name ||
@@ -98,13 +105,18 @@ export function RouterProvider({ children }) {
       setUserRole(role);
       setIsAuthenticated(true);
       setUser(resolvedUser);
+      setPersistSession(rememberSession);
 
-      writeStoredSession({
-        isAuthenticated: true,
-        userRole: role,
-        user: resolvedUser,
-        lastRoute: targetRoute,
-      });
+      if (rememberSession) {
+        writeStoredSession({
+          isAuthenticated: true,
+          userRole: role,
+          user: resolvedUser,
+          lastRoute: targetRoute,
+        });
+      } else {
+        clearStoredSession();
+      }
 
       navigate(targetRoute);
     },
@@ -115,6 +127,7 @@ export function RouterProvider({ children }) {
     setUserRole(null);
     setIsAuthenticated(false);
     setUser(null);
+    setPersistSession(false);
     setRouteParams({});
     clearStoredSession();
     navigate("login");

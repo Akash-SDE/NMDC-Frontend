@@ -44,3 +44,31 @@ export const wagonTypesMeta = {
   totalCount: 18,
   pageSize: 5,
 };
+
+export const WAGON_TYPES_STORAGE_KEY = "nmdc_master_wagon_types";
+
+export function getWagonTypesMasterData() {
+  if (typeof window === "undefined") return [...wagonTypesData];
+
+  try {
+    const raw = window.localStorage.getItem(WAGON_TYPES_STORAGE_KEY);
+    if (!raw) return [...wagonTypesData];
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [...wagonTypesData];
+
+    return parsed;
+  } catch {
+    return [...wagonTypesData];
+  }
+}
+
+export function saveWagonTypesMasterData(data) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(WAGON_TYPES_STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // Ignore storage failures and continue with in-memory state.
+  }
+}

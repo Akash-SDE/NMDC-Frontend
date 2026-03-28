@@ -526,8 +526,3 @@ export default function OreTypeMaster() {
 </div>
   );
 }
-
-
-
-
-

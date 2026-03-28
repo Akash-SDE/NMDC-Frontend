@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, USER_ROLES } from "../../context/RouterContext";
 import { Logo } from "../icons";
 
@@ -51,8 +51,43 @@ const DEMO_ACCOUNTS = {
   },
 };
 
+const LOGIN_HERO_IMAGE =
+  "https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=1600&q=80";
+const REMEMBER_LOGIN_KEY = "nmdc_remembered_login";
+
+function readRememberedCredentials() {
+  try {
+    const raw = window.localStorage.getItem(REMEMBER_LOGIN_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.username || !parsed?.password) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeRememberedCredentials(username, password) {
+  try {
+    window.localStorage.setItem(
+      REMEMBER_LOGIN_KEY,
+      JSON.stringify({ username, password }),
+    );
+  } catch {
+    // Ignore storage failures and continue with in-memory state.
+  }
+}
+
+function clearRememberedCredentials() {
+  try {
+    window.localStorage.removeItem(REMEMBER_LOGIN_KEY);
+  } catch {
+    // Ignore storage failures and continue with in-memory state.
+  }
+}
+
 export default function LoginPage() {
-  const { login, navigate } = useRouter();
+  const { login } = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
@@ -60,6 +95,17 @@ export default function LoginPage() {
     password: "",
     remember: false,
   });
+
+  useEffect(() => {
+    const remembered = readRememberedCredentials();
+    if (!remembered) return;
+
+    setFormData({
+      username: remembered.username,
+      password: remembered.password,
+      remember: true,
+    });
+  }, []);
 
   function handleChange(field, value) {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -69,11 +115,17 @@ export default function LoginPage() {
   function handleSubmit(e) {
     e.preventDefault();
     setError("");
-    const { username, password } = formData;
+    const { username, password, remember } = formData;
 
     if (!username.trim() || !password.trim()) {
       setError("Please enter both username and password.");
       return;
+    }
+
+    if (remember) {
+      writeRememberedCredentials(username.trim(), password);
+    } else {
+      clearRememberedCredentials();
     }
 
     // Superadmin check
@@ -84,7 +136,7 @@ export default function LoginPage() {
       login(USER_ROLES.SUPERADMIN, {
         name: DEMO_ACCOUNTS.superadmin.name,
         username,
-      });
+      }, remember);
       return;
     }
 
@@ -93,7 +145,7 @@ export default function LoginPage() {
       username === DEMO_ACCOUNTS.admin.username &&
       password === DEMO_ACCOUNTS.admin.password
     ) {
-      login(USER_ROLES.ADMIN, { name: DEMO_ACCOUNTS.admin.name, username });
+      login(USER_ROLES.ADMIN, { name: DEMO_ACCOUNTS.admin.name, username }, remember);
       return;
     }
 
@@ -105,12 +157,12 @@ export default function LoginPage() {
       login(USER_ROLES.OPERATOR, {
         name: DEMO_ACCOUNTS.operator.name,
         username,
-      });
+      }, remember);
       return;
     }
 
     // Any other credentials → admin (demo mode)
-    login(USER_ROLES.ADMIN, { name: username, username });
+    login(USER_ROLES.ADMIN, { name: username, username }, remember);
   }
 
   function quickLogin(role) {
@@ -129,12 +181,20 @@ export default function LoginPage() {
         <div className="mx-auto w-full max-w-105 3xl:max-w-130 5xl:max-w-175">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8 3xl:mb-12">
-            <div className="flex h-11 w-11 3xl:h-14 3xl:w-14 items-center justify-center rounded-xl overflow-hidden bg-brand-50">
-              <Logo size={44} className="3xl:w-14 3xl:h-14" />
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg shadow-sm">
+              <Logo size={34} className="h-full w-full object-contain" />
             </div>
             <span className="text-[18px] 3xl:text-[22px] font-bold text-brand-900">
               Rake Dispatch Management System
             </span>
+          </div>
+
+          <div className="mb-6 overflow-hidden rounded-xl border border-slate-200 shadow-sm lg:hidden">
+            <img
+              src={LOGIN_HERO_IMAGE}
+              alt="Freight rail logistics"
+              className="h-42 w-full object-cover"
+            />
           </div>
 
           <h1 className="text-[30px] sm:text-[36px] 3xl:text-[44px] font-bold text-brand-900 leading-tight">
@@ -270,15 +330,6 @@ export default function LoginPage() {
               Log In
             </button>
           </form>
-          <p className="mt-5 text-center text-[13px] 3xl:text-[16px] text-slate-500">
-            Don't have an account?{" "}
-            <button
-              onClick={() => navigate("signup")}
-              className="font-semibold text-brand-600 hover:text-brand-700 transition-colors"
-            >
-              Create Account
-            </button>
-          </p>
         </div>
         <div className="font-bold text-xs text-blue-600 text-center mt-10">
           <a href="https://thinkerscave.com/">
@@ -288,49 +339,12 @@ export default function LoginPage() {
       </div>
       {/* Image Side */}
       <div className="hidden lg:flex lg:w-[50%] xl:w-[55%] relative overflow-hidden">
-        <div className="absolute inset-0 bg-linear-to-br from-slate-700 via-slate-800 to-slate-900">
-          <div className="absolute inset-0 opacity-40">
-            <svg
-              viewBox="0 0 800 600"
-              className="w-full h-full"
-              preserveAspectRatio="xMidYMid slice"
-            >
-              <defs>
-                <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#87CEEB" />
-                  <stop offset="60%" stopColor="#B8860B" />
-                  <stop offset="100%" stopColor="#8B7355" />
-                </linearGradient>
-              </defs>
-              <rect width="800" height="600" fill="url(#skyGrad)" />
-              <rect x="0" y="350" width="800" height="250" fill="#A0845C" />
-              <rect
-                x="200"
-                y="250"
-                width="350"
-                height="120"
-                rx="8"
-                fill="#D4A843"
-              />
-              <rect
-                x="180"
-                y="200"
-                width="150"
-                height="80"
-                rx="6"
-                fill="#C4983D"
-              />
-              <circle cx="280" cy="390" r="35" fill="#333" />
-              <circle cx="280" cy="390" r="18" fill="#555" />
-              <circle cx="470" cy="390" r="35" fill="#333" />
-              <circle cx="470" cy="390" r="18" fill="#555" />
-              <polygon
-                points="200,250 550,250 520,140 230,140"
-                fill="#B8941E"
-              />
-            </svg>
-          </div>
-        </div>
+        <img
+          src={LOGIN_HERO_IMAGE}
+          alt="Freight rail logistics"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/45" />
         <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 via-black/50 to-transparent p-8 3xl:p-12">
           <div className="backdrop-blur-md bg-white/10 rounded-2xl p-6 3xl:p-8 border border-white/20">
             <h3 className="text-[22px] 3xl:text-[28px] font-bold text-white">

@@ -134,6 +134,12 @@ const initialDemandForm = {
   salesType: "",
 };
 
+const pageShellClass = "space-y-6 3xl:space-y-8 5xl:space-y-12";
+const pageHeaderClass = "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between";
+const pageTitleClass = "text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800";
+const pageSubtitleClass = "mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500";
+const tableCardClass = "rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden";
+
 function formatDate(value) {
   if (!value) return "-";
   if (value.includes(" ")) return value;
@@ -152,16 +158,25 @@ function compareValues(a, b, order) {
 }
 
 export default function EDemandManagementPage() {
-  const { currentRoute } = useRouter();
+  const { currentRoute, navigate } = useRouter();
+  const demandListRoute = "manage-e-demand";
+  const addDemandRoute = "manage-e-demand-add";
   const isPermitRoute = currentRoute === "manage-e-permit";
+  const isAddDemandRoute = currentRoute === addDemandRoute;
 
   const [demands, setDemands] = useState(initialDemands);
   const [demandSearch, setDemandSearch] = useState("");
   const [demandSortBy, setDemandSortBy] = useState("id");
   const [demandSortOrder, setDemandSortOrder] = useState("asc");
-  const [isAddDemandOpen, setIsAddDemandOpen] = useState(false);
   const [demandForm, setDemandForm] = useState(initialDemandForm);
 
+  const [permitData, setPermitData] = useState(initialPermitRows);
+  const [savedPermitNumbers, setSavedPermitNumbers] = useState(() => {
+    return initialPermitRows.reduce((accumulator, row) => {
+      accumulator[row.id] = row.ePermitNumber;
+      return accumulator;
+    }, {});
+  });
   const [permitSearch, setPermitSearch] = useState("");
   const [permitSortBy, setPermitSortBy] = useState("id");
   const [permitSortOrder, setPermitSortOrder] = useState("asc");
@@ -191,7 +206,7 @@ export default function EDemandManagementPage() {
   const permitRows = useMemo(() => {
     const query = permitSearch.trim().toLowerCase();
 
-    return initialPermitRows
+    return permitData
       .filter((row) => {
         if (!query) return true;
         return [
@@ -209,7 +224,7 @@ export default function EDemandManagementPage() {
           .includes(query);
       })
       .sort((a, b) => compareValues(a[permitSortBy], b[permitSortBy], permitSortOrder));
-  }, [permitSearch, permitSortBy, permitSortOrder]);
+  }, [permitData, permitSearch, permitSortBy, permitSortOrder]);
 
   function handleDemandSort(field) {
     if (demandSortBy === field) {
@@ -229,14 +244,38 @@ export default function EDemandManagementPage() {
     setPermitSortOrder("asc");
   }
 
+  function handlePermitNumberChange(rowId, value) {
+    setPermitData((prev) =>
+      prev.map((row) => {
+        if (row.id !== rowId) return row;
+        return {
+          ...row,
+          ePermitNumber: value,
+        };
+      }),
+    );
+  }
+
+  function handleSavePermitNumber(rowId) {
+    setSavedPermitNumbers((prev) => {
+      const currentRow = permitData.find((row) => row.id === rowId);
+      if (!currentRow) return prev;
+
+      return {
+        ...prev,
+        [rowId]: currentRow.ePermitNumber,
+      };
+    });
+  }
+
   function handleDemandFormChange(event) {
     const { name, value } = event.target;
     setDemandForm((prev) => ({ ...prev, [name]: value }));
   }
 
   function closeDemandForm() {
-    setIsAddDemandOpen(false);
     setDemandForm(initialDemandForm);
+    navigate(demandListRoute);
   }
 
   function handleAddDemandSubmit(event) {
@@ -270,182 +309,26 @@ export default function EDemandManagementPage() {
     closeDemandForm();
   }
 
-  if (isPermitRoute) {
+  if (isAddDemandRoute) {
     return (
-      <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
-        <div>
-          <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
-            Manage E-Permit
-          </h2>
-          <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
-            Uniform, searchable permit register aligned with the admin Master UI.
-          </p>
-        </div>
-
-        <SearchBar
-          placeholder="Search rack, customer, stockpile or permit number"
-          value={permitSearch}
-          onChange={setPermitSearch}
-          showFilter={false}
-        />
-
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full" data-print-table>
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/60">
-                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                    {" "}
-                    <SortHeaderButton
-                      label="Sl No"
-                      field="id"
-                      sortBy={permitSortBy}
-                      sortOrder={permitSortOrder}
-                      onSort={handlePermitSort}
-                    />
-                  </th>
-                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                    <SortHeaderButton
-                      label="Rack Number"
-                      field="rackNumber"
-                      sortBy={permitSortBy}
-                      sortOrder={permitSortOrder}
-                      onSort={handlePermitSort}
-                    />
-                  </th>
-                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                    <SortHeaderButton
-                      label="Customer"
-                      field="customer"
-                      sortBy={permitSortBy}
-                      sortOrder={permitSortOrder}
-                      onSort={handlePermitSort}
-                    />
-                  </th>
-                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden xl:table-cell">
-                    <SortHeaderButton
-                      label="Stockpile"
-                      field="stockpile"
-                      sortBy={permitSortBy}
-                      sortOrder={permitSortOrder}
-                      onSort={handlePermitSort}
-                    />
-                  </th>
-                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden lg:table-cell">
-                    <SortHeaderButton
-                      label="Quantity"
-                      field="quantity"
-                      sortBy={permitSortBy}
-                      sortOrder={permitSortOrder}
-                      onSort={handlePermitSort}
-                    />
-                  </th>
-                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden 2xl:table-cell">
-                    <SortHeaderButton
-                      label="Completed On"
-                      field="completedOn"
-                      sortBy={permitSortBy}
-                      sortOrder={permitSortOrder}
-                      onSort={handlePermitSort}
-                    />
-                  </th>
-                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                    <SortHeaderButton
-                      label="E-Permit Number"
-                      field="ePermitNumber"
-                      sortBy={permitSortBy}
-                      sortOrder={permitSortOrder}
-                      onSort={handlePermitSort}
-                    />
-                  </th>
-                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden 2xl:table-cell">
-                    <SortHeaderButton
-                      label="Railway Transit Pass"
-                      field="railwayTransitPass"
-                      sortBy={permitSortBy}
-                      sortOrder={permitSortOrder}
-                      onSort={handlePermitSort}
-                    />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {permitRows.length > 0 ? (
-                  permitRows.map((row) => (
-                    <tr key={row.id} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70">
-                      <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700">
-                        {row.id}
-                      </td>
-                      <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-800 font-semibold">
-                        {row.rackNumber}
-                      </td>
-                      <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700">
-                        {row.customer}
-                      </td>
-                      <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700 hidden xl:table-cell">
-                        {row.stockpile}
-                      </td>
-                      <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700 hidden lg:table-cell">
-                        {row.quantity.toFixed(2)}
-                      </td>
-                      <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700 hidden 2xl:table-cell">
-                        {formatDate(row.completedOn)}
-                      </td>
-                      <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700">
-                        {row.ePermitNumber}
-                      </td>
-                      <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700 hidden 2xl:table-cell">
-                        {row.railwayTransitPass}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-5 py-12 text-center text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500"
-                    >
-                      There is no E-Permit data to display.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+      <div className={pageShellClass}>
+        <div className={pageHeaderClass}>
+          <div>
+            <h2 className={pageTitleClass}>Add E-Demand</h2>
+            <p className={pageSubtitleClass}>
+              Create a new E-Demand record on a dedicated page.
+            </p>
           </div>
-        </div>
-      </div>
-    );
-  }
 
-  return (
-    <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
-            Manage E-Demand
-          </h2>
-          <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
-            View and create E-Demand records with Master-page style alignment.
-          </p>
+          <button
+            type="button"
+            onClick={() => closeDemandForm()}
+            className={`${uniformSecondaryButtonClass} self-start`}
+          >
+            Back to Manage E-Demand
+          </button>
         </div>
 
-        <button
-          onClick={() => setIsAddDemandOpen(true)}
-          className="flex items-center gap-2 3xl:gap-3 rounded-lg bg-blue-600 px-5 py-2.5 3xl:px-6 3xl:py-3 5xl:px-8 5xl:py-4 text-[13px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-white shadow-sm hover:bg-blue-700 transition-all self-start active:scale-[0.98]"
-        >
-          <PlusIcon className="3xl:w-5 3xl:h-5" />
-          <span>Add New E-Demand</span>
-        </button>
-      </div>
-
-      <SearchBar
-        placeholder="Search by f-note, customer, destination, ore type or sales type"
-        value={demandSearch}
-        onChange={setDemandSearch}
-        showFilter={false}
-      />
-
-      {isAddDemandOpen ? (
         <UniformSectionCard
           title="Add E-Demand"
           subtitle="Use the same uniform admin style to register a new demand."
@@ -553,9 +436,213 @@ export default function EDemandManagementPage() {
             </div>
           </form>
         </UniformSectionCard>
-      ) : null}
+      </div>
+    );
+  }
 
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+  if (isPermitRoute) {
+    return (
+      <div className={pageShellClass}>
+        <div className={pageHeaderClass}>
+          <div>
+            <h2 className={pageTitleClass}>Manage E-Permit</h2>
+            <p className={pageSubtitleClass}>
+              View permit register data in the same uniform style as E-Demand.
+            </p>
+          </div>
+        </div>
+
+        <SearchBar
+          placeholder="Search rack, customer, stockpile or permit number"
+          value={permitSearch}
+          onChange={setPermitSearch}
+          showFilter={false}
+        />
+
+        <div className={tableCardClass}>
+          <div className="overflow-x-auto">
+            <table className="w-full" data-print-table>
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/60">
+                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                    <SortHeaderButton
+                      label="Sl No"
+                      field="id"
+                      sortBy={permitSortBy}
+                      sortOrder={permitSortOrder}
+                      onSort={handlePermitSort}
+                    />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                    <SortHeaderButton
+                      label="Rack Number"
+                      field="rackNumber"
+                      sortBy={permitSortBy}
+                      sortOrder={permitSortOrder}
+                      onSort={handlePermitSort}
+                    />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                    <SortHeaderButton
+                      label="Customer"
+                      field="customer"
+                      sortBy={permitSortBy}
+                      sortOrder={permitSortOrder}
+                      onSort={handlePermitSort}
+                    />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden xl:table-cell">
+                    <SortHeaderButton
+                      label="Stockpile"
+                      field="stockpile"
+                      sortBy={permitSortBy}
+                      sortOrder={permitSortOrder}
+                      onSort={handlePermitSort}
+                    />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden lg:table-cell">
+                    <SortHeaderButton
+                      label="Quantity"
+                      field="quantity"
+                      sortBy={permitSortBy}
+                      sortOrder={permitSortOrder}
+                      onSort={handlePermitSort}
+                    />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden 2xl:table-cell">
+                    <SortHeaderButton
+                      label="Completed On"
+                      field="completedOn"
+                      sortBy={permitSortBy}
+                      sortOrder={permitSortOrder}
+                      onSort={handlePermitSort}
+                    />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                    E-Permit Number
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden 2xl:table-cell">
+                    <SortHeaderButton
+                      label="Railway Transit Pass"
+                      field="railwayTransitPass"
+                      sortBy={permitSortBy}
+                      sortOrder={permitSortOrder}
+                      onSort={handlePermitSort}
+                    />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {permitRows.length > 0 ? (
+                  permitRows.map((row) => {
+                    const isPermitNumberDirty = (savedPermitNumbers[row.id] ?? "") !== row.ePermitNumber;
+
+                    return (
+                      <tr key={row.id} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70">
+                        <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700">
+                          {row.id}
+                        </td>
+                        <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-800 font-semibold">
+                          {row.rackNumber}
+                        </td>
+                        <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700">
+                          {row.customer}
+                        </td>
+                        <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700 hidden xl:table-cell">
+                          {row.stockpile}
+                        </td>
+                        <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700 hidden lg:table-cell">
+                          {row.quantity.toFixed(2)}
+                        </td>
+                        <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700 hidden 2xl:table-cell">
+                          {formatDate(row.completedOn)}
+                        </td>
+                        <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={row.ePermitNumber}
+                              onChange={(event) => handlePermitNumberChange(row.id, event.target.value)}
+                              className="h-9 w-full min-w-30 rounded-md border border-slate-200 bg-white px-2.5 pr-9 text-[12px] font-semibold text-slate-700 outline-none transition-colors focus:border-blue-400 focus:ring-2 focus:ring-blue-100 3xl:h-10 3xl:text-[14px] 5xl:h-12 5xl:text-[18px]"
+                              aria-label={`E-Permit Number for row ${row.id}`}
+                            />
+                            {isPermitNumberDirty ? (
+                              <button
+                                type="button"
+                                onClick={() => handleSavePermitNumber(row.id)}
+                                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                                aria-label={`Save E-Permit Number for row ${row.id}`}
+                                title="Save"
+                              >
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                                  <polyline points="17 21 17 13 7 13 7 21" />
+                                  <polyline points="7 3 7 8 15 8" />
+                                </svg>
+                              </button>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700 hidden 2xl:table-cell">
+                          {row.railwayTransitPass}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-5 py-12 text-center text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500"
+                    >
+                      There is no E-Permit data to display.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={pageShellClass}>
+      <div className={pageHeaderClass}>
+        <div>
+          <h2 className={pageTitleClass}>Manage E-Demand</h2>
+          <p className={pageSubtitleClass}>
+            View and create E-Demand records with Master-page style alignment.
+          </p>
+        </div>
+
+        <button
+          onClick={() => navigate(addDemandRoute)}
+          className={`${uniformPrimaryButtonClass} flex items-center gap-2 self-start`}
+        >
+          <PlusIcon />
+          <span>Add New E-Demand</span>
+        </button>
+      </div>
+
+      <SearchBar
+        placeholder="Search by f-note, customer, destination, ore type or sales type"
+        value={demandSearch}
+        onChange={setDemandSearch}
+        showFilter={false}
+      />
+
+      <div className={tableCardClass}>
         <div className="overflow-x-auto">
           <table className="w-full" data-print-table>
             <thead>
