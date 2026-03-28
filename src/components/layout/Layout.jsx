@@ -8,7 +8,7 @@ export default function Layout({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex min-h-screen w-full bg-[#f3f5f8]">
+    <div className="flex min-h-screen w-full overflow-x-hidden bg-[#f3f5f8]">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -33,10 +33,10 @@ export default function Layout({ children }) {
         }`}
       >
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <div className="px-4 pt-3 sm:px-5 lg:px-6">
+        <div className="px-3 pt-3 sm:px-5 lg:px-6">
           <AppBreadcrumb />
         </div>
-        <main className="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 lg:p-6">{children}</main>
       </div>
     </div>
   );

@@ -42,24 +42,26 @@ export function UniformPageShell({ title, subtitle, tabs, activeTab, onTabChange
           {subtitle ? <p className="text-[12px] font-medium text-slate-500">{subtitle}</p> : null}
         </div>
         {tabs && tabs.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {tabs.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => onTabChange?.(tab.id)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                    isActive
-                      ? "bg-linear-to-r from-blue-700 to-blue-600 text-white shadow-sm"
-                      : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
+          <div className="overflow-x-auto pb-1 scrollbar-hide">
+            <div className="flex w-max gap-2">
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => onTabChange?.(tab.id)}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition-all ${
+                      isActive
+                        ? "bg-linear-to-r from-blue-700 to-blue-600 text-white shadow-sm"
+                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         ) : null}
       </div>

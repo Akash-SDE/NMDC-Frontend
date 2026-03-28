@@ -83,9 +83,58 @@ const adminSidebarSections = [
         icon: "users",
       },
       {
+        id: "admin-tools",
+        label: "Admin",
+        icon: "config",
+        children: [
+          {
+            id: "admin-delete-offered-rakes",
+            label: "Delete Offered Rakes",
+          },
+          {
+            id: "admin-edit-rake-timing",
+            label: "Edit Rake Timing",
+          },
+        ],
+      },
+      {
         id: "reports",
         label: "Reports",
         icon: "reports",
+        children: [
+          {
+            id: "reports-transaction",
+            label: "Transaction Report",
+          },
+          {
+            id: "reports-demurrage",
+            label: "Demurrage Report",
+          },
+          {
+            id: "reports-daily",
+            label: "Daily Report",
+          },
+          {
+            id: "reports-siding-performance",
+            label: "Siding Performance Report",
+          },
+          {
+            id: "reports-load-adjustment",
+            label: "Load Adjustment Report",
+          },
+          {
+            id: "reports-sick-wagon",
+            label: "Sick Wagon Report",
+          },
+          {
+            id: "reports-rt",
+            label: "RT Report",
+          },
+          {
+            id: "reports-rake-incentive",
+            label: "Rake Incentive Report",
+          },
+        ],
       },
     ],
   },

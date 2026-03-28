@@ -58,11 +58,11 @@ export default function SearchBar({
       </div>
 
       {/* Action buttons */}
-      <div className="flex items-center gap-2 3xl:gap-3 5xl:gap-4">
+      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end 3xl:gap-3 5xl:gap-4">
         {showFilter && (
           <button
             onClick={onFilter}
-            className={`${uniformSecondaryButtonClass} flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] 3xl:gap-2 3xl:px-4 3xl:py-3 3xl:text-[15px] 5xl:px-6 5xl:py-4 5xl:text-[20px]`}
+            className={`${uniformSecondaryButtonClass} flex w-full items-center justify-center gap-1.5 px-3.5 py-2.5 text-[13px] xs:w-auto 3xl:gap-2 3xl:px-4 3xl:py-3 3xl:text-[15px] 5xl:px-6 5xl:py-4 5xl:text-[20px]`}
           >
             <svg
               width="16"
@@ -85,7 +85,7 @@ export default function SearchBar({
         {showExport && (
           <button
             onClick={onExport}
-            className={`${uniformSecondaryButtonClass} flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] 3xl:gap-2 3xl:px-4 3xl:py-3 3xl:text-[15px] 5xl:px-6 5xl:py-4 5xl:text-[20px]`}
+            className={`${uniformSecondaryButtonClass} flex w-full items-center justify-center gap-1.5 px-3.5 py-2.5 text-[13px] xs:w-auto 3xl:gap-2 3xl:px-4 3xl:py-3 3xl:text-[15px] 5xl:px-6 5xl:py-4 5xl:text-[20px]`}
           >
             <svg
               width="16"

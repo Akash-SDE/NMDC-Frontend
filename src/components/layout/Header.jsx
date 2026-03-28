@@ -1,6 +1,7 @@
 import { useRouter } from "../../context/RouterContext";
+import { MenuIcon } from "../icons";
 
-export default function Header() {
+export default function Header({ onMenuClick }) {
   const { user } = useRouter();
 
   const initials = (user?.name || "User")
@@ -24,13 +25,24 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-100 shadow-lg bg-[#F3F5F8] py-2">
       <div className="flex h-15.5 items-center justify-between rounded-xl px-3 sm:px-4 lg:px-5">
-        <div className="min-w-0 pr-3">
-          <h1 className="truncate text-[18px] font-extrabold leading-none text-[#1f4ec9] sm:text-[26px]">
-            RAKE DISPATCH MANAGEMENT SYSTEM
-          </h1>
-          <p className="mt-1 truncate text-[14px] font-bold leading-none text-black sm:text-[22px]">
-            BIOM Bacheli Complex, Dantewada(C.G.)
-          </p>
+        <div className="flex min-w-0 items-center gap-2 pr-3 sm:gap-3">
+          <button
+            type="button"
+            onClick={onMenuClick}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 lg:hidden"
+            aria-label="Open sidebar"
+          >
+            <MenuIcon size={18} />
+          </button>
+
+          <div className="min-w-0">
+            <h1 className="truncate text-[14px] font-extrabold leading-none text-[#1f4ec9] sm:text-[26px]">
+              RAKE DISPATCH MANAGEMENT SYSTEM
+            </h1>
+            <p className="mt-1 truncate text-[11px] font-bold leading-none text-black sm:text-[22px]">
+              BIOM Bacheli Complex, Dantewada(C.G.)
+            </p>
+          </div>
         </div>
 
         <div className="group relative">

@@ -61,41 +61,43 @@ export default function AppBreadcrumb() {
   }, [currentRoute, userRole]);
 
   return (
-    <nav className="mb-3 flex items-center gap-2 text-[12px] font-semibold text-slate-600 sm:text-[13px]">
-      {crumbs.map((crumb, index) => {
-        const isLast = index === crumbs.length - 1;
+    <nav className="mb-3 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="flex min-w-max items-center gap-2 text-[12px] font-semibold text-slate-600 sm:text-[13px]">
+        {crumbs.map((crumb, index) => {
+          const isLast = index === crumbs.length - 1;
 
-        return (
-          <div key={`${crumb.route}-${index}`} className="flex items-center gap-2">
-            {index > 0 ? (
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="text-slate-400"
-                aria-hidden="true"
-              >
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            ) : null}
+          return (
+            <div key={`${crumb.route}-${index}`} className="flex shrink-0 items-center gap-2">
+              {index > 0 ? (
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-slate-400"
+                  aria-hidden="true"
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              ) : null}
 
-            {isLast ? (
-              <span className="font-bold text-slate-800">{crumb.label}</span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => navigate(crumb.route)}
-                className="text-blue-700 transition-colors hover:text-blue-800"
-              >
-                {crumb.label}
-              </button>
-            )}
-          </div>
-        );
-      })}
+              {isLast ? (
+                <span className="font-bold text-slate-800">{crumb.label}</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => navigate(crumb.route)}
+                  className="text-blue-700 transition-colors hover:text-blue-800"
+                >
+                  {crumb.label}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </nav>
   );
 }
