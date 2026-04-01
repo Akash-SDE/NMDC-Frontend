@@ -1228,9 +1228,6 @@ export default function Dashboard() {
                   <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
                     <SortHeaderButton label="Lag" field="lag" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                    Actions
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -1265,44 +1262,6 @@ export default function Dashboard() {
                       </span>
                     </td>
                     <td className={`whitespace-nowrap px-4 py-3 text-[12px] font-bold ${getLagClasses(row.lag)}`}>{row.lag}</td>
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
-                          aria-label={`Edit ${row.rakeId}`}
-                          title="Edit"
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 20h9" />
-                            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
-                          aria-label={`Plan ${row.rakeId}`}
-                          title="Plan"
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <line x1="4" y1="7" x2="20" y2="7" />
-                            <line x1="4" y1="12" x2="20" y2="12" />
-                            <line x1="4" y1="17" x2="14" y2="17" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
-                          aria-label={`Lock ${row.rakeId}`}
-                          title="Lock"
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="4" y="11" width="16" height="9" rx="2" />
-                            <path d="M8 11V7a4 4 0 1 1 8 0v4" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 ))}
               </tbody>
