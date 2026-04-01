@@ -32,8 +32,11 @@ const initialOfferedRakes = [
     rakeId: "RK-7729",
     rakeNumber: "R-2026-001",
     wagonSupply: 58,
+    wagonType: "BOXNHL",
     siding: "Siding-A",
     route: "R-14",
+    oreType: "LUMP",
+    customer: "JSW Steel",
     oreTypeCustomer: "LUMP / JSW Steel",
     destination: "Visakhapatnam",
     fNote: "FN-23011",
@@ -45,8 +48,11 @@ const initialOfferedRakes = [
     rakeId: "RK-8812",
     rakeNumber: "R-2026-002",
     wagonSupply: 45,
+    wagonType: "BOXN",
     siding: "Siding-C",
     route: "R-09",
+    oreType: "FINES",
+    customer: "Tata Steel",
     oreTypeCustomer: "FINES / Tata Steel",
     destination: "Bhilai",
     fNote: "FN-23022",
@@ -58,8 +64,11 @@ const initialOfferedRakes = [
     rakeId: "RK-9003",
     rakeNumber: "R-2026-003",
     wagonSupply: 59,
+    wagonType: "BOBRN",
     siding: "Siding-D",
     route: "R-05",
+    oreType: "PELLET",
+    customer: "SAIL",
     oreTypeCustomer: "PELLET / SAIL",
     destination: "Raipur",
     fNote: "FN-23041",
@@ -183,6 +192,31 @@ function formatDateTimeForTable(value) {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
+function parseTableDateTimeToTimestamp(value) {
+  const [datePart = "", timePart = ""] = String(value || "").split(" ");
+  const [day = "", month = "", year = ""] = datePart.split("/");
+  const [hours = "0", minutes = "0"] = timePart.split(":");
+
+  const parsed = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hours),
+    Number(minutes),
+  );
+
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+}
+
+function formatTableDateTimeForInput(value) {
+  const timestamp = parseTableDateTimeToTimestamp(value);
+  if (!timestamp) return "";
+
+  const parsed = new Date(timestamp);
+  const localValue = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000);
+  return localValue.toISOString().slice(0, 16);
+}
+
 export default function RakeManagementPage() {
   const { navigate, currentRoute, routeParams } = useRouter();
   const [offeredRows, setOfferedRows] = useState(initialOfferedRakes);
@@ -195,10 +229,13 @@ export default function RakeManagementPage() {
   const [adjustOfferTime, setAdjustOfferTime] = useState("");
   const [adjustSearchRakeNumber, setAdjustSearchRakeNumber] = useState("");
   const [statusConfirmRakeId, setStatusConfirmRakeId] = useState("");
+  const [inlineActionMode, setInlineActionMode] = useState("add");
+  const [activeInlineRakeId, setActiveInlineRakeId] = useState("");
 
   const inputClass = uniformInputClass;
-  const isOfferingPage = currentRoute === "rake-offering";
+  const isOfferingPage = currentRoute === "rake-offering" || currentRoute === "rake-adjustment";
   const isAdjustmentPage = currentRoute === "rake-adjustment";
+  const isAdjustmentFlow = routeParams?.formType === "adjustment" || currentRoute === "rake-adjustment";
 
   const selectedRake = useMemo(
     () => offeredRows.find((row) => row.rakeNumber === adjustRakeNumber),
@@ -222,6 +259,7 @@ export default function RakeManagementPage() {
   const sortedRows = useMemo(() => {
     const getComparableValue = (row, field) => {
       if (field === "status") return row.isDisabled ? "disabled" : "enabled";
+      if (field === "offerTime") return parseTableDateTimeToTimestamp(row.offerTime);
       if (field === "wagonSupply" || field === "sno") {
         const parsed = Number(row[field]);
         return Number.isNaN(parsed) ? 0 : parsed;
@@ -273,29 +311,64 @@ export default function RakeManagementPage() {
       return;
     }
 
+    if (inlineActionMode === "adjust") {
+      if (!activeInlineRakeId) return;
+      handleSaveInlineAdjustment(activeInlineRakeId);
+      return;
+    }
+
     const nextSno = offeredRows.length > 0 ? Math.max(...offeredRows.map((row) => Number(row.sno) || 0)) + 1 : 1;
 
-    const nextRow = {
-      sno: nextSno,
+    const normalizedRow = {
       rakeId: offeringForm.rakeId.trim(),
       rakeNumber: offeringForm.rakeNumber.trim(),
       wagonSupply: Number(offeringForm.noOfWagons) || 0,
       wagonType: offeringForm.wagonType,
       siding: offeringForm.siding,
       route: offeringForm.route,
+      oreType: offeringForm.oreType,
+      customer: offeringForm.customer,
       oreTypeCustomer: `${offeringForm.oreType} / ${offeringForm.customer}`,
       destination: offeringForm.destination,
       fNote: offeringForm.fNote.trim() || "-",
       offerTime: formatDateTimeForTable(offeringForm.offerTime),
-      isDisabled: false,
     };
 
-    setOfferedRows((prev) => [nextRow, ...prev]);
+    if (inlineActionMode === "add") {
+      const nextRow = {
+        sno: nextSno,
+        ...normalizedRow,
+        adjustOfferFor: "-",
+        adjustedOfferTime: "-",
+        isDisabled: false,
+      };
+      setOfferedRows((prev) => [nextRow, ...prev]);
+    } else {
+      setOfferedRows((prev) =>
+        prev.map((row) =>
+          row.rakeId === activeInlineRakeId
+            ? {
+                ...row,
+                ...normalizedRow,
+              }
+            : row,
+        ),
+      );
+    }
+
     setOfferingForm(initialOfferingForm);
+    setAdjustOfferFor("");
+    setAdjustOfferTime("");
+    setInlineActionMode("add");
+    setActiveInlineRakeId("");
   }
 
   function handleOfferingClear() {
     setOfferingForm(initialOfferingForm);
+    setAdjustOfferFor("");
+    setAdjustOfferTime("");
+    setInlineActionMode("add");
+    setActiveInlineRakeId("");
   }
 
   function parseWagonSupply(value) {
@@ -312,17 +385,30 @@ export default function RakeManagementPage() {
       return;
     }
 
-    const prefillRow = routeParams?.prefillRow;
+    const prefillRow =
+      routeParams?.prefillRow ||
+      (routeParams?.rakeNumber
+        ? offeredRows.find((row) => row.rakeNumber === routeParams.rakeNumber)
+        : null);
 
     if (!prefillRow) {
       setOfferingForm(initialOfferingForm);
+      setAdjustOfferFor("");
+      setAdjustOfferTime("");
       return;
     }
 
-    const [oreType = "", customer = ""] = String(prefillRow.oreTypeCustomer)
+    const [legacyOreType = "", legacyCustomer = ""] = String(prefillRow.oreTypeCustomer)
       .split("/")
       .map((value) => value.trim());
-    const { wagonType, noOfWagons } = parseWagonSupply(prefillRow.wagonSupply);
+    const { wagonType: parsedWagonType, noOfWagons: parsedNoOfWagons } = parseWagonSupply(prefillRow.wagonSupply);
+    const oreType = prefillRow.oreType || legacyOreType;
+    const customer = prefillRow.customer || legacyCustomer;
+    const wagonType = prefillRow.wagonType || parsedWagonType;
+    const noOfWagons =
+      prefillRow.wagonSupply !== undefined && prefillRow.wagonSupply !== null
+        ? String(prefillRow.wagonSupply)
+        : parsedNoOfWagons;
 
     setOfferingForm({
       rakeId: prefillRow.rakeId || "",
@@ -338,7 +424,12 @@ export default function RakeManagementPage() {
       placementTime: "",
       offerTime: "",
     });
-  }, [isOfferingPage, routeParams]);
+
+    if (isAdjustmentFlow) {
+      setAdjustOfferFor("");
+      setAdjustOfferTime("");
+    }
+  }, [isOfferingPage, isAdjustmentFlow, offeredRows, routeParams]);
 
   useEffect(() => {
     if (!isAdjustmentPage) {
@@ -355,13 +446,78 @@ export default function RakeManagementPage() {
   function handleEditOffered(row) {
     if (row.isDisabled) return;
 
-    navigate("rake-offering", { prefillRow: row });
+    setOfferingForm({
+      rakeId: row.rakeId || "",
+      rakeNumber: row.rakeNumber || "",
+      wagonType: row.wagonType || "",
+      noOfWagons: String(row.wagonSupply ?? ""),
+      siding: row.siding || "",
+      route: row.route || "",
+      oreType: row.oreType || "",
+      fNote: row.fNote || "",
+      customer: row.customer || "",
+      destination: row.destination || "",
+      placementTime: "",
+      offerTime: formatTableDateTimeForInput(row.offerTime),
+    });
+    setInlineActionMode("edit");
+    setActiveInlineRakeId(row.rakeId);
+    setAdjustOfferFor(row.adjustOfferFor && row.adjustOfferFor !== "-" ? row.adjustOfferFor : "");
+    setAdjustOfferTime("");
   }
 
   function handleOpenAdjustment(row) {
     if (row.isDisabled) return;
 
-    navigate("rake-adjustment", { rakeNumber: row.rakeNumber });
+    setOfferingForm({
+      rakeId: row.rakeId || "",
+      rakeNumber: row.rakeNumber || "",
+      wagonType: row.wagonType || "",
+      noOfWagons: String(row.wagonSupply ?? ""),
+      siding: row.siding || "",
+      route: row.route || "",
+      oreType: row.oreType || "",
+      fNote: row.fNote || "",
+      customer: row.customer || "",
+      destination: row.destination || "",
+      placementTime: "",
+      offerTime: formatTableDateTimeForInput(row.offerTime),
+    });
+
+    setInlineActionMode("adjust");
+    setActiveInlineRakeId(row.rakeId);
+    setAdjustOfferFor(row.adjustOfferFor && row.adjustOfferFor !== "-" ? row.adjustOfferFor : "");
+    setAdjustOfferTime(
+      row.adjustedOfferTime && row.adjustedOfferTime !== "-"
+        ? formatTableDateTimeForInput(row.adjustedOfferTime)
+        : formatTableDateTimeForInput(row.offerTime),
+    );
+  }
+
+  function handleSaveInlineAdjustment(rakeId) {
+    if (!adjustOfferFor || !adjustOfferTime) {
+      return;
+    }
+
+    const adjustedOfferTime = formatDateTimeForTable(adjustOfferTime);
+
+    setOfferedRows((prev) =>
+      prev.map((row) =>
+        row.rakeId === rakeId
+          ? {
+              ...row,
+              adjustOfferFor,
+              adjustedOfferTime,
+              offerTime: adjustedOfferTime,
+            }
+          : row,
+      ),
+    );
+
+    setAdjustOfferFor("");
+    setAdjustOfferTime("");
+    setInlineActionMode("add");
+    setActiveInlineRakeId("");
   }
 
   function toggleOfferedStatus(rakeId) {
@@ -389,15 +545,20 @@ export default function RakeManagementPage() {
   }
 
   function renderOfferingTab() {
+    const submitDisabled =
+      isAdjustmentFlow && (!adjustOfferFor || !adjustOfferTime);
+
     return (
       <div className="space-y-6 3xl:space-y-8 5xl:space-y-12 animate-fadeIn">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
-              Rake Offering
+              {isAdjustmentFlow ? "Rake Offering Adjustment" : "Rake Offering"}
             </h2>
             <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
-              Create or edit offering details in a dedicated form page.
+              {isAdjustmentFlow
+                ? "Edit and adjust rake offering details in one unified form."
+                : "Create or edit offering details in a dedicated form page."}
             </p>
           </div>
           <button
@@ -411,7 +572,11 @@ export default function RakeManagementPage() {
 
         <UniformSectionCard
           title="Rake Offering Details"
-          subtitle="Capture complete dispatch attributes with clean validation-friendly fields."
+          subtitle={
+            isAdjustmentFlow
+              ? "Use the same Add Rake Offering structure with adjustment details below."
+              : "Capture complete dispatch attributes with clean validation-friendly fields."
+          }
         >
           <form onSubmit={handleOfferingSubmit} className="space-y-5">
             <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
@@ -566,6 +731,39 @@ export default function RakeManagementPage() {
               </div>
             </div>
 
+            {isAdjustmentFlow ? (
+              <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                <p className="mb-4 text-xs font-bold uppercase tracking-[0.08em] text-slate-600">
+                  Adjustment Details
+                </p>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <UniformFormField label="Offer For">
+                    <ThemedSelect
+                      value={adjustOfferFor}
+                      onChange={(event) => setAdjustOfferFor(event.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Select adjustment reason</option>
+                      {adjustmentReasonOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </ThemedSelect>
+                  </UniformFormField>
+
+                  <UniformFormField label="Adjusted Offer Time">
+                    <input
+                      type="datetime-local"
+                      value={adjustOfferTime}
+                      onChange={(event) => setAdjustOfferTime(event.target.value)}
+                      className={inputClass}
+                    />
+                  </UniformFormField>
+                </div>
+              </div>
+            ) : null}
+
             <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-4">
               <button
                 type="button"
@@ -576,9 +774,10 @@ export default function RakeManagementPage() {
               </button>
               <button
                 type="submit"
-                className={uniformPrimaryButtonClass}
+                disabled={submitDisabled}
+                className={`${uniformPrimaryButtonClass} ${submitDisabled ? "cursor-not-allowed opacity-60" : ""}`}
               >
-                Submit Offering
+                {isAdjustmentFlow ? "Save Adjustment" : "Submit Offering"}
               </button>
             </div>
           </form>
@@ -589,7 +788,7 @@ export default function RakeManagementPage() {
 
   function renderOfferedTab() {
     const compactInputClass = `${inputClass} h-8 px-2 text-[11px]`;
-    const inlineAddDisabled =
+    const requiredFieldsMissing =
       !offeringForm.rakeId ||
       !offeringForm.rakeNumber ||
       !offeringForm.noOfWagons ||
@@ -600,6 +799,27 @@ export default function RakeManagementPage() {
       !offeringForm.customer ||
       !offeringForm.destination ||
       !offeringForm.offerTime;
+    const inlineAddDisabled =
+      inlineActionMode === "adjust"
+        ? !activeInlineRakeId || !adjustOfferFor || !adjustOfferTime
+        : requiredFieldsMissing;
+    const inlineActionLabel =
+      inlineActionMode === "edit"
+        ? "Save Edit"
+        : inlineActionMode === "adjust"
+          ? "Save Adjustment"
+          : "Add Rake";
+    const inlineStatusLabel =
+      inlineActionMode === "edit"
+        ? "Editing"
+        : inlineActionMode === "adjust"
+          ? "Adjusting"
+          : "Draft";
+    const isInlineAdjustmentMode = inlineActionMode === "adjust";
+    const isInlineEditMode = inlineActionMode === "edit";
+    const areMainFieldsEditable = !isInlineAdjustmentMode;
+    const isOfferForEditable = isInlineAdjustmentMode;
+    const isOfferTimeEditable = !isInlineEditMode;
 
     return (
       <div className="space-y-6 3xl:space-y-8 5xl:space-y-12 animate-fadeIn">
@@ -623,9 +843,12 @@ export default function RakeManagementPage() {
 
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-280 whitespace-nowrap">
+            <table className="w-full min-w-475 whitespace-nowrap">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
+                  <th className="px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    Actions
+                  </th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     <SortHeaderButton label="Rake ID" field="rakeId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
@@ -633,13 +856,31 @@ export default function RakeManagementPage() {
                     <SortHeaderButton label="Rake Number" field="rakeNumber" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                    <SortHeaderButton label="Siding / Route" field="siding" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    <SortHeaderButton label="Siding" field="siding" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                    <SortHeaderButton label="Ore / Customer" field="oreTypeCustomer" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    <SortHeaderButton label="Route" field="route" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="Ore Type" field="oreType" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="Customer" field="customer" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     <SortHeaderButton label="Destination" field="destination" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="Wagon Type" field="wagonType" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="Wagon Supply" field="wagonSupply" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="F-Note" field="fNote" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="Offered For" field="adjustOfferFor" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     <SortHeaderButton label="Offer Time" field="offerTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
@@ -647,13 +888,54 @@ export default function RakeManagementPage() {
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-5 py-3.5 text-right text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                    Actions
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                <tr className="bg-blue-50/50 align-top">
+                <tr className="bg-blue-50/50 align-top [&>td]:py-4">
+                  <td className="px-5 py-3">
+                    <div className="flex flex-col items-center gap-2">
+                      {inlineActionMode !== "add" ? (
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500">
+                          {inlineActionMode === "edit" ? `Editing ${activeInlineRakeId}` : `Adjusting ${activeInlineRakeId}`}
+                        </span>
+                      ) : null}
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleInlineAddRake}
+                          disabled={inlineAddDisabled}
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-white transition-colors ${
+                            inlineAddDisabled ? "cursor-not-allowed bg-slate-300" : "bg-blue-600 hover:bg-blue-700"
+                          }`}
+                          aria-label={inlineActionLabel}
+                          title={inlineActionLabel}
+                        >
+                          <PlusIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleOfferingClear}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100"
+                          aria-label="Clear form"
+                          title="Clear form"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </td>
                   <td className="px-5 py-3">
                     <input
                       type="text"
@@ -661,6 +943,7 @@ export default function RakeManagementPage() {
                       onChange={(event) => updateOffering("rakeId", event.target.value)}
                       placeholder="Rake ID"
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -670,163 +953,169 @@ export default function RakeManagementPage() {
                       onChange={(event) => updateOffering("rakeNumber", event.target.value)}
                       placeholder="Rake Number"
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
-                    <div className="space-y-1.5">
-                      <ThemedSelect
-                        value={offeringForm.siding}
-                        onChange={(event) => updateOffering("siding", event.target.value)}
-                        className={compactInputClass}
-                      >
-                        <option value="">Siding</option>
-                        {sidingOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </ThemedSelect>
-                      <ThemedSelect
-                        value={offeringForm.route}
-                        onChange={(event) => updateOffering("route", event.target.value)}
-                        className={compactInputClass}
-                      >
-                        <option value="">Route</option>
-                        {routeOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </ThemedSelect>
-                    </div>
+                    <ThemedSelect
+                      value={offeringForm.siding}
+                      onChange={(event) => updateOffering("siding", event.target.value)}
+                      className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
+                    >
+                      <option value="">Siding</option>
+                      {sidingOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </ThemedSelect>
                   </td>
                   <td className="px-5 py-3">
-                    <div className="space-y-1.5">
-                      <ThemedSelect
-                        value={offeringForm.oreType}
-                        onChange={(event) => updateOffering("oreType", event.target.value)}
-                        className={compactInputClass}
-                      >
-                        <option value="">Ore Type</option>
-                        {oreTypeOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </ThemedSelect>
-                      <ThemedSelect
-                        value={offeringForm.customer}
-                        onChange={(event) => updateOffering("customer", event.target.value)}
-                        className={compactInputClass}
-                      >
-                        <option value="">Customer</option>
-                        {customerOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </ThemedSelect>
-                    </div>
+                    <ThemedSelect
+                      value={offeringForm.route}
+                      onChange={(event) => updateOffering("route", event.target.value)}
+                      className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
+                    >
+                      <option value="">Route</option>
+                      {routeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </ThemedSelect>
                   </td>
                   <td className="px-5 py-3">
-                    <div className="space-y-1.5">
+                    <ThemedSelect
+                      value={offeringForm.oreType}
+                      onChange={(event) => updateOffering("oreType", event.target.value)}
+                      className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
+                    >
+                      <option value="">Ore Type</option>
+                      {oreTypeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </ThemedSelect>
+                  </td>
+                  <td className="px-5 py-3">
+                    <ThemedSelect
+                      value={offeringForm.customer}
+                      onChange={(event) => updateOffering("customer", event.target.value)}
+                      className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
+                    >
+                      <option value="">Customer</option>
+                      {customerOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </ThemedSelect>
+                  </td>
+                  <td className="px-5 py-3">
+                    <ThemedSelect
+                      value={offeringForm.destination}
+                      onChange={(event) => updateOffering("destination", event.target.value)}
+                      className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
+                    >
+                      <option value="">Destination</option>
+                      {destinationOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </ThemedSelect>
+                  </td>
+                  <td className="px-5 py-3">
+                    <ThemedSelect
+                      value={offeringForm.wagonType}
+                      onChange={(event) => updateOffering("wagonType", event.target.value)}
+                      className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
+                    >
+                      <option value="">Wagon Type</option>
+                      {wagonTypeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </ThemedSelect>
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="number"
+                      value={offeringForm.noOfWagons}
+                      onChange={(event) => updateOffering("noOfWagons", event.target.value)}
+                      placeholder="Wagons"
+                      className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="text"
+                      value={offeringForm.fNote}
+                      onChange={(event) => updateOffering("fNote", event.target.value)}
+                      placeholder="F-Note"
+                      className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    {isOfferForEditable ? (
                       <ThemedSelect
-                        value={offeringForm.destination}
-                        onChange={(event) => updateOffering("destination", event.target.value)}
+                        value={adjustOfferFor}
+                        onChange={(event) => setAdjustOfferFor(event.target.value)}
                         className={compactInputClass}
                       >
-                        <option value="">Destination</option>
-                        {destinationOptions.map((option) => (
+                        <option value="">Offer For</option>
+                        {adjustmentReasonOptions.map((option) => (
                           <option key={option} value={option}>
                             {option}
                           </option>
                         ))}
                       </ThemedSelect>
-                      <div className="space-y-1.5">
+                      ) : isInlineEditMode ? (
                         <input
-                          type="number"
-                          value={offeringForm.noOfWagons}
-                          onChange={(event) => updateOffering("noOfWagons", event.target.value)}
-                          placeholder="Wagons"
+                          type="text"
+                          value={adjustOfferFor || ""}
+                          placeholder="-"
                           className={compactInputClass}
+                          readOnly
+                          disabled
                         />
-                        <ThemedSelect
-                          value={offeringForm.wagonType}
-                          onChange={(event) => updateOffering("wagonType", event.target.value)}
-                          className={compactInputClass}
-                        >
-                          <option value="">Type</option>
-                          {wagonTypeOptions.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </ThemedSelect>
-                      </div>
-                      <input
-                        type="text"
-                        value={offeringForm.fNote}
-                        onChange={(event) => updateOffering("fNote", event.target.value)}
-                        placeholder="F-Note"
-                        className={compactInputClass}
-                      />
-                    </div>
+                    ) : null}
                   </td>
                   <td className="px-5 py-3">
                     <input
                       type="datetime-local"
-                      value={offeringForm.offerTime}
-                      onChange={(event) => updateOffering("offerTime", event.target.value)}
+                        value={isInlineAdjustmentMode ? adjustOfferTime : offeringForm.offerTime}
+                      onChange={(event) => {
+                          if (isInlineAdjustmentMode) {
+                          setAdjustOfferTime(event.target.value);
+                          return;
+                        }
+                        updateOffering("offerTime", event.target.value);
+                      }}
                       className={compactInputClass}
+                        disabled={!isOfferTimeEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
                     <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
-                      Draft
+                      {inlineStatusLabel}
                     </span>
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={handleInlineAddRake}
-                        disabled={inlineAddDisabled}
-                        className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-white transition-colors ${
-                          inlineAddDisabled ? "cursor-not-allowed bg-slate-300" : "bg-blue-600 hover:bg-blue-700"
-                        }`}
-                        aria-label="Add rake"
-                        title="Add rake"
-                      >
-                        <PlusIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleOfferingClear}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100"
-                        aria-label="Clear form"
-                        title="Clear form"
-                      >
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <line x1="18" y1="6" x2="6" y2="18" />
-                          <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                      </button>
-                    </div>
                   </td>
                 </tr>
 
                 {sortedRows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-12 text-center">
+                    <td colSpan={14} className="px-5 py-12 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <svg
                           width="40"
@@ -851,66 +1140,20 @@ export default function RakeManagementPage() {
                   </tr>
                 ) : (
                   sortedRows.map((row) => {
-                    const [oreType = "-", customer = "-"] = String(row.oreTypeCustomer)
-                      .split("/")
-                      .map((value) => value.trim());
+                    const [offerDate = "-", offerClock = "-"] = String(row.offerTime || "-").split(" ");
+                    const oreType = row.oreType || "-";
+                    const customer = row.customer || "-";
+                    const offeredFor = row.adjustOfferFor && row.adjustOfferFor !== "-" ? row.adjustOfferFor : "";
 
                     return (
                       <tr
                         key={row.rakeId}
-                        className={`hover:bg-slate-50/60 transition-colors group ${row.isDisabled ? "opacity-70" : ""}`}
+                        className={`hover:bg-slate-50/60 transition-colors group [&>td]:py-5 ${
+                          row.rakeId === activeInlineRakeId ? "bg-amber-50/60" : ""
+                        } ${row.isDisabled ? "opacity-70" : ""}`}
                       >
                         <td className="px-5 py-4">
-                          <span className="text-[13px] font-semibold text-blue-600">
-                            {row.rakeId}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div>
-                            <p className="text-[13px] font-semibold text-slate-800">{row.rakeNumber}</p>
-                            <p className="text-[11px] text-slate-400 mt-0.5">F-Note: {row.fNote}</p>
-                            <p className="text-[11px] text-slate-400 mt-0.5">{row.wagonType || "-"} / {row.wagonSupply}</p>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div>
-                            <p className="text-[13px] font-medium text-slate-700">{row.siding}</p>
-                            <p className="text-[11px] text-slate-400 mt-0.5">Route: {row.route}</p>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div>
-                            <p className="text-[13px] font-medium text-slate-700">{customer}</p>
-                            <p className="text-[11px] text-slate-400 mt-0.5">Ore: {oreType}</p>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <span className="text-[13px] text-slate-600">{row.destination}</span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div>
-                            <p className="text-[13px] text-slate-700">{row.offerTime.split(" ")[0]}</p>
-                            <p className="text-[11px] text-slate-400 mt-0.5">{row.offerTime.split(" ")[1]}</p>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <span
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold ${
-                              row.isDisabled
-                                ? "border-slate-200 bg-slate-100 text-slate-500"
-                                : "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            }`}
-                          >
-                            <span
-                              className={`h-1.5 w-1.5 rounded-full ${
-                                row.isDisabled ? "bg-slate-400" : "bg-emerald-500"
-                              }`}
-                            />
-                            {row.isDisabled ? "Inactive" : "Active"}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center justify-center gap-2 opacity-60 transition-opacity group-hover:opacity-100">
                             <button
                               type="button"
                               onClick={() => handleEditOffered(row)}
@@ -953,6 +1196,63 @@ export default function RakeManagementPage() {
                               {row.isDisabled ? <EnableIcon /> : <DisableIcon />}
                             </button>
                           </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-[13px] font-semibold text-blue-600">
+                            {row.rakeId}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-[13px] font-semibold text-slate-800">{row.rakeNumber || "-"}</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-[13px] text-slate-700">{row.siding || "-"}</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-[13px] text-slate-700">{row.route || "-"}</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-[13px] text-slate-700">{oreType}</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-[13px] text-slate-700">{customer}</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-[13px] text-slate-700">{row.destination || "-"}</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-[13px] text-slate-700">{row.wagonType || "-"}</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-[13px] text-slate-700">{row.wagonSupply ?? "-"}</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-[13px] text-slate-700">{row.fNote || "-"}</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-[13px] text-slate-700">{offeredFor}</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div>
+                            <p className="text-[13px] text-slate-700">{offerDate}</p>
+                            <p className="mt-0.5 text-[11px] text-slate-400">{offerClock}</p>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold ${
+                              row.isDisabled
+                                ? "border-slate-200 bg-slate-100 text-slate-500"
+                                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            }`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                row.isDisabled ? "bg-slate-400" : "bg-emerald-500"
+                              }`}
+                            />
+                            {row.isDisabled ? "Inactive" : "Active"}
+                          </span>
                         </td>
                       </tr>
                     );
@@ -1033,7 +1333,7 @@ export default function RakeManagementPage() {
                 </UniformFormField>
                 <UniformFormField label="Customer">
                   <input
-                    value={selectedRake?.oreTypeCustomer?.split("/")[1]?.trim() || ""}
+                    value={selectedRake?.customer || selectedRake?.oreTypeCustomer?.split("/")[1]?.trim() || ""}
                     readOnly
                     className={inputClass}
                   />

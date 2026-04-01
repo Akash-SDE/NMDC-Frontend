@@ -170,13 +170,21 @@ function toWagonSeriesKey(code) {
 
 const activeRakeRows = [
   {
-    rakeNumber: "RK-7729",
+    rakeId: "RK-7729",
+    rakeNumber: "R-2026-001",
+    fNote: "FN-23011",
     oreType: "LUMPS-62",
+    siding: "SIDING-A",
+    route: "R14",
+    wagons: "58",
+    tonnage: "3,450T",
     sidingRoute: "SIDING-A / R14",
     wagonCount: "58 / 3,450T",
     customer: "METALS-CO",
     destination: "PORT-A",
+    offerDate: "19/03/2026",
     offerTime: "10:15",
+    completionDate: "19/03/2026",
     completionTime: "14:32",
     feedRate: "850 T/H",
     updatedAt: "14:32:05",
@@ -184,13 +192,21 @@ const activeRakeRows = [
     lag: "4m 12s",
   },
   {
-    rakeNumber: "RK-8812",
+    rakeId: "RK-8812",
+    rakeNumber: "R-2026-002",
+    fNote: "FN-23022",
     oreType: "FINES-58",
+    siding: "SIDING-C",
+    route: "R09",
+    wagons: "45",
+    tonnage: "2,880T",
     sidingRoute: "SIDING-C / R09",
     wagonCount: "45 / 2,880T",
     customer: "GLOBAL-ORE",
     destination: "STOCKPILE-2",
+    offerDate: "19/03/2026",
     offerTime: "11:00",
+    completionDate: "19/03/2026",
     completionTime: "14:15",
     feedRate: "720 T/H",
     updatedAt: "14:15:33",
@@ -198,13 +214,21 @@ const activeRakeRows = [
     lag: "0m 45s",
   },
   {
-    rakeNumber: "RK-7655",
+    rakeId: "RK-7655",
+    rakeNumber: "R-2026-003",
+    fNote: "FN-23033",
     oreType: "LUMPS-65",
+    siding: "SIDING-B",
+    route: "R22",
+    wagons: "52",
+    tonnage: "3,100T",
     sidingRoute: "SIDING-B / R22",
     wagonCount: "52 / 3,100T",
     customer: "STEEL-IND",
     destination: "EAST-JUNCT",
+    offerDate: "19/03/2026",
     offerTime: "09:45",
+    completionDate: "19/03/2026",
     completionTime: "14:02",
     feedRate: "680 T/H",
     updatedAt: "14:02:10",
@@ -212,13 +236,21 @@ const activeRakeRows = [
     lag: "22m 18s",
   },
   {
-    rakeNumber: "RK-9003",
+    rakeId: "RK-9003",
+    rakeNumber: "R-2026-004",
+    fNote: "FN-23044",
     oreType: "PELLET-67",
+    siding: "SIDING-D",
+    route: "R05",
+    wagons: "59",
+    tonnage: "3,520T",
     sidingRoute: "SIDING-D / R05",
     wagonCount: "59 / 3,520T",
     customer: "IRON-CORE",
     destination: "FURNACE-4",
+    offerDate: "19/03/2026",
     offerTime: "12:20",
+    completionDate: "19/03/2026",
     completionTime: "13:55",
     feedRate: "910 T/H",
     updatedAt: "13:55:45",
@@ -226,13 +258,21 @@ const activeRakeRows = [
     lag: "1m 15s",
   },
   {
-    rakeNumber: "RK-6541",
+    rakeId: "RK-6541",
+    rakeNumber: "R-2026-005",
+    fNote: "FN-23055",
     oreType: "FINES-54",
+    siding: "SIDING-A",
+    route: "R18",
+    wagons: "50",
+    tonnage: "3,200T",
     sidingRoute: "SIDING-A / R18",
     wagonCount: "50 / 3,200T",
     customer: "METALS-CO",
     destination: "PORT-B",
+    offerDate: "19/03/2026",
     offerTime: "08:30",
+    completionDate: "19/03/2026",
     completionTime: "12:45",
     feedRate: "760 T/H",
     updatedAt: "12:45:22",
@@ -240,13 +280,21 @@ const activeRakeRows = [
     lag: "3m 30s",
   },
   {
-    rakeNumber: "RK-4420",
+    rakeId: "RK-4420",
+    rakeNumber: "R-2026-006",
+    fNote: "FN-23066",
     oreType: "LUMPS-60",
+    siding: "SIDING-E",
+    route: "R11",
+    wagons: "61",
+    tonnage: "3,680T",
     sidingRoute: "SIDING-E / R11",
     wagonCount: "61 / 3,680T",
     customer: "GLOBAL-ORE",
     destination: "WEST-YARD",
+    offerDate: "19/03/2026",
     offerTime: "07:10",
+    completionDate: "19/03/2026",
     completionTime: "11:30",
     feedRate: "830 T/H",
     updatedAt: "11:30:18",
@@ -254,13 +302,21 @@ const activeRakeRows = [
     lag: "0m 52s",
   },
   {
-    rakeNumber: "RK-3318",
+    rakeId: "RK-3318",
+    rakeNumber: "R-2026-007",
+    fNote: "FN-23077",
     oreType: "FINES-49",
+    siding: "SIDING-B",
+    route: "R03",
+    wagons: "44",
+    tonnage: "2,750T",
     sidingRoute: "SIDING-B / R03",
     wagonCount: "44 / 2,750T",
     customer: "COAST-ALLOY",
     destination: "STOCKPILE-5",
+    offerDate: "19/03/2026",
     offerTime: "13:05",
+    completionDate: "19/03/2026",
     completionTime: "14:40",
     feedRate: "640 T/H",
     updatedAt: "14:40:10",
@@ -268,25 +324,27 @@ const activeRakeRows = [
     lag: "5m 20s",
   },
   {
-    rakeNumber: "RK-2205",
+    rakeId: "RK-2205",
+    rakeNumber: "R-2026-008",
+    fNote: "FN-23088",
     oreType: "LUMPS-68",
+    siding: "SIDING-F",
+    route: "R27",
+    wagons: "63",
+    tonnage: "3,780T",
     sidingRoute: "SIDING-F / R27",
     wagonCount: "63 / 3,780T",
     customer: "STEEL-IND",
     destination: "NORTH-HUB",
+    offerDate: "19/03/2026",
     offerTime: "06:25",
+    completionDate: "19/03/2026",
     completionTime: "10:20",
     feedRate: "940 T/H",
     updatedAt: "10:20:55",
     status: "READY",
     lag: "0m 35s",
   },
-];
-
-const rakeOfferingTrend = [
-  { day: "25 Mar", offers: 12 },
-  { day: "26 Mar", offers: 16 },
-  { day: "27 Mar", offers: 14 },
 ];
 
 function getStatusClasses(status) {
@@ -321,6 +379,26 @@ function formatDispatchTime(date) {
   });
 }
 
+function formatDashboardDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDashboardDateLabel(dateValue) {
+  if (!dateValue) {
+    return "--/--/----";
+  }
+
+  const [year, month, day] = String(dateValue).split("-");
+  if (!year || !month || !day) {
+    return dateValue;
+  }
+
+  return `${day}/${month}/${year}`;
+}
+
 function assignDispatchLanes(events) {
   const sortedEvents = [...events].sort((a, b) => {
     if (a.start === b.start) {
@@ -346,6 +424,206 @@ function assignDispatchLanes(events) {
       laneIndex,
     };
   });
+}
+
+function LiveWagonCountCard({ rows, seriesMeta }) {
+  const [fixedTime] = useState(() => new Date());
+  const [hoveredTrendPoint, setHoveredTrendPoint] = useState(null);
+
+  const resolveSeriesStroke = (colorClass) => {
+    const matchedHex = /bg-\[(#[0-9a-fA-F]{3,8})\]/.exec(colorClass || "");
+    return matchedHex?.[1] || "#1565c0";
+  };
+
+  const fullDayRows = useMemo(() => {
+    const rowByHour = rows.reduce((accumulator, row) => {
+      const hourKey = row.hour.slice(0, 2);
+      accumulator[hourKey] = row;
+      return accumulator;
+    }, {});
+
+    return dispatchGridHours.map((hour) => {
+      const hourKey = String(hour).padStart(2, "0");
+      const hourLabel = `${hourKey}:00`;
+      const existingRow = rowByHour[hourKey];
+
+      if (existingRow) {
+        return {
+          ...existingRow,
+          hour: hourLabel,
+        };
+      }
+
+      return {
+        hour: hourLabel,
+        segments: seriesMeta.map((series) => ({
+          key: series.key,
+          value: 0,
+        })),
+      };
+    });
+  }, [rows, seriesMeta]);
+
+  const lineChartData = useMemo(() => {
+    const rowsAscending = [...fullDayRows].sort((a, b) => a.hour.localeCompare(b.hour));
+    const chartWidth = 980;
+    const chartHeight = 300;
+    const left = 34;
+    const right = 20;
+    const top = 20;
+    const bottom = 42;
+    const innerWidth = chartWidth - left - right;
+    const innerHeight = chartHeight - top - bottom;
+    const stepX = rowsAscending.length > 1 ? innerWidth / (rowsAscending.length - 1) : innerWidth;
+
+    const minValue = 10;
+    const maxValue = 100;
+
+    const lines = seriesMeta.map((series) => {
+      const points = rowsAscending.map((row, index) => {
+        const value = row.segments.find((segment) => segment.key === series.key)?.value ?? 0;
+        const clampedValue = Math.min(Math.max(value, minValue), maxValue);
+        const normalized = (clampedValue - minValue) / (maxValue - minValue);
+        const x = left + stepX * index;
+        const y = top + (1 - normalized) * innerHeight;
+        return { x, y, value, hour: row.hour };
+      });
+
+      const path = points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+
+      return {
+        ...series,
+        stroke: resolveSeriesStroke(series.color),
+        points,
+        path,
+      };
+    });
+
+    const guides = Array.from({ length: 10 }, (_, index) => {
+      const value = (index + 1) * 10;
+      const normalized = (value - minValue) / (maxValue - minValue);
+      return {
+        value,
+        y: top + (1 - normalized) * innerHeight,
+      };
+    });
+
+    return {
+      chartWidth,
+      chartHeight,
+      left,
+      right,
+      bottom,
+      rowsAscending,
+      lines,
+      guides,
+      stepX,
+    };
+  }, [fullDayRows, seriesMeta]);
+
+  return (
+    <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 px-4 py-4">
+        <div>
+          <h3 className="text-[22px] font-extrabold leading-tight text-[#102a57]">HOURLY WAGON COUNT</h3>
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-500">TIME-STAMPED WAGON SNAPSHOT</p>
+        </div>
+      </div>
+
+      <div className="border-b border-slate-200 bg-[#f8fbff] px-4 py-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">WAGON COUNT TREND</p>
+
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] font-bold text-slate-600">
+          {seriesMeta.map((series) => (
+            <span key={`trend-legend-${series.key}`} className="inline-flex items-center gap-1.5 uppercase tracking-[0.04em]">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: resolveSeriesStroke(series.color) }} />
+              {series.label}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-2 min-h-10">
+          {hoveredTrendPoint ? (
+            <div className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: hoveredTrendPoint.color }} />
+              <p className="text-[11px] font-semibold text-[#0f2f67]">
+                {hoveredTrendPoint.label} at {hoveredTrendPoint.hour}: <span className="font-extrabold">{hoveredTrendPoint.value}</span>
+              </p>
+            </div>
+          ) : (
+            <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-400">Hover a dot to view details</p>
+          )}
+        </div>
+
+        <div className="mt-2 overflow-x-auto">
+          <svg viewBox={`0 0 ${lineChartData.chartWidth} ${lineChartData.chartHeight}`} className="h-72 w-full min-w-240">
+            {lineChartData.guides.map((guide) => (
+              <g key={`guide-${guide.value}-${guide.y}`}>
+                <line
+                  x1={lineChartData.left}
+                  y1={guide.y}
+                  x2={lineChartData.chartWidth - lineChartData.right}
+                  y2={guide.y}
+                  stroke="#cbd5e1"
+                  strokeWidth="1"
+                />
+                <text x={lineChartData.left - 8} y={guide.y + 4} textAnchor="end" fontSize="10" fill="#64748b" fontWeight="700">
+                  {guide.value}
+                </text>
+              </g>
+            ))}
+
+            {lineChartData.lines.map((series) => (
+              <g key={`${series.key}-line`}>
+                <path d={series.path} fill="none" stroke={series.stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                {series.points.map((point) => (
+                  <circle
+                    key={`${series.key}-${point.hour}`}
+                    cx={point.x}
+                    cy={point.y}
+                    r="3"
+                    fill={series.stroke}
+                    tabIndex={0}
+                    className="cursor-pointer"
+                    onMouseEnter={() =>
+                      setHoveredTrendPoint({
+                        label: series.label,
+                        hour: point.hour,
+                        value: point.value,
+                        color: series.stroke,
+                      })
+                    }
+                    onMouseLeave={() => setHoveredTrendPoint(null)}
+                    onFocus={() =>
+                      setHoveredTrendPoint({
+                        label: series.label,
+                        hour: point.hour,
+                        value: point.value,
+                        color: series.stroke,
+                      })
+                    }
+                    onBlur={() => setHoveredTrendPoint(null)}
+                  >
+                    <title>{`${series.label} ${point.hour}: ${point.value}`}</title>
+                  </circle>
+                ))}
+              </g>
+            ))}
+
+            {lineChartData.rowsAscending.map((row, index) => {
+              const x = lineChartData.left + lineChartData.stepX * index;
+              return (
+                <text key={`x-label-${row.hour}`} x={x} y={lineChartData.chartHeight - 10} textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="700">
+                  {row.hour}
+                </text>
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+
+    </article>
+  );
 }
 
 function CardIcon({ type }) {
@@ -646,6 +924,7 @@ function DispatchTimelineCard({
 }
 
 export default function Dashboard() {
+  const [dashboardDate, setDashboardDate] = useState(() => formatDashboardDate(new Date()));
   const storedWagonTypes = useMemo(() => {
     return getWagonTypesMasterData().filter(
       (item) => item?.code && item?.name && item.status !== "inactive",
@@ -682,7 +961,7 @@ export default function Dashboard() {
   }, [hourlySeriesMeta]);
 
   const [tablePage, setTablePage] = useState(1);
-  const [sortBy, setSortBy] = useState("rakeNumber");
+  const [sortBy, setSortBy] = useState("rakeId");
   const [sortOrder, setSortOrder] = useState("asc");
   const [activeHourlySeries, setActiveHourlySeries] = useState(() => {
     return hourlySeriesMeta.reduce((accumulator, series) => {
@@ -691,7 +970,6 @@ export default function Dashboard() {
     }, {});
   });
   const [hoveredHourlySeries, setHoveredHourlySeries] = useState(null);
-  const [hoveredOfferPoint, setHoveredOfferPoint] = useState(null);
 
   const statusCounts = useMemo(() => {
     return activeRakeRows.reduce(
@@ -766,71 +1044,6 @@ export default function Dashboard() {
     const start = (tablePage - 1) * pageSize;
     return sortedRows.slice(start, start + pageSize);
   }, [tablePage, sortedRows]);
-  const rakeSidingGroups = useMemo(() => {
-    const groupMap = {};
-
-    activeRakeRows.forEach((row) => {
-      const [sidingNameRaw, routeNameRaw] = row.sidingRoute.split("/").map((part) => part.trim());
-      const sidingName = sidingNameRaw || "UNASSIGNED";
-      const routeName = routeNameRaw || "-";
-
-      if (!groupMap[sidingName]) {
-        groupMap[sidingName] = [];
-      }
-
-      groupMap[sidingName].push({
-        rakeNumber: row.rakeNumber,
-        routeName,
-        status: row.status,
-      });
-    });
-
-    return Object.entries(groupMap)
-      .map(([sidingName, rakes]) => ({
-        sidingName,
-        rakes,
-      }))
-      .sort((a, b) => a.sidingName.localeCompare(b.sidingName));
-  }, []);
-  const chartData = useMemo(() => {
-    const trendSeries = rakeOfferingTrend;
-    const chartWidth = 320;
-    const chartHeight = 200;
-    const left = 26;
-    const right = 18;
-    const top = 18;
-    const bottom = 32;
-    const maxOffers = Math.max(...trendSeries.map((item) => item.offers), 1);
-    const innerWidth = chartWidth - left - right;
-    const innerHeight = chartHeight - top - bottom;
-    const stepX = trendSeries.length > 1 ? innerWidth / (trendSeries.length - 1) : innerWidth;
-    const points = trendSeries.map((item, index) => {
-      const x = left + index * stepX;
-      const y = top + (1 - item.offers / maxOffers) * innerHeight;
-      return { ...item, x, y };
-    });
-    const linePath = points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
-    const lastPoint = points[points.length - 1];
-    const firstPoint = points[0];
-    const areaPath = `${linePath} L ${lastPoint.x} ${chartHeight - bottom} L ${firstPoint.x} ${chartHeight - bottom} Z`;
-    const totalOffers = trendSeries.reduce((total, item) => total + item.offers, 0);
-    const averageOffers = (totalOffers / trendSeries.length).toFixed(1);
-    const growth = firstPoint.offers > 0 ? ((lastPoint.offers - firstPoint.offers) / firstPoint.offers) * 100 : 0;
-    return {
-      trendSeries,
-      chartWidth,
-      chartHeight,
-      top,
-      bottom,
-      points,
-      linePath,
-      areaPath,
-      totalOffers,
-      averageOffers,
-      growth,
-      maxOffers,
-    };
-  }, []);
   const toggleHourlySeries = (seriesKey) => {
     setActiveHourlySeries((previous) => {
       const currentlyEnabled = Object.values(previous).filter(Boolean).length;
@@ -899,22 +1112,27 @@ export default function Dashboard() {
     };
   }, [hoveredHourlySeries, activeHourlySeries, hourlySeriesMeta]);
 
-  const offerHoverSummary = useMemo(() => {
-    if (!hoveredOfferPoint) {
-      return null;
-    }
-
-    const previousPoint = chartData.trendSeries[hoveredOfferPoint.index - 1];
-    const delta = previousPoint ? hoveredOfferPoint.offers - previousPoint.offers : 0;
-
-    return {
-      ...hoveredOfferPoint,
-      delta,
-    };
-  }, [hoveredOfferPoint, chartData.trendSeries]);
-
   return (
     <div className="space-y-4">
+      <section className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">REPORT DATE</p>
+            <p className="mt-1 text-[12px] font-semibold text-[#0f2f67]">Pick the dashboard date to review</p>
+          </div>
+
+          <div className="w-full sm:w-60">
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Select date</label>
+            <input
+              type="date"
+              value={dashboardDate}
+              onChange={(event) => setDashboardDate(event.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-[#0f2f67] outline-none transition focus:border-[#1565c0] focus:ring-1 focus:ring-[#1565c0]"
+            />
+          </div>
+        </div>
+      </section>
+
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metricCards.map((card) => (
           <MetricCard key={card.title} card={card} />
@@ -930,104 +1148,11 @@ export default function Dashboard() {
         />
       </section>
 
-      <section className="space-y-4">
-        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-[24px] font-extrabold leading-tight text-[#102a57]">Hourly Wagon Count</h3>
-              <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">MULTI-TYPE WAGON PRODUCTION</p>
-            </div>
-            <div className="flex flex-col items-end gap-2 pt-1">
-              <div className="flex items-center gap-2">
-                {hourlySeriesMeta.map((series) => {
-                  const isActive = activeHourlySeries[series.key];
-                  return (
-                    <button
-                      key={series.key}
-                      type="button"
-                      onClick={() => toggleHourlySeries(series.key)}
-                      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-bold transition-colors ${
-                        isActive
-                          ? "border-slate-300 bg-white text-slate-600"
-                          : "border-slate-200 bg-slate-100 text-slate-400"
-                      }`}
-                      aria-pressed={isActive}
-                      title={isActive ? "Click to hide" : "Click to show"}
-                    >
-                      <span className={`h-2.5 w-2.5 rounded-full ${series.color}`} />
-                      {series.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <div className="relative mt-4 h-65 rounded-lg border border-slate-100 bg-[#fafbfe] p-3">
-            {hourlyHoverSummary ? (
-              <div className="pointer-events-none absolute right-3 top-3 z-20 max-w-[calc(100%-1.5rem)] rounded-md border border-blue-200 bg-white/95 px-2.5 py-1.5 shadow-sm backdrop-blur-sm">
-                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-blue-700">Hourly Detail</p>
-                <p className="mt-0.5 text-[11px] font-semibold leading-snug text-[#102a57] sm:text-[12px]">
-                  {hourlyHoverSummary.hour} • {hourlyHoverSummary.label}: {hourlyHoverSummary.value} wagons
-                </p>
-              </div>
-            ) : null}
-            <div className="absolute inset-x-3 top-8 h-px bg-slate-200" />
-            <div className="absolute inset-x-3 top-1/2 h-px bg-slate-200" />
-            <div className="absolute inset-x-3 bottom-10 h-px bg-slate-200" />
-
-            <div className="flex h-full items-end gap-2 pb-3">
-              {hourlyChartData.bars.map((item) => (
-                <div key={item.hour} className="flex flex-1 flex-col items-center justify-end gap-1">
-                  <div className="flex w-full items-end justify-center gap-1">
-                    {item.segments.map((segment) => (
-                      <button
-                        key={`${item.hour}-${segment.key}`}
-                        type="button"
-                        onMouseEnter={() =>
-                          setHoveredHourlySeries({
-                            hour: item.hour,
-                            key: segment.key,
-                            value: segment.value,
-                          })
-                        }
-                        onMouseLeave={() => setHoveredHourlySeries(null)}
-                        onFocus={() =>
-                          setHoveredHourlySeries({
-                            hour: item.hour,
-                            key: segment.key,
-                            value: segment.value,
-                          })
-                        }
-                        onBlur={() => setHoveredHourlySeries(null)}
-                        className={`w-2 rounded-t ${segment.color} transition-all duration-300 hover:brightness-110 focus:brightness-110 focus:outline-none`}
-                        style={{ height: `${segment.height}px` }}
-                        aria-label={`${segment.label} ${segment.value} wagons at ${item.hour}`}
-                        title={`${segment.label}: ${segment.value} wagons at ${item.hour}`}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-[9px] font-semibold text-slate-400">{item.hour.slice(0, 2)}:00</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
-            {hourlySeriesMeta.map((series) => (
-              <div key={series.key} className="flex items-center justify-between text-[12px]">
-                <span className="inline-flex items-center gap-2 font-semibold text-slate-600">
-                  <span className={`h-2 w-2 rounded-full ${series.color}`} />
-                  {series.label}
-                </span>
-                <span className="font-bold text-[#0f2f67]">{hourlyChartData.totals[series.key]}</span>
-              </div>
-            ))}
-          </div>
-        </article>
+      <section>
+        <LiveWagonCountCard rows={hourlyChartData.bars} seriesMeta={hourlySeriesMeta} />
       </section>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(270px,1fr)]">
+      <section>
         <article className="rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
             <h3 className="text-[17px] font-extrabold tracking-[0.01em] text-[#102a57]">
@@ -1050,25 +1175,46 @@ export default function Dashboard() {
               <thead>
                 <tr className="border-b border-slate-100 bg-[#f3f4f6]">
                   <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                    Actions
+                  </th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                    <SortHeaderButton label="Rake ID" field="rakeId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
                     <SortHeaderButton label="Rake Number" field="rakeNumber" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                    <SortHeaderButton label="F-Note" field="fNote" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                    <SortHeaderButton label="Siding" field="siding" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                    <SortHeaderButton label="Route" field="route" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
                     <SortHeaderButton label="Ore Type" field="oreType" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                    <SortHeaderButton label="Siding/Route" field="sidingRoute" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                  </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                    <SortHeaderButton label="Wagon/Count" field="wagonCount" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                  </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
                     <SortHeaderButton label="Customer" field="customer" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                    <SortHeaderButton label="Wagons" field="wagons" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                    <SortHeaderButton label="Tonnage" field="tonnage" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
                     <SortHeaderButton label="Destination" field="destination" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                    <SortHeaderButton label="Offer Date" field="offerDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
                     <SortHeaderButton label="Offer Time" field="offerTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                    <SortHeaderButton label="Completion Date" field="completionDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
                     <SortHeaderButton label="Completion Time" field="completionTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
@@ -1090,16 +1236,60 @@ export default function Dashboard() {
               <tbody>
                 {pagedRows.map((row, index) => (
                   <tr
-                    key={`${row.rakeNumber}-${row.updatedAt}`}
+                    key={`${row.rakeId}-${row.updatedAt}`}
                     className={`border-b border-white ${index % 2 === 0 ? "bg-[#eff1f3]" : "bg-[#f4f5f7]"}`}
                   >
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
+                          aria-label={`Edit ${row.rakeId}`}
+                          title="Edit"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
+                          aria-label={`Plan ${row.rakeId}`}
+                          title="Plan"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="4" y1="7" x2="20" y2="7" />
+                            <line x1="4" y1="12" x2="20" y2="12" />
+                            <line x1="4" y1="17" x2="14" y2="17" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
+                          aria-label={`Lock ${row.rakeId}`}
+                          title="Lock"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="4" y="11" width="16" height="9" rx="2" />
+                            <path d="M8 11V7a4 4 0 1 1 8 0v4" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-[12px] font-bold text-[#155eef]">{row.rakeId}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-[12px] font-bold text-[#0f2f67]">{row.rakeNumber}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-[12px] font-medium text-slate-600">{row.fNote}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-[12px] font-semibold text-slate-700">{row.siding}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-[12px] font-semibold text-slate-700">{row.route}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-[12px] font-semibold text-slate-700">{row.oreType}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-[12px] font-medium text-slate-700">{row.sidingRoute}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-[12px] font-bold text-[#1f67b7]">{row.wagonCount}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-[12px] font-semibold text-slate-700">{row.customer}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-[12px] font-bold text-[#1f67b7]">{row.wagons}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-[12px] font-bold text-[#1f67b7]">{row.tonnage}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-[12px] font-semibold text-slate-700">{row.destination}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-[12px] font-medium text-slate-700">{row.offerDate}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-[12px] font-medium text-slate-700">{row.offerTime}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-[12px] font-medium text-slate-700">{row.completionDate}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-[12px] font-medium text-slate-700">{row.completionTime}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-[12px] font-bold text-slate-700">{row.feedRate}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-[12px] font-medium text-slate-700">{row.updatedAt}</td>
@@ -1143,138 +1333,8 @@ export default function Dashboard() {
             </div>
           </div>
         </article>
-
-        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div>
-            <div>
-              <h3 className="text-[24px] font-extrabold leading-tight text-[#102a57]">3-Day Rake Offering Analysis</h3>
-              <p className="text-[11px] font-medium text-slate-500">Last 72 hours rake offering trend</p>
-            </div>
-          </div>
-
-          <div className="relative mt-4 rounded-lg border border-slate-100 bg-[#f8fbff] p-2">
-            {offerHoverSummary ? (
-              <div className="pointer-events-none absolute right-3 top-3 z-20 max-w-[calc(100%-1.5rem)] rounded-md border border-blue-200 bg-white/95 px-2.5 py-1.5 shadow-sm backdrop-blur-sm">
-                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-blue-700">Trend Detail</p>
-                <p className="mt-0.5 text-[11px] font-semibold leading-snug text-[#102a57] sm:text-[12px]">
-                  {offerHoverSummary.day}: {offerHoverSummary.offers} offers
-                  {offerHoverSummary.index > 0
-                    ? ` (${offerHoverSummary.delta >= 0 ? "+" : ""}${offerHoverSummary.delta} vs previous day)`
-                    : ""}
-                </p>
-              </div>
-            ) : null}
-            <svg viewBox={`0 0 ${chartData.chartWidth} ${chartData.chartHeight}`} className="h-52 w-full">
-              <defs>
-                <linearGradient id="offerAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#2f79e9" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#2f79e9" stopOpacity="0.02" />
-                </linearGradient>
-              </defs>
-              {[0.2, 0.45, 0.7].map((guide) => (
-                <line
-                  key={guide}
-                  x1="24"
-                  x2={chartData.chartWidth - 16}
-                  y1={chartData.top + guide * (chartData.chartHeight - chartData.top - chartData.bottom)}
-                  y2={chartData.top + guide * (chartData.chartHeight - chartData.top - chartData.bottom)}
-                  stroke="#dbe4f1"
-                  strokeDasharray="3 4"
-                />
-              ))}
-              <path d={chartData.areaPath} fill="url(#offerAreaGradient)" />
-              <path d={chartData.linePath} fill="none" stroke="#2f79e9" strokeWidth="3" strokeLinecap="round" />
-              {chartData.points.map((point, index) => {
-                const isHovered = hoveredOfferPoint?.day === point.day;
-                return (
-                <g key={point.day}>
-                  <circle
-                    cx={point.x}
-                    cy={point.y}
-                    r={isHovered ? "5.5" : "4"}
-                    fill="#ffffff"
-                    stroke="#0f2f67"
-                    strokeWidth="2"
-                    className="cursor-pointer"
-                    tabIndex={0}
-                    onMouseEnter={() => setHoveredOfferPoint({ day: point.day, offers: point.offers, index })}
-                    onMouseLeave={() => setHoveredOfferPoint(null)}
-                    onFocus={() => setHoveredOfferPoint({ day: point.day, offers: point.offers, index })}
-                    onBlur={() => setHoveredOfferPoint(null)}
-                  />
-                  <text x={point.x} y={point.y - 10} textAnchor="middle" className="fill-[#0f2f67] text-[10px] font-bold">
-                    {point.offers}
-                  </text>
-                </g>
-              );
-              })}
-            </svg>
-
-            <div className="mt-1 flex justify-between px-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
-              {chartData.trendSeries.map((item) => (
-                <span key={item.day}>{item.day}</span>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-2 border-t border-slate-100 pt-3 sm:grid-cols-3">
-            <div className="rounded-md bg-[#f4f8ff] px-3 py-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-slate-500">Total Offers</p>
-              <p className="mt-1 text-[20px] font-extrabold text-[#0f2f67]">{chartData.totalOffers}</p>
-            </div>
-            <div className="rounded-md bg-[#f4f8ff] px-3 py-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-slate-500">Avg / Day</p>
-              <p className="mt-1 text-[20px] font-extrabold text-[#0f2f67]">{chartData.averageOffers}</p>
-            </div>
-            <div className="rounded-md bg-[#f4f8ff] px-3 py-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-slate-500">3-Day Change</p>
-              <p className={`mt-1 text-[20px] font-extrabold ${chartData.growth >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                {chartData.growth >= 0 ? "+" : ""}
-                {chartData.growth.toFixed(1)}%
-              </p>
-            </div>
-          </div>
-        </article>
       </section>
 
-      <section>
-        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-[20px] font-extrabold tracking-[0.01em] text-[#102a57]">
-              Rake-to-Siding Allocation
-            </h3>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-              Which rake is on which siding
-            </p>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {rakeSidingGroups.map((group) => (
-              <div key={group.sidingName} className="rounded-lg border border-slate-200 bg-[#f8fbff] px-3 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-[13px] font-extrabold tracking-[0.04em] text-[#0f2f67]">{group.sidingName}</p>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">{group.rakes.length} rakes</p>
-                </div>
-
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {group.rakes.map((rake) => (
-                    <div
-                      key={`${group.sidingName}-${rake.rakeNumber}`}
-                      className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5"
-                    >
-                      <span className="text-[11px] font-bold text-[#0f2f67]">{rake.rakeNumber}</span>
-                      <span className="text-[10px] font-semibold text-slate-500">{rake.routeName}</span>
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[8px] font-bold tracking-[0.06em] ${getStatusClasses(rake.status)}`}>
-                        {rake.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
-      </section>
     </div>
   );
 }
