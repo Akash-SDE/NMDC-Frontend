@@ -38,19 +38,6 @@ const baseMetricCards = [
   },
 ];
 
-const transactionRows = [
-  { ore: "D5-LUMP", total: 18, offered: 4, completed: 10, unloading: 4 },
-  { ore: "D5-FINES", total: 12, offered: 4, completed: 5, unloading: 3 },
-  { ore: "D10/MA", total: 7, offered: 1, completed: 4, unloading: 2 },
-  { ore: "SIDING-X", total: 5, offered: 2, completed: 1, unloading: 2 },
-];
-
-const transactionSegmentMeta = [
-  { key: "offered", label: "OFFERED", color: "bg-[#1f3d72]" },
-  { key: "unloading", label: "UNLOADING", color: "bg-[#4787e0]" },
-  { key: "completed", label: "COMPLETED", color: "bg-[#1664bc]" },
-];
-
 const baseHourlySeries = [
   { hour: "08:00", lump: 55, fines: 42, pellet: 28, rom: 22 },
   { hour: "09:00", lump: 62, fines: 49, pellet: 31, rom: 24 },
@@ -81,6 +68,97 @@ const extraWagonSeriesColors = [
   "bg-[#be123c]",
   "bg-[#4f46e5]",
   "bg-[#166534]",
+];
+
+const dispatchGridHours = Array.from({ length: 24 }, (_, index) => index);
+
+const dispatchStatusMeta = {
+  offered: { label: "OFFERED", dot: "bg-[#1565c0]", block: "bg-[#1565c0]" },
+  completed: { label: "COMPLETED", dot: "bg-[#10b981]", block: "bg-[#10b981]" },
+  unloading: { label: "UNLOADING", dot: "bg-[#f59e0b]", block: "bg-[#f59e0b]" },
+  delayed: { label: "DELAYED", dot: "bg-[#dc2626]", block: "bg-[#dc2626]" },
+};
+
+const dispatchGridHierarchy = [
+  {
+    id: "siding-1a",
+    name: "Siding 1A",
+    type: "siding",
+    count: 3,
+    routes: [
+      {
+        id: "route-1a-1",
+        name: "Route 1",
+        type: "route",
+        code: "ALPHA",
+        count: 2,
+      },
+      {
+        id: "route-1a-2",
+        name: "Route 2",
+        type: "route",
+        code: "BRAVO",
+        count: 1,
+      },
+    ],
+  },
+  {
+    id: "siding-2c",
+    name: "Siding 2C",
+    type: "siding",
+    count: 1,
+    routes: [
+      {
+        id: "route-2c-1",
+        name: "Route 1",
+        type: "route",
+        code: "CHARLIE",
+        count: 1,
+      },
+    ],
+  },
+  {
+    id: "siding-north-junc",
+    name: "North Junction",
+    type: "siding",
+    count: 1,
+    alert: "HIGH ALERT",
+    routes: [
+      {
+        id: "route-nj-1",
+        name: "Direct Line",
+        type: "route",
+        code: "DELTA",
+        count: 1,
+      },
+    ],
+  },
+  {
+    id: "siding-4b",
+    name: "Siding 4B",
+    type: "siding",
+    count: 2,
+    routes: [
+      {
+        id: "route-4b-1",
+        name: "Route 1",
+        type: "route",
+        code: "ECHO",
+        count: 2,
+      },
+    ],
+  },
+];
+
+const dispatchGridEvents = [
+  { id: "dispatch-1", siding: "siding-1a", route: "route-1a-1", start: 0.5, end: 3.5, status: "completed", label: "RK-7729" },
+  { id: "dispatch-2", siding: "siding-1a", route: "route-1a-2", start: 5.0, end: 8.5, status: "unloading", label: "RK-8812" },
+  { id: "dispatch-3", siding: "siding-4b", route: "route-4b-1", start: 2.0, end: 5.0, status: "delayed", label: "RK-7655" },
+  { id: "dispatch-4", siding: "siding-2c", route: "route-2c-1", start: 7.0, end: 12.0, status: "offered", label: "RK-9003" },
+  { id: "dispatch-5", siding: "siding-north-junc", route: "route-nj-1", start: 11.0, end: 15.5, status: "delayed", label: "RK-6541" },
+  { id: "dispatch-6", siding: "siding-1a", route: "route-1a-1", start: 14.0, end: 18.5, status: "unloading", label: "RK-3318" },
+  { id: "dispatch-7", siding: "siding-4b", route: "route-4b-1", start: 10.0, end: 13.5, status: "completed", label: "RK-2205" },
+  { id: "dispatch-8", siding: "siding-2c", route: "route-2c-1", start: 18.0, end: 22.0, status: "offered", label: "RK-4420" },
 ];
 
 function toWagonSeriesKey(code) {
@@ -231,6 +309,37 @@ function getLagClasses(lag) {
   return "text-rose-700";
 }
 
+function formatDispatchHour(hour) {
+  return `${String(hour).padStart(2, "0")}h`;
+}
+
+function assignDispatchLanes(events) {
+  const sortedEvents = [...events].sort((a, b) => {
+    if (a.start === b.start) {
+      return a.end - b.end;
+    }
+    return a.start - b.start;
+  });
+
+  const laneEndTimes = [];
+
+  return sortedEvents.map((event) => {
+    let laneIndex = laneEndTimes.findIndex((laneEndTime) => event.start >= laneEndTime);
+
+    if (laneIndex === -1) {
+      laneIndex = laneEndTimes.length;
+      laneEndTimes.push(event.end);
+    } else {
+      laneEndTimes[laneIndex] = event.end;
+    }
+
+    return {
+      ...event,
+      laneIndex,
+    };
+  });
+}
+
 function CardIcon({ type }) {
   if (type === "offer") {
     return (
@@ -321,40 +430,190 @@ function MetricCard({ card }) {
   );
 }
 
-function SegmentBar({ row, activeSegments, onHoverChange }) {
-  const activeSegmentList = transactionSegmentMeta.filter((segment) => activeSegments[segment.key]);
-  const activeTotal = activeSegmentList.reduce((sum, segment) => sum + row[segment.key], 0);
+function DispatchTimelineCard({
+  hierarchy,
+  events,
+  startHour = 0,
+  endHour = 23,
+}) {
+  const hourSpan = Math.max(endHour - startHour, 1);
+  const [expandedSidings, setExpandedSidings] = useState(
+    hierarchy.reduce((acc, siding) => {
+      acc[siding.id] = true;
+      return acc;
+    }, {}),
+  );
 
-  if (activeTotal === 0) {
-    return (
-      <div className="flex h-7 items-center justify-center rounded-md bg-slate-100 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-        Enable at least one status
-      </div>
-    );
-  }
+  const toggleSidingExpand = (sidingId) => {
+    setExpandedSidings((prev) => ({
+      ...prev,
+      [sidingId]: !prev[sidingId],
+    }));
+  };
+
+  const eventsByRouteId = useMemo(() => {
+    return events.reduce((accumulator, event) => {
+      const routeKey = event.route || event.siding;
+      if (!accumulator[routeKey]) {
+        accumulator[routeKey] = [];
+      }
+      accumulator[routeKey].push(event);
+      return accumulator;
+    }, {});
+  }, [events]);
+
+  const eventsByRouteLanes = useMemo(() => {
+    return Object.entries(eventsByRouteId).reduce((accumulator, [routeId, routeEvents]) => {
+      accumulator[routeId] = assignDispatchLanes(routeEvents);
+      return accumulator;
+    }, {});
+  }, [eventsByRouteId]);
+
+  const nowMarkerPercent = useMemo(() => {
+    const now = new Date();
+    const nowInHours = now.getHours() + now.getMinutes() / 60;
+    const clampedNow = Math.min(Math.max(nowInHours, startHour), endHour);
+    return ((clampedNow - startHour) / hourSpan) * 100;
+  }, [endHour, hourSpan, startHour]);
 
   return (
-    <div className="flex h-7 overflow-hidden rounded-md bg-slate-100">
-      {activeSegmentList.map((segment) => {
-        const value = row[segment.key];
-        const width = `${(value / activeTotal) * 100}%`;
+    <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-4 py-4">
+        <div>
+          <h3 className="text-[22px] font-extrabold leading-tight text-[#102a57]">REAL-TIME DISPATCH GRID</h3>
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-500">24-HOUR SIDING & ROUTE ALLOCATION</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-[11px] font-bold text-slate-600">
+          {Object.entries(dispatchStatusMeta).map(([key, meta]) => (
+            <span key={key} className="inline-flex items-center gap-1.5 uppercase tracking-[0.04em]">
+              <span className={`h-2.5 w-2.5 rounded-full ${meta.dot}`} />
+              {meta.label}
+            </span>
+          ))}
+        </div>
+      </div>
 
-        return (
-          <button
-            key={`${row.ore}-${segment.key}`}
-            type="button"
-            onMouseEnter={() => onHoverChange({ ore: row.ore, segment: segment.key })}
-            onMouseLeave={() => onHoverChange(null)}
-            onFocus={() => onHoverChange({ ore: row.ore, segment: segment.key })}
-            onBlur={() => onHoverChange(null)}
-            className={`h-full transition-all duration-300 ${segment.color} hover:brightness-110 focus:brightness-110 focus:outline-none`}
-            style={{ width }}
-            aria-label={`${segment.label} ${value} rakes in ${row.ore}`}
-            title={`${segment.label}: ${value} rakes`}
-          />
-        );
-      })}
-    </div>
+      <div className="overflow-x-auto">
+        <div className="min-w-240">
+          <div className="grid grid-cols-[280px_repeat(24,minmax(0,1fr))] border-b border-slate-200 bg-[#f3f4f6] sticky top-0 z-20">
+            <div className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-[0.06em] text-slate-600">SIDING / ROUTE</div>
+            {dispatchGridHours.map((hour) => (
+              <div
+                key={hour}
+                className={`px-1 py-3 text-center text-[10px] font-bold border-l border-slate-300/50 ${
+                  hour === new Date().getHours() ? "bg-[#dfeafb] text-[#1565c0]" : "text-slate-500"
+                }`}
+              >
+                {formatDispatchHour(hour)}
+              </div>
+            ))}
+          </div>
+
+          {hierarchy.map((siding) => {
+            const isExpanded = expandedSidings[siding.id];
+
+            return (
+              <div key={siding.id}>
+                <div className="grid grid-cols-[280px_repeat(24,minmax(0,1fr))] border-b border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => toggleSidingExpand(siding.id)}
+                    className="flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className={`text-slate-600 transition-transform shrink-0 ${
+                          isExpanded ? "rotate-90" : ""
+                        }`}
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                      <div>
+                        <p className="text-[13px] font-bold text-[#0f2f67]">{siding.name}</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-slate-500 mt-0.5">{siding.count} ASSIGNED</p>
+                      </div>
+                    </div>
+                    {siding.alert && (
+                      <span className="inline-flex items-center rounded-full bg-[#dc2626] px-2 py-0.5 text-[9px] font-bold tracking-[0.06em] text-white">
+                        {siding.alert}
+                      </span>
+                    )}
+                  </button>
+
+                  <div className="col-span-24 relative bg-white/40" style={{ height: "0px" }} />
+                </div>
+
+                {isExpanded &&
+                  siding.routes.map((route) => {
+                    const routeEvents = eventsByRouteLanes[route.id] || [];
+                    const laneDepth = Math.max(
+                      routeEvents.reduce((max, event) => Math.max(max, event.laneIndex + 1), 0),
+                      1,
+                    );
+                    const rowHeight = laneDepth * 28 + 10;
+
+                    return (
+                      <div key={route.id} className="grid grid-cols-[280px_1fr] border-b border-slate-100 bg-white hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center gap-3 border-r border-slate-200 bg-slate-50 px-4 py-3">
+                          <span className="ml-8 text-[12px] font-semibold text-[#0f2f67]">{route.name}</span>
+                          <span className="inline-flex items-center rounded-full bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-700">
+                            {route.code}
+                          </span>
+                          <span className="ml-auto text-[10px] font-bold text-slate-500">{route.count}</span>
+                        </div>
+
+                        <div className="relative bg-white" style={{ height: `${rowHeight}px` }}>
+                          <div className="pointer-events-none absolute inset-0">
+                            {dispatchGridHours.map((hour) => (
+                              <span
+                                key={`${route.id}-divider-${hour}`}
+                                className="absolute bottom-0 top-0 border-l border-slate-200/60"
+                                style={{ left: `${((hour - startHour) / hourSpan) * 100}%` }}
+                              />
+                            ))}
+                            <span
+                              className="absolute bottom-0 top-0 w-0.5 bg-[#1565c0]/90 shadow-lg"
+                              style={{ left: `${nowMarkerPercent}%` }}
+                            />
+                          </div>
+
+                          {routeEvents.map((event) => {
+                            const meta = dispatchStatusMeta[event.status] || dispatchStatusMeta.offered;
+                            const left = ((event.start - startHour) / hourSpan) * 100;
+                            const width = Math.max(((event.end - event.start) / hourSpan) * 100, 1.2);
+                            const top = 5 + event.laneIndex * 28;
+
+                            return (
+                              <span
+                                key={event.id}
+                                className={`absolute inline-flex h-6 items-center rounded-md px-2 text-[9px] font-bold text-white shadow-md hover:shadow-lg transition-shadow cursor-pointer hover:z-30 ${meta.block}`}
+                                style={{
+                                  left: `${left}%`,
+                                  width: `${width}%`,
+                                  top: `${top}px`,
+                                }}
+                                title={`${event.label} • ${meta.label} • ${event.start.toFixed(1)}h-${event.end.toFixed(1)}h`}
+                              >
+                                {width >= 8 ? event.label : ""}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -397,12 +656,6 @@ export default function Dashboard() {
   const [tablePage, setTablePage] = useState(1);
   const [sortBy, setSortBy] = useState("rakeNumber");
   const [sortOrder, setSortOrder] = useState("asc");
-  const [activeTransactionSegments, setActiveTransactionSegments] = useState({
-    offered: true,
-    unloading: true,
-    completed: true,
-  });
-  const [hoveredTransaction, setHoveredTransaction] = useState(null);
   const [activeHourlySeries, setActiveHourlySeries] = useState(() => {
     return hourlySeriesMeta.reduce((accumulator, series) => {
       accumulator[series.key] = true;
@@ -550,49 +803,6 @@ export default function Dashboard() {
       maxOffers,
     };
   }, []);
-  const hoverSummary = useMemo(() => {
-    if (!hoveredTransaction) {
-      return null;
-    }
-
-    const row = transactionRows.find((item) => item.ore === hoveredTransaction.ore);
-    if (!row || !activeTransactionSegments[hoveredTransaction.segment]) {
-      return null;
-    }
-
-    const activeTotalCount = transactionSegmentMeta.reduce((sum, segment) => {
-      return activeTransactionSegments[segment.key] ? sum + row[segment.key] : sum;
-    }, 0);
-
-    const value = row[hoveredTransaction.segment];
-    const percent = activeTotalCount > 0 ? Math.round((value / activeTotalCount) * 100) : 0;
-    const segmentLabel = transactionSegmentMeta.find((segment) => segment.key === hoveredTransaction.segment)?.label;
-
-    return {
-      ore: row.ore,
-      value,
-      percent,
-      segmentLabel,
-      activeTotalCount,
-    };
-  }, [hoveredTransaction, activeTransactionSegments]);
-
-  const toggleTransactionSegment = (segmentKey) => {
-    setActiveTransactionSegments((previous) => {
-      const currentlyEnabled = Object.values(previous).filter(Boolean).length;
-
-      if (previous[segmentKey] && currentlyEnabled === 1) {
-        return previous;
-      }
-
-      return {
-        ...previous,
-        [segmentKey]: !previous[segmentKey],
-      };
-    });
-    setHoveredTransaction(null);
-  };
-
   const toggleHourlySeries = (seriesKey) => {
     setActiveHourlySeries((previous) => {
       const currentlyEnabled = Object.values(previous).filter(Boolean).length;
@@ -683,71 +893,16 @@ export default function Dashboard() {
         ))}
       </section>
 
+      <section>
+        <DispatchTimelineCard
+          hierarchy={dispatchGridHierarchy}
+          events={dispatchGridEvents}
+          startHour={0}
+          endHour={23}
+        />
+      </section>
+
       <section className="space-y-4">
-        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-[30px] font-extrabold leading-tight tracking-tight text-[#102a57]">
-                Today&apos;s Transactions
-              </h3>
-              <p className="mt-1 text-[12px] font-medium text-slate-500">
-                Distribution by Ore Type and Status
-              </p>
-            </div>
-            <div className="flex items-center gap-2 pt-1">
-              {transactionSegmentMeta.map((segment) => {
-                const isActive = activeTransactionSegments[segment.key];
-
-                return (
-                  <button
-                    key={segment.key}
-                    type="button"
-                    onClick={() => toggleTransactionSegment(segment.key)}
-                    className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-bold transition-colors ${
-                      isActive
-                        ? "border-slate-300 bg-white text-slate-600"
-                        : "border-slate-200 bg-slate-100 text-slate-400"
-                    }`}
-                    aria-pressed={isActive}
-                    title={isActive ? "Click to hide" : "Click to show"}
-                  >
-                    <span className={`h-2.5 w-2.5 rounded-xs ${segment.color}`} />
-                    {segment.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="relative space-y-6 pt-2">
-            {hoverSummary ? (
-              <div className="pointer-events-none absolute right-0 top-0 z-20 max-w-[calc(100%-1rem)] rounded-md border border-blue-200 bg-white/95 px-2.5 py-1.5 shadow-sm backdrop-blur-sm">
-                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-blue-700">Transaction Detail</p>
-                <p className="mt-0.5 text-[11px] font-semibold leading-snug text-[#102a57] sm:text-[12px]">
-                  {hoverSummary.ore} • {hoverSummary.segmentLabel}: {hoverSummary.value} rakes ({hoverSummary.percent}% of {hoverSummary.activeTotalCount})
-                </p>
-              </div>
-            ) : null}
-            {transactionRows.map((row) => (
-              <div key={row.ore}>
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-[12px] font-bold text-[#102a57]">{row.ore}</p>
-                  <p className="text-[13px] font-bold text-[#0f2f67]">
-                    {transactionSegmentMeta.reduce((sum, segment) => {
-                      return activeTransactionSegments[segment.key] ? sum + row[segment.key] : sum;
-                    }, 0)}
-                  </p>
-                </div>
-                <SegmentBar
-                  row={row}
-                  activeSegments={activeTransactionSegments}
-                  onHoverChange={setHoveredTransaction}
-                />
-              </div>
-            ))}
-          </div>
-        </article>
-
         <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>

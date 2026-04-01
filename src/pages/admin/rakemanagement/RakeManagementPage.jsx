@@ -168,6 +168,21 @@ function AdjustmentIcon() {
   );
 }
 
+function formatDateTimeForTable(value) {
+  if (!value) return "";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const year = parsed.getFullYear();
+  const hours = String(parsed.getHours()).padStart(2, "0");
+  const minutes = String(parsed.getMinutes()).padStart(2, "0");
+
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+}
+
 export default function RakeManagementPage() {
   const { navigate, currentRoute, routeParams } = useRouter();
   const [offeredRows, setOfferedRows] = useState(initialOfferedRakes);
@@ -238,6 +253,45 @@ export default function RakeManagementPage() {
 
   function handleOfferingSubmit(event) {
     event.preventDefault();
+  }
+
+  function handleInlineAddRake() {
+    const requiredValues = [
+      offeringForm.rakeId,
+      offeringForm.rakeNumber,
+      offeringForm.noOfWagons,
+      offeringForm.wagonType,
+      offeringForm.siding,
+      offeringForm.route,
+      offeringForm.oreType,
+      offeringForm.customer,
+      offeringForm.destination,
+      offeringForm.offerTime,
+    ];
+
+    if (requiredValues.some((value) => !String(value || "").trim())) {
+      return;
+    }
+
+    const nextSno = offeredRows.length > 0 ? Math.max(...offeredRows.map((row) => Number(row.sno) || 0)) + 1 : 1;
+
+    const nextRow = {
+      sno: nextSno,
+      rakeId: offeringForm.rakeId.trim(),
+      rakeNumber: offeringForm.rakeNumber.trim(),
+      wagonSupply: Number(offeringForm.noOfWagons) || 0,
+      wagonType: offeringForm.wagonType,
+      siding: offeringForm.siding,
+      route: offeringForm.route,
+      oreTypeCustomer: `${offeringForm.oreType} / ${offeringForm.customer}`,
+      destination: offeringForm.destination,
+      fNote: offeringForm.fNote.trim() || "-",
+      offerTime: formatDateTimeForTable(offeringForm.offerTime),
+      isDisabled: false,
+    };
+
+    setOfferedRows((prev) => [nextRow, ...prev]);
+    setOfferingForm(initialOfferingForm);
   }
 
   function handleOfferingClear() {
@@ -534,9 +588,22 @@ export default function RakeManagementPage() {
   }
 
   function renderOfferedTab() {
+    const compactInputClass = `${inputClass} h-8 px-2 text-[11px]`;
+    const inlineAddDisabled =
+      !offeringForm.rakeId ||
+      !offeringForm.rakeNumber ||
+      !offeringForm.noOfWagons ||
+      !offeringForm.wagonType ||
+      !offeringForm.siding ||
+      !offeringForm.route ||
+      !offeringForm.oreType ||
+      !offeringForm.customer ||
+      !offeringForm.destination ||
+      !offeringForm.offerTime;
+
     return (
       <div className="space-y-6 3xl:space-y-8 5xl:space-y-12 animate-fadeIn">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
           <div>
             <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
               Rake Management
@@ -545,14 +612,6 @@ export default function RakeManagementPage() {
               Manage and monitor all offered rakes across routes, sidings, and destinations.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate("rake-offering")}
-            className="flex items-center gap-2 3xl:gap-3 rounded-lg bg-blue-600 px-5 py-2.5 3xl:px-6 3xl:py-3 5xl:px-8 5xl:py-4 text-[13px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-white shadow-sm hover:bg-blue-700 transition-all self-start active:scale-[0.98]"
-          >
-            <PlusIcon className="3xl:w-5 3xl:h-5" />
-            <span>Add Rake</span>
-          </button>
         </div>
 
         <SearchBar
@@ -564,7 +623,7 @@ export default function RakeManagementPage() {
 
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-280">
+            <table className="w-full min-w-280 whitespace-nowrap">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
@@ -594,6 +653,177 @@ export default function RakeManagementPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
+                <tr className="bg-blue-50/50 align-top">
+                  <td className="px-5 py-3">
+                    <input
+                      type="text"
+                      value={offeringForm.rakeId}
+                      onChange={(event) => updateOffering("rakeId", event.target.value)}
+                      placeholder="Rake ID"
+                      className={compactInputClass}
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="text"
+                      value={offeringForm.rakeNumber}
+                      onChange={(event) => updateOffering("rakeNumber", event.target.value)}
+                      placeholder="Rake Number"
+                      className={compactInputClass}
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="space-y-1.5">
+                      <ThemedSelect
+                        value={offeringForm.siding}
+                        onChange={(event) => updateOffering("siding", event.target.value)}
+                        className={compactInputClass}
+                      >
+                        <option value="">Siding</option>
+                        {sidingOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </ThemedSelect>
+                      <ThemedSelect
+                        value={offeringForm.route}
+                        onChange={(event) => updateOffering("route", event.target.value)}
+                        className={compactInputClass}
+                      >
+                        <option value="">Route</option>
+                        {routeOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </ThemedSelect>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="space-y-1.5">
+                      <ThemedSelect
+                        value={offeringForm.oreType}
+                        onChange={(event) => updateOffering("oreType", event.target.value)}
+                        className={compactInputClass}
+                      >
+                        <option value="">Ore Type</option>
+                        {oreTypeOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </ThemedSelect>
+                      <ThemedSelect
+                        value={offeringForm.customer}
+                        onChange={(event) => updateOffering("customer", event.target.value)}
+                        className={compactInputClass}
+                      >
+                        <option value="">Customer</option>
+                        {customerOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </ThemedSelect>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="space-y-1.5">
+                      <ThemedSelect
+                        value={offeringForm.destination}
+                        onChange={(event) => updateOffering("destination", event.target.value)}
+                        className={compactInputClass}
+                      >
+                        <option value="">Destination</option>
+                        {destinationOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </ThemedSelect>
+                      <div className="space-y-1.5">
+                        <input
+                          type="number"
+                          value={offeringForm.noOfWagons}
+                          onChange={(event) => updateOffering("noOfWagons", event.target.value)}
+                          placeholder="Wagons"
+                          className={compactInputClass}
+                        />
+                        <ThemedSelect
+                          value={offeringForm.wagonType}
+                          onChange={(event) => updateOffering("wagonType", event.target.value)}
+                          className={compactInputClass}
+                        >
+                          <option value="">Type</option>
+                          {wagonTypeOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </ThemedSelect>
+                      </div>
+                      <input
+                        type="text"
+                        value={offeringForm.fNote}
+                        onChange={(event) => updateOffering("fNote", event.target.value)}
+                        placeholder="F-Note"
+                        className={compactInputClass}
+                      />
+                    </div>
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="datetime-local"
+                      value={offeringForm.offerTime}
+                      onChange={(event) => updateOffering("offerTime", event.target.value)}
+                      className={compactInputClass}
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+                      Draft
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={handleInlineAddRake}
+                        disabled={inlineAddDisabled}
+                        className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-white transition-colors ${
+                          inlineAddDisabled ? "cursor-not-allowed bg-slate-300" : "bg-blue-600 hover:bg-blue-700"
+                        }`}
+                        aria-label="Add rake"
+                        title="Add rake"
+                      >
+                        <PlusIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleOfferingClear}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100"
+                        aria-label="Clear form"
+                        title="Clear form"
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
                 {sortedRows.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-5 py-12 text-center">
@@ -639,6 +869,7 @@ export default function RakeManagementPage() {
                           <div>
                             <p className="text-[13px] font-semibold text-slate-800">{row.rakeNumber}</p>
                             <p className="text-[11px] text-slate-400 mt-0.5">F-Note: {row.fNote}</p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">{row.wagonType || "-"} / {row.wagonSupply}</p>
                           </div>
                         </td>
                         <td className="px-5 py-4">
