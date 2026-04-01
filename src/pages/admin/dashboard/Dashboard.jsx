@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import { getWagonTypesMasterData } from "../../../data/adminmasterdatafiles/wagonTypes";
 
@@ -313,6 +313,14 @@ function formatDispatchHour(hour) {
   return `${String(hour).padStart(2, "0")}h`;
 }
 
+function formatDispatchTime(date) {
+  return date.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 function assignDispatchLanes(events) {
   const sortedEvents = [...events].sort((a, b) => {
     if (a.start === b.start) {
@@ -437,12 +445,27 @@ function DispatchTimelineCard({
   endHour = 23,
 }) {
   const hourSpan = Math.max(endHour - startHour, 1);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
   const [expandedSidings, setExpandedSidings] = useState(
     hierarchy.reduce((acc, siding) => {
       acc[siding.id] = true;
       return acc;
     }, {}),
   );
+
+  useEffect(() => {
+    const syncCurrentTime = () => {
+      setCurrentTime(new Date());
+    };
+
+    syncCurrentTime();
+    const intervalId = setInterval(syncCurrentTime, 1000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const currentHour = currentTime.getHours();
+  const currentTimeLabel = formatDispatchTime(currentTime);
 
   const toggleSidingExpand = (sidingId) => {
     setExpandedSidings((prev) => ({
@@ -470,11 +493,10 @@ function DispatchTimelineCard({
   }, [eventsByRouteId]);
 
   const nowMarkerPercent = useMemo(() => {
-    const now = new Date();
-    const nowInHours = now.getHours() + now.getMinutes() / 60;
+    const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60 + currentTime.getSeconds() / 3600;
     const clampedNow = Math.min(Math.max(nowInHours, startHour), endHour);
     return ((clampedNow - startHour) / hourSpan) * 100;
-  }, [endHour, hourSpan, startHour]);
+  }, [currentTime, endHour, hourSpan, startHour]);
 
   return (
     <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -482,6 +504,9 @@ function DispatchTimelineCard({
         <div>
           <h3 className="text-[22px] font-extrabold leading-tight text-[#102a57]">REAL-TIME DISPATCH GRID</h3>
           <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-500">24-HOUR SIDING & ROUTE ALLOCATION</p>
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-600">
+            CURRENT TIME: <span className="text-[#1565c0]">{currentTimeLabel}</span>
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-[11px] font-bold text-slate-600">
           {Object.entries(dispatchStatusMeta).map(([key, meta]) => (
@@ -494,14 +519,21 @@ function DispatchTimelineCard({
       </div>
 
       <div className="overflow-x-auto">
-        <div className="min-w-240">
+        <div className="relative min-w-240">
+          <div className="pointer-events-none absolute inset-y-0 left-70 right-0 z-30">
+            <span
+              className="absolute inset-y-0 w-0.5 bg-[#1565c0]/90 shadow-[0_0_0_1px_rgba(21,101,192,0.12)]"
+              style={{ left: `${nowMarkerPercent}%` }}
+            />
+          </div>
+
           <div className="grid grid-cols-[280px_repeat(24,minmax(0,1fr))] border-b border-slate-200 bg-[#f3f4f6] sticky top-0 z-20">
             <div className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-[0.06em] text-slate-600">SIDING / ROUTE</div>
             {dispatchGridHours.map((hour) => (
               <div
                 key={hour}
                 className={`px-1 py-3 text-center text-[10px] font-bold border-l border-slate-300/50 ${
-                  hour === new Date().getHours() ? "bg-[#dfeafb] text-[#1565c0]" : "text-slate-500"
+                  hour === currentHour ? "bg-[#dfeafb] text-[#1565c0]" : "text-slate-500"
                 }`}
               >
                 {formatDispatchHour(hour)}
@@ -577,10 +609,6 @@ function DispatchTimelineCard({
                                 style={{ left: `${((hour - startHour) / hourSpan) * 100}%` }}
                               />
                             ))}
-                            <span
-                              className="absolute bottom-0 top-0 w-0.5 bg-[#1565c0]/90 shadow-lg"
-                              style={{ left: `${nowMarkerPercent}%` }}
-                            />
                           </div>
 
                           {routeEvents.map((event) => {
