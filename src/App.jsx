@@ -10,7 +10,6 @@ import LoadingManagementPage from "./pages/admin/loading/LoadingManagementPage";
 import DelayManagementPage from "./pages/admin/delay/DelayManagementPage";
 import AdminUserManagementPage from "./pages/admin/users/AdminUserManagementPage";
 import ReportsPage from "./pages/admin/reports/ReportsPage";
-import AdminToolsPage from "./pages/admin/admintools/AdminToolsPage";
 import OperatorOperationsHub from "./pages/operator/OperatorOperationsHub";
 import SuperadminLayout from "./pages/superadmin/SuperadminLayout";
 import RoleManagementPage from "./pages/superadmin/RoleManagement/RoleManagementPage";
@@ -81,18 +80,16 @@ function AppRoutes() {
         return <RakeManagementPage />;
       case "rake-adjustment":
         return <RakeManagementPage />;
+      case "loading":
       case "loading-management":
         return <LoadingManagementPage />;
+      case "delay":
       case "delay-management":
         return <DelayManagementPage />;
       case "admin-users":
       case "admin-users-add":
       case "admin-users-edit":
         return <AdminUserManagementPage />;
-      case "admin-tools":
-      case "admin-delete-offered-rakes":
-      case "admin-edit-rake-timing":
-        return <AdminToolsPage />;
       case "reports":
       case "reports-transaction":
       case "reports-demurrage":

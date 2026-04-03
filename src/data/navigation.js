@@ -29,14 +29,26 @@ const adminSidebarSections = [
         icon: "rake",
       },
       {
-        id: "loading-management",
+        id: "loading",
         label: "Loading",
         icon: "loading",
+        children: [
+          {
+            id: "loading-management",
+            label: "Loading Management",
+          },
+        ],
       },
       {
-        id: "delay-management",
-        label: "Delays",
+        id: "delay",
+        label: "Delay",
         icon: "delay",
+        children: [
+          {
+            id: "delay-management",
+            label: "Delay Management",
+          },
+        ],
       },
       {
         id: "master-data",
@@ -81,21 +93,6 @@ const adminSidebarSections = [
         id: "admin-users",
         label: "Manage Users",
         icon: "users",
-      },
-      {
-        id: "admin-tools",
-        label: "Admin",
-        icon: "config",
-        children: [
-          {
-            id: "admin-delete-offered-rakes",
-            label: "Delete Offered Rakes",
-          },
-          {
-            id: "admin-edit-rake-timing",
-            label: "Edit Rake Timing",
-          },
-        ],
       },
       {
         id: "reports",

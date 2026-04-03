@@ -1,15 +1,12 @@
 import { useMemo, useState } from "react";
 import {
-  UniformFormField,
-  UniformPageShell,
-  UniformSectionCard,
   uniformInputClass,
-  uniformPrimaryButtonClass,
 } from "../../../components/shared/UniformUi";
 import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
+import { PlusIcon } from "../../../components/icons";
 
 const categories = [
   "Mechanical",
@@ -20,29 +17,47 @@ const categories = [
   "Operational Issue",
 ];
 
-const initialLogs = [
+const initialRows = [
   {
     id: 1,
+    rakeNumber: "R-2026-001",
     category: "Mechanical",
     startTime: "2026-03-19T04:50",
     endTime: "2026-03-19T06:20",
     reason: "Wagon brake failure",
+    reportedBy: "Shift A",
     isDisabled: false,
   },
   {
     id: 2,
+    rakeNumber: "R-2026-002",
     category: "Railway Delay",
     startTime: "2026-03-19T10:10",
     endTime: "2026-03-19T10:55",
     reason: "Late rake handover",
+    reportedBy: "Shift B",
+    isDisabled: false,
+  },
+  {
+    id: 3,
+    rakeNumber: "R-2026-003",
+    category: "Weather",
+    startTime: "2026-03-19T13:30",
+    endTime: "2026-03-19T16:05",
+    reason: "High winds and visibility drop",
+    reportedBy: "Control Room",
     isDisabled: false,
   },
 ];
 
-const delayTabs = [
-  { id: "form", label: "Delay Form" },
-  { id: "table", label: "Delay Table" },
-];
+const initialInlineForm = {
+  rakeNumber: "",
+  category: "",
+  startTime: "",
+  endTime: "",
+  reason: "",
+  reportedBy: "",
+};
 
 function EditIcon() {
   return (
@@ -103,101 +118,161 @@ function EnableIcon() {
   );
 }
 
-function formatDate(value) {
+function ClearIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function parseDateTimeToTimestamp(value) {
+  if (!value) return 0;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+}
+
+function formatDateTimeForTable(value) {
   if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "-";
+
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const year = parsed.getFullYear();
+  const hours = String(parsed.getHours()).padStart(2, "0");
+  const minutes = String(parsed.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
-function getDurationMinutes(start, end) {
-  if (!start || !end) return null;
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return null;
-  const diff = endDate.getTime() - startDate.getTime();
-  if (diff < 0) return null;
-  return Math.floor(diff / 60000);
+function getDurationMinutes(startTime, endTime) {
+  if (!startTime || !endTime) return null;
+  const start = parseDateTimeToTimestamp(startTime);
+  const end = parseDateTimeToTimestamp(endTime);
+  if (!start || !end || end < start) return null;
+  return Math.floor((end - start) / 60000);
 }
 
-function toDurationLabel(minutes) {
-  if (minutes === null) return "-";
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return `${h}h ${m}m`;
+function formatDuration(minutes) {
+  if (minutes === null || Number.isNaN(minutes)) return "-";
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return `${hours}h ${remainder}m`;
+}
+
+function getStatusMeta(row) {
+  if (row.isDisabled) {
+    return {
+      label: "Inactive",
+      badgeClass: "border-slate-200 bg-slate-100 text-slate-500",
+      dotClass: "bg-slate-400",
+    };
+  }
+
+  const duration = getDurationMinutes(row.startTime, row.endTime) ?? 0;
+  if (duration >= 120) {
+    return {
+      label: "Critical",
+      badgeClass: "border-rose-200 bg-rose-50 text-rose-700",
+      dotClass: "bg-rose-500",
+    };
+  }
+
+  return {
+    label: "Logged",
+    badgeClass: "border-amber-200 bg-amber-50 text-amber-700",
+    dotClass: "bg-amber-500",
+  };
 }
 
 export default function DelayManagementPage() {
-  const [logs, setLogs] = useState(initialLogs);
-  const [activeTab, setActiveTab] = useState("form");
+  const [rows, setRows] = useState(initialRows);
   const [tableSearch, setTableSearch] = useState("");
   const [sortBy, setSortBy] = useState("startTime");
   const [sortOrder, setSortOrder] = useState("asc");
-  const [editingLogId, setEditingLogId] = useState(null);
-  const [form, setForm] = useState({
-    category: "",
-    startTime: "",
-    endTime: "",
-    reason: "",
-  });
-  const [message, setMessage] = useState("");
+  const [inlineForm, setInlineForm] = useState(initialInlineForm);
+  const [inlineActionMode, setInlineActionMode] = useState("add");
+  const [activeInlineLogId, setActiveInlineLogId] = useState(null);
   const [statusConfirmLogId, setStatusConfirmLogId] = useState(null);
+  const [message, setMessage] = useState("");
 
-  const previewDuration = useMemo(
-    () => toDurationLabel(getDurationMinutes(form.startTime, form.endTime)),
-    [form.startTime, form.endTime],
+  const compactInputClass = `${uniformInputClass} h-8 px-2 text-[11px]`;
+
+  const currentInlineDuration = useMemo(
+    () => formatDuration(getDurationMinutes(inlineForm.startTime, inlineForm.endTime)),
+    [inlineForm.startTime, inlineForm.endTime],
   );
 
   const statusConfirmLog = useMemo(
-    () => logs.find((item) => item.id === statusConfirmLogId),
-    [logs, statusConfirmLogId],
+    () => rows.find((item) => item.id === statusConfirmLogId),
+    [rows, statusConfirmLogId],
   );
 
-  const summary = useMemo(() => {
-    const total = logs.reduce((acc, item) => {
-      const minutes = getDurationMinutes(item.startTime, item.endTime);
-      return acc + (minutes || 0);
-    }, 0);
-    return {
-      entries: logs.length,
-      totalMinutes: total,
-      totalLabel: toDurationLabel(total),
-    };
-  }, [logs]);
-
-  const filteredLogs = useMemo(() => {
-    if (!tableSearch.trim()) return logs;
+  const filteredRows = useMemo(() => {
+    if (!tableSearch.trim()) return rows;
 
     const q = tableSearch.toLowerCase();
-    return logs.filter((row) =>
-      [row.category, row.reason, row.startTime, row.endTime]
+    return rows.filter((row) => {
+      const durationLabel = formatDuration(
+        getDurationMinutes(row.startTime, row.endTime),
+      );
+      const status = getStatusMeta(row).label;
+
+      return [
+        row.rakeNumber,
+        row.category,
+        row.startTime,
+        row.endTime,
+        row.reason,
+        row.reportedBy,
+        durationLabel,
+        status,
+      ]
         .join(" ")
         .toLowerCase()
-        .includes(q),
-    );
-  }, [logs, tableSearch]);
+        .includes(q);
+    });
+  }, [rows, tableSearch]);
 
-  const sortedLogs = useMemo(() => {
+  const sortedRows = useMemo(() => {
     const getComparableValue = (row, field) => {
-      if (field === "duration") return getDurationMinutes(row.startTime, row.endTime) ?? -1;
-      if (field === "status") return row.isDisabled ? "disabled" : "enabled";
+      if (field === "startTime" || field === "endTime") {
+        return parseDateTimeToTimestamp(row[field]);
+      }
+
+      if (field === "duration") {
+        return getDurationMinutes(row.startTime, row.endTime) ?? -1;
+      }
+
+      if (field === "status") {
+        return getStatusMeta(row).label.toLowerCase();
+      }
+
+      if (field === "id") {
+        return Number(row.id) || 0;
+      }
+
       return String(row[field] ?? "").toLowerCase();
     };
 
-    return [...filteredLogs].sort((a, b) => {
+    return [...filteredRows].sort((a, b) => {
       const aValue = getComparableValue(a, sortBy);
       const bValue = getComparableValue(b, sortBy);
       if (aValue === bValue) return 0;
       const comparison = aValue > bValue ? 1 : -1;
       return sortOrder === "asc" ? comparison : -comparison;
     });
-  }, [filteredLogs, sortBy, sortOrder]);
+  }, [filteredRows, sortBy, sortOrder]);
 
   function handleSort(field) {
     if (sortBy === field) {
@@ -208,31 +283,104 @@ export default function DelayManagementPage() {
     }
   }
 
-  function updateField(field, value) {
-    setForm((prev) => ({ ...prev, [field]: value }));
+  function updateInline(field, value) {
+    setInlineForm((prev) => ({ ...prev, [field]: value }));
     setMessage("");
   }
 
-  function handleEditLog(log) {
-    setEditingLogId(log.id);
-    setForm({
-      category: log.category,
-      startTime: log.startTime,
-      endTime: log.endTime,
-      reason: log.reason,
+  function clearInlineForm() {
+    setInlineForm(initialInlineForm);
+    setInlineActionMode("add");
+    setActiveInlineLogId(null);
+    setMessage("");
+  }
+
+  function validateInlineForm() {
+    const requiredFields = [
+      inlineForm.rakeNumber,
+      inlineForm.category,
+      inlineForm.startTime,
+      inlineForm.endTime,
+      inlineForm.reason,
+      inlineForm.reportedBy,
+    ];
+
+    if (requiredFields.some((field) => !String(field || "").trim())) {
+      return "Please fill all delay fields before saving.";
+    }
+
+    const duration = getDurationMinutes(inlineForm.startTime, inlineForm.endTime);
+    if (duration === null) {
+      return "End time must be greater than start time.";
+    }
+
+    return "";
+  }
+
+  function handleInlineSave() {
+    const validationMessage = validateInlineForm();
+    if (validationMessage) {
+      setMessage(validationMessage);
+      return;
+    }
+
+    const normalized = {
+      rakeNumber: inlineForm.rakeNumber.trim(),
+      category: inlineForm.category,
+      startTime: inlineForm.startTime,
+      endTime: inlineForm.endTime,
+      reason: inlineForm.reason.trim(),
+      reportedBy: inlineForm.reportedBy.trim(),
+    };
+
+    if (inlineActionMode === "edit" && activeInlineLogId !== null) {
+      setRows((prev) =>
+        prev.map((item) =>
+          item.id === activeInlineLogId
+            ? {
+                ...item,
+                ...normalized,
+              }
+            : item,
+        ),
+      );
+      setMessage("Delay log updated successfully.");
+    } else {
+      const nextId = rows.length > 0 ? Math.max(...rows.map((item) => item.id)) + 1 : 1;
+
+      setRows((prev) => [
+        {
+          id: nextId,
+          ...normalized,
+          isDisabled: false,
+        },
+        ...prev,
+      ]);
+      setMessage("Delay log added successfully.");
+    }
+
+    setInlineForm(initialInlineForm);
+    setInlineActionMode("add");
+    setActiveInlineLogId(null);
+  }
+
+  function handleEditRow(row) {
+    if (row.isDisabled) {
+      setMessage("Enable this delay log before editing.");
+      return;
+    }
+
+    setInlineForm({
+      rakeNumber: row.rakeNumber,
+      category: row.category,
+      startTime: row.startTime,
+      endTime: row.endTime,
+      reason: row.reason,
+      reportedBy: row.reportedBy,
     });
+    setInlineActionMode("edit");
+    setActiveInlineLogId(row.id);
     setMessage("");
-    setActiveTab("form");
-  }
-
-  function toggleLogStatus(logId) {
-    setLogs((prev) =>
-      prev.map((item) =>
-        item.id === logId
-          ? { ...item, isDisabled: !item.isDisabled }
-          : item,
-      ),
-    );
   }
 
   function requestLogStatusToggle(logId) {
@@ -245,234 +393,252 @@ export default function DelayManagementPage() {
 
   function confirmLogStatusToggle() {
     if (statusConfirmLogId === null) return;
-    toggleLogStatus(statusConfirmLogId);
+
+    setRows((prev) =>
+      prev.map((item) =>
+        item.id === statusConfirmLogId
+          ? { ...item, isDisabled: !item.isDisabled }
+          : item,
+      ),
+    );
     setStatusConfirmLogId(null);
   }
 
-  function handleAdd(event) {
-    event.preventDefault();
+  const inlineSaveDisabled =
+    !inlineForm.rakeNumber.trim() ||
+    !inlineForm.category ||
+    !inlineForm.startTime ||
+    !inlineForm.endTime ||
+    !inlineForm.reason.trim() ||
+    !inlineForm.reportedBy.trim();
 
-    if (!form.category || !form.startTime || !form.endTime || !form.reason.trim()) {
-      setMessage("Please fill all delay fields before saving.");
-      return;
-    }
-
-    const minutes = getDurationMinutes(form.startTime, form.endTime);
-    if (minutes === null) {
-      setMessage("End time must be greater than start time.");
-      return;
-    }
-
-    if (editingLogId) {
-      setLogs((prev) =>
-        prev.map((item) =>
-          item.id === editingLogId
-            ? {
-                ...item,
-                category: form.category,
-                startTime: form.startTime,
-                endTime: form.endTime,
-                reason: form.reason,
-              }
-            : item,
-        ),
-      );
-      setMessage("Delay log updated successfully.");
-    } else {
-      const next = {
-        id: logs.length + 1,
-        category: form.category,
-        startTime: form.startTime,
-        endTime: form.endTime,
-        reason: form.reason,
-        isDisabled: false,
-      };
-      setLogs((prev) => [next, ...prev]);
-      setMessage("Delay log added successfully.");
-    }
-
-    setEditingLogId(null);
-    setForm({ category: "", startTime: "", endTime: "", reason: "" });
-    setActiveTab("table");
-  }
-
-  const inputClass = uniformInputClass;
+  const inlineSaveLabel = inlineActionMode === "edit" ? "Save Edit" : "Add Delay";
+  const inlineStatusLabel = inlineActionMode === "edit" ? "Editing" : "Draft";
 
   return (
-    <UniformPageShell
-      title="Delay Management"
-      subtitle="Step 4 from workflow: capture delay category, start/end time, duration, and operational reason."
-      tabs={delayTabs}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-    >
-      <div className="space-y-4">
-        {activeTab === "form" ? (
-          <>
-            <UniformSectionCard
-              title="Delay Snapshot"
-              subtitle="Live summary of recorded delays and current draft entry."
-            >
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Logs</p>
-                  <p className="mt-1 text-xl font-bold text-slate-800">{summary.entries}</p>
-                </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Delay</p>
-                  <p className="mt-1 text-xl font-bold text-slate-800">{summary.totalLabel}</p>
-                </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current Entry Duration</p>
-                  <p className="mt-1 text-xl font-bold text-blue-700">{previewDuration}</p>
-                </div>
-              </div>
-            </UniformSectionCard>
+    <>
+      <div className="space-y-6 3xl:space-y-8 5xl:space-y-12 animate-fadeIn">
+        <div>
+          <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
+            Delay Management
+          </h2>
+          <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
+            Record and manage delays in an inline worksheet similar to Rake Management.
+          </p>
+        </div>
 
-            <UniformSectionCard
-              title="Update Reason for Delay"
-              subtitle="Create a structured delay log with mandatory timestamps and reason."
-            >
-              {message ? (
-                <p className="mb-3 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
-                  {message}
-                </p>
-              ) : null}
-
-              <form onSubmit={handleAdd} className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <UniformFormField label="Delay Category">
-                  <ThemedSelect
-                    value={form.category}
-                    onChange={(event) => updateField("category", event.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select category</option>
-                    {categories.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </ThemedSelect>
-                </UniformFormField>
-
-                <UniformFormField label="Start Time">
-                  <input
-                    type="datetime-local"
-                    value={form.startTime}
-                    onChange={(event) => updateField("startTime", event.target.value)}
-                    className={inputClass}
-                  />
-                </UniformFormField>
-
-                <UniformFormField label="End Time">
-                  <input
-                    type="datetime-local"
-                    value={form.endTime}
-                    onChange={(event) => updateField("endTime", event.target.value)}
-                    className={inputClass}
-                  />
-                </UniformFormField>
-
-                <UniformFormField label="Duration">
-                  <input type="text" value={previewDuration} readOnly className={inputClass} />
-                </UniformFormField>
-
-                <div className="sm:col-span-2 xl:col-span-3">
-                  <UniformFormField label="Reason">
-                    <input
-                      type="text"
-                      value={form.reason}
-                      onChange={(event) => updateField("reason", event.target.value)}
-                      className={inputClass}
-                      placeholder="Enter delay reason"
-                    />
-                  </UniformFormField>
-                </div>
-
-                <div className="self-end sm:col-span-2 xl:col-span-1 xl:flex xl:justify-end">
-                  <button type="submit" className={uniformPrimaryButtonClass}>
-                    {editingLogId ? "Update Delay Log" : "Save Delay Log"}
-                  </button>
-                </div>
-              </form>
-            </UniformSectionCard>
-          </>
+        {message ? (
+          <p className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
+            {message}
+          </p>
         ) : null}
 
-        {activeTab === "table" ? (
-          <UniformSectionCard title="Delay Records" subtitle="Recent delay logs with calculated duration.">
-            <SearchBar
-              placeholder="Search category, reason, or time"
-              value={tableSearch}
-              onChange={setTableSearch}
-              showFilter={false}
-            />
+        <SearchBar
+          placeholder="Search by rake number, delay category, reason, or status..."
+          value={tableSearch}
+          onChange={setTableSearch}
+          showFilter={false}
+        />
 
-            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-              <table className="w-full min-w-175">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-100">
-                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
-                      <SortHeaderButton label="Category" field="category" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
-                      <SortHeaderButton label="Start Time" field="startTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
-                      <SortHeaderButton label="End Time" field="endTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
-                      <SortHeaderButton label="Duration" field="duration" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
-                      <SortHeaderButton label="Reason" field="reason" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
-                      <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
-                      Actions
-                    </th>
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-425 whitespace-nowrap">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/60">
+                  <th className="px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    Actions
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="Log ID" field="id" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="Rake Number" field="rakeNumber" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="Category" field="category" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="Start Time" field="startTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="End Time" field="endTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="Duration" field="duration" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="Reason" field="reason" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="Reported By" field="reportedBy" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                <tr className="bg-blue-50/50 align-top [&>td]:py-4">
+                  <td className="px-5 py-3">
+                    <div className="flex flex-col items-center gap-2">
+                      {inlineActionMode === "edit" ? (
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500">
+                          Editing #{activeInlineLogId}
+                        </span>
+                      ) : null}
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleInlineSave}
+                          disabled={inlineSaveDisabled}
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-white transition-colors ${
+                            inlineSaveDisabled
+                              ? "cursor-not-allowed bg-slate-300"
+                              : "bg-blue-600 hover:bg-blue-700"
+                          }`}
+                          aria-label={inlineSaveLabel}
+                          title={inlineSaveLabel}
+                        >
+                          <PlusIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={clearInlineForm}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100"
+                          aria-label="Clear form"
+                          title="Clear form"
+                        >
+                          <ClearIcon />
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="text"
+                      value={activeInlineLogId ?? "New"}
+                      className={compactInputClass}
+                      readOnly
+                      disabled
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="text"
+                      value={inlineForm.rakeNumber}
+                      onChange={(event) => updateInline("rakeNumber", event.target.value)}
+                      placeholder="Rake Number"
+                      className={compactInputClass}
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <ThemedSelect
+                      value={inlineForm.category}
+                      onChange={(event) => updateInline("category", event.target.value)}
+                      className={compactInputClass}
+                    >
+                      <option value="">Category</option>
+                      {categories.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </ThemedSelect>
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="datetime-local"
+                      value={inlineForm.startTime}
+                      onChange={(event) => updateInline("startTime", event.target.value)}
+                      className={compactInputClass}
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="datetime-local"
+                      value={inlineForm.endTime}
+                      onChange={(event) => updateInline("endTime", event.target.value)}
+                      className={compactInputClass}
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="text"
+                      value={currentInlineDuration}
+                      className={compactInputClass}
+                      readOnly
+                      disabled
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="text"
+                      value={inlineForm.reason}
+                      onChange={(event) => updateInline("reason", event.target.value)}
+                      placeholder="Reason"
+                      className={compactInputClass}
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="text"
+                      value={inlineForm.reportedBy}
+                      onChange={(event) => updateInline("reportedBy", event.target.value)}
+                      placeholder="Reported By"
+                      className={compactInputClass}
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+                      {inlineStatusLabel}
+                    </span>
+                  </td>
+                </tr>
+
+                {sortedRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="px-5 py-12 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <svg
+                          width="40"
+                          height="40"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#94a3b8"
+                          strokeWidth="1.5"
+                          className="mb-2"
+                        >
+                          <circle cx="11" cy="11" r="8" />
+                          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        <p className="text-[15px] font-semibold text-slate-400">
+                          No delay logs found
+                        </p>
+                        <p className="text-[13px] text-slate-400">
+                          Try adjusting your search keyword.
+                        </p>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {sortedLogs.map((row, index) => {
-                    const duration = toDurationLabel(
+                ) : (
+                  sortedRows.map((row) => {
+                    const duration = formatDuration(
                       getDurationMinutes(row.startTime, row.endTime),
                     );
+                    const statusMeta = getStatusMeta(row);
 
                     return (
                       <tr
                         key={row.id}
-                        className={`border-t border-slate-200 text-sm text-slate-700 ${
-                          index % 2 === 0 ? "bg-white" : "bg-slate-50"
-                        } ${row.isDisabled ? "opacity-60" : ""}`}
+                        className={`hover:bg-slate-50/60 transition-colors group [&>td]:py-5 ${
+                          row.id === activeInlineLogId ? "bg-amber-50/60" : ""
+                        } ${row.isDisabled ? "opacity-70" : ""}`}
                       >
-                        <td className="px-3 py-2.5">
-                          <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
-                            {row.category}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2.5">{formatDate(row.startTime)}</td>
-                        <td className="px-3 py-2.5">{formatDate(row.endTime)}</td>
-                        <td className="px-3 py-2.5 font-semibold text-blue-700">{duration}</td>
-                        <td className="px-3 py-2.5">{row.reason}</td>
-                        <td className="px-3 py-2.5">
-                          <span
-                            className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                              row.isDisabled
-                                ? "bg-slate-200 text-slate-600"
-                                : "bg-emerald-100 text-emerald-700"
-                            }`}
-                          >
-                            {row.isDisabled ? "Disabled" : "Enabled"}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <div className="flex items-center gap-2">
+                        <td className="px-5 py-4">
+                          <div className="flex items-center justify-center gap-2 opacity-60 transition-opacity group-hover:opacity-100">
                             <button
                               type="button"
-                              onClick={() => handleEditLog(row)}
+                              onClick={() => handleEditRow(row)}
                               disabled={row.isDisabled}
                               className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
                                 row.isDisabled
@@ -498,38 +664,60 @@ export default function DelayManagementPage() {
                             </button>
                           </div>
                         </td>
+                        <td className="px-5 py-4 text-[13px] font-semibold text-blue-600">#{row.id}</td>
+                        <td className="px-5 py-4 text-[13px] text-slate-700">{row.rakeNumber}</td>
+                        <td className="px-5 py-4">
+                          <span className="inline-flex rounded-full bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-700">
+                            {row.category}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-[13px] text-slate-700">{formatDateTimeForTable(row.startTime)}</td>
+                        <td className="px-5 py-4 text-[13px] text-slate-700">{formatDateTimeForTable(row.endTime)}</td>
+                        <td className="px-5 py-4 text-[13px] font-semibold text-blue-700">{duration}</td>
+                        <td className="px-5 py-4 text-[13px] text-slate-700">{row.reason}</td>
+                        <td className="px-5 py-4 text-[13px] text-slate-700">{row.reportedBy}</td>
+                        <td className="px-5 py-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold ${statusMeta.badgeClass}`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full ${statusMeta.dotClass}`} />
+                            {statusMeta.label}
+                          </span>
+                        </td>
                       </tr>
                     );
-                  })}
-                  {sortedLogs.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">
-                        No delay logs found for this search.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          </UniformSectionCard>
-        ) : null}
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
 
-        <ConfirmDialog
-          isOpen={Boolean(statusConfirmLog)}
-          onClose={closeLogStatusDialog}
-          onConfirm={confirmLogStatusToggle}
-          title={statusConfirmLog?.isDisabled ? "Enable Delay Log" : "Disable Delay Log"}
-          message={
-            statusConfirmLog?.isDisabled
-              ? "Are you sure you want to enable this delay log?"
-              : "Are you sure you want to disable this delay log?"
-          }
-          itemName={statusConfirmLog ? `${statusConfirmLog.category} - ${statusConfirmLog.id}` : ""}
-          confirmLabel={statusConfirmLog?.isDisabled ? "Enable" : "Disable"}
-          variant={statusConfirmLog?.isDisabled ? "warning" : "danger"}
-        />
+          <div className="border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500">
+            <p>
+              Showing <span className="font-semibold text-slate-700">{sortedRows.length}</span> record(s)
+            </p>
+          </div>
+        </div>
       </div>
-    </UniformPageShell>
+
+      <ConfirmDialog
+        isOpen={Boolean(statusConfirmLog)}
+        onClose={closeLogStatusDialog}
+        onConfirm={confirmLogStatusToggle}
+        title={statusConfirmLog?.isDisabled ? "Enable Delay Log" : "Disable Delay Log"}
+        message={
+          statusConfirmLog?.isDisabled
+            ? "Are you sure you want to enable this delay log?"
+            : "Are you sure you want to disable this delay log?"
+        }
+        itemName={
+          statusConfirmLog
+            ? `${statusConfirmLog.rakeNumber} - ${statusConfirmLog.category}`
+            : ""
+        }
+        confirmLabel={statusConfirmLog?.isDisabled ? "Enable" : "Disable"}
+        variant={statusConfirmLog?.isDisabled ? "warning" : "danger"}
+      />
+    </>
   );
 }
-

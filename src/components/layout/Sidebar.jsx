@@ -93,8 +93,9 @@ export default function Sidebar({
   const [openSubmenus, setOpenSubmenus] = useState({
     "master-data": true,
     "e-demand": true,
+    loading: true,
+    delay: true,
     reports: true,
-    "admin-tools": true,
   });
   const [floatingSubmenu, setFloatingSubmenu] = useState(null);
   const floatingCloseTimerRef = useRef(null);
