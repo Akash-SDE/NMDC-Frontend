@@ -1,7 +1,9 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { refreshAccessToken } from "../services/authService";
 
 const RouterContext = createContext(null);
 const AUTH_STORAGE_KEY = "nmdc_auth_session";
+const TOKEN_STORAGE_KEY = "nmdc_auth_tokens";
 
 export const USER_ROLES = {
   ADMIN: "admin",
@@ -38,8 +40,27 @@ function writeStoredSession(session) {
 function clearStoredSession() {
   try {
     window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    window.localStorage.removeItem(TOKEN_STORAGE_KEY);
   } catch {
     // Ignore storage failures and continue with in-memory state.
+  }
+}
+
+function readStoredTokens() {
+  try {
+    const raw = window.localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredTokens(tokens) {
+  try {
+    window.localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(tokens));
+  } catch {
+    // Ignore storage failures.
   }
 }
 
@@ -50,10 +71,14 @@ export function RouterProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [persistSession, setPersistSession] = useState(false);
+  const [tokens, setTokens] = useState({ access: null, refresh: null });
 
   useEffect(() => {
     const storedSession = readStoredSession();
     if (!storedSession) return;
+
+    const storedTokens = readStoredTokens();
+    if (storedTokens) setTokens(storedTokens);
 
     setUserRole(storedSession.userRole);
     setIsAuthenticated(true);
@@ -88,7 +113,7 @@ export function RouterProvider({ children }) {
   }, []);
 
   const login = useCallback(
-    (role, userData = {}, rememberSession = false) => {
+    (role, userData = {}, rememberSession = false, authTokens = {}) => {
       const resolvedUser = {
         name:
           userData.name ||
@@ -106,6 +131,11 @@ export function RouterProvider({ children }) {
       setIsAuthenticated(true);
       setUser(resolvedUser);
       setPersistSession(rememberSession);
+      setTokens(authTokens);
+
+      // Always persist tokens so apiClient can read them for API calls.
+      // Session (user/role) is only persisted when rememberSession is true.
+      if (authTokens?.access) writeStoredTokens(authTokens);
 
       if (rememberSession) {
         writeStoredSession({
@@ -115,7 +145,7 @@ export function RouterProvider({ children }) {
           lastRoute: targetRoute,
         });
       } else {
-        clearStoredSession();
+        window.localStorage.removeItem(AUTH_STORAGE_KEY);
       }
 
       navigate(targetRoute);
@@ -129,9 +159,21 @@ export function RouterProvider({ children }) {
     setUser(null);
     setPersistSession(false);
     setRouteParams({});
+    setTokens({ access: null, refresh: null });
     clearStoredSession();
     navigate("login");
   }, [navigate]);
+
+  /** Attempt a silent token refresh; returns new access token or throws. */
+  const refreshToken = useCallback(async () => {
+    const storedTokens = readStoredTokens() || tokens;
+    if (!storedTokens?.refresh) throw new Error("No refresh token available.");
+    const { access } = await refreshAccessToken(storedTokens.refresh);
+    const updated = { ...storedTokens, access };
+    setTokens(updated);
+    if (persistSession) writeStoredTokens(updated);
+    return access;
+  }, [tokens, persistSession]);
 
   return (
     <RouterContext.Provider
@@ -144,6 +186,8 @@ export function RouterProvider({ children }) {
         user,
         login,
         logout,
+        tokens,
+        refreshToken,
       }}
     >
       {children}

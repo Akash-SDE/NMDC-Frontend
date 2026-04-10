@@ -1,9 +1,5 @@
-import { useState } from "react";
-import {
-  customersData,
-  customersMeta,
-} from "../../../data/adminmasterdatafiles/customers";
-import useCrud from "../../../hooks/useCrud";
+import { useState, useEffect, useCallback } from "react";
+import { customersMeta } from "../../../data/adminmasterdatafiles/customers";
 import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
@@ -12,20 +8,19 @@ import Toast from "../../../components/shared/Toast";
 import { PlusIcon } from "../../../components/icons";
 import { useRouter } from "../../../context/RouterContext";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
+import {
+  fetchCustomers,
+  createCustomer,
+  updateCustomer,
+  patchCustomer,
+} from "../../../services/customerService";
+
+// ─── Icons ───────────────────────────────────────────────────────────────────
 
 function EditIcon() {
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="3xl:w-5 3xl:h-5"
-    >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="3xl:w-5 3xl:h-5">
       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
       <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
     </svg>
@@ -33,44 +28,24 @@ function EditIcon() {
 }
 function DisableIcon() {
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="3xl:w-5 3xl:h-5 5xl:w-6 5xl:h-6"
-    >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="3xl:w-5 3xl:h-5">
       <rect x="3" y="11" width="18" height="10" rx="2" ry="2" />
       <line x1="12" y1="11" x2="12" y2="7" />
       <path d="M7 11V7a5 5 0 0 1 10 0v4" />
     </svg>
   );
 }
-
 function EnableIcon() {
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="3xl:w-5 3xl:h-5 5xl:w-6 5xl:h-6"
-    >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="3xl:w-5 3xl:h-5">
       <path d="M17 11V7a5 5 0 0 0-10 0v4" />
       <rect x="3" y="11" width="18" height="10" rx="2" ry="2" />
       <polyline points="8 16 11 19 16 14" />
     </svg>
   );
 }
-
 function SortIcon({ isActive, order }) {
   if (!isActive) {
     return (
@@ -80,7 +55,6 @@ function SortIcon({ isActive, order }) {
       </svg>
     );
   }
-
   return order === "asc" ? (
     <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 text-slate-700" aria-hidden="true">
       <path d="M8 2l3 3H5l3-3z" fill="currentColor" />
@@ -94,23 +68,43 @@ function SortIcon({ isActive, order }) {
   );
 }
 
-const contractOptions = ["Long Term", "Annual", "Spot", "Trial"];
-const contractBadgeColors = {
-  "Long Term": "bg-brand-100 text-brand-700 border-brand-200",
-  Annual: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  Spot: "bg-amber-100 text-amber-700 border-amber-200",
-  Trial: "bg-purple-100 text-purple-700 border-purple-200",
-};
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Map API record → UI shape */
+function toUi(r) {
+  return {
+    id: r.id,
+    code: r.customer_code || "",
+    name: r.customer_name || "",
+    contactPerson: r.customer_state || "",   // closest available field
+    location: r.customer_address || "",
+    status: r.status ? "active" : "inactive",
+    _raw: r,
+  };
+}
+
+/** Map UI form → API payload */
+function toApi(form) {
+  return {
+    customer_code: form.code || null,
+    customer_name: form.name,
+    customer_address: form.location || null,
+    customer_state: form.contactPerson || null,
+    status: form.status === "active",
+  };
+}
+
+// ─── Form ─────────────────────────────────────────────────────────────────────
 
 const emptyForm = {
   code: "",
   name: "",
   contactPerson: "",
   location: "",
-  contractType: "Annual",
   status: "active",
 };
-function CustomerForm({ initialData, onSave, onCancel, isEditing }) {
+
+function CustomerForm({ initialData, onSave, onCancel, isEditing, saving }) {
   const [form, setForm] = useState(initialData || { ...emptyForm });
   const [errors, setErrors] = useState({});
 
@@ -123,9 +117,7 @@ function CustomerForm({ initialData, onSave, onCancel, isEditing }) {
     const e = {};
     if (!form.code.trim()) e.code = "Code is required";
     if (!form.name.trim()) e.name = "Name is required";
-    if (!form.contactPerson.trim())
-      e.contactPerson = "Contact person is required";
-    if (!form.location.trim()) e.location = "Location is required";
+    if (!form.location.trim()) e.location = "Address is required";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -136,17 +128,14 @@ function CustomerForm({ initialData, onSave, onCancel, isEditing }) {
   }
 
   const inputClass = (f) =>
-    `w-full rounded-lg border ${errors[f] ? "border-red-300 ring-2 ring-red-100" : "border-slate-200"} bg-slate-50 px-4 py-2.5 3xl:py-3 5xl:py-4 text-[14px] 3xl:text-[16px] 5xl:text-[20px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:bg-white`;
+    `w-full rounded-lg border ${errors[f] ? "border-red-300 ring-2 ring-red-100" : "border-slate-200"} bg-slate-50 px-4 py-2.5 3xl:py-3 text-[14px] 3xl:text-[16px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:bg-white`;
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 3xl:space-y-6 5xl:space-y-8"
-    >
-      {/* Code + Contract Type */}
+    <form onSubmit={handleSubmit} className="space-y-4 3xl:space-y-6">
+      {/* Code */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 3xl:gap-5">
         <div>
-          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5 3xl:mb-2">
+          <label className="block text-[13px] 3xl:text-[15px] font-semibold text-slate-800 mb-1.5">
             Customer Code *
           </label>
           <input
@@ -157,35 +146,25 @@ function CustomerForm({ initialData, onSave, onCancel, isEditing }) {
             disabled={isEditing}
             className={`${inputClass("code")} ${isEditing ? "opacity-60 cursor-not-allowed" : ""}`}
           />
-          {errors.code && (
-            <p className="mt-1 text-[11px] 3xl:text-[13px] text-red-500 font-medium">
-              {errors.code}
-            </p>
-          )}
+          {errors.code && <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.code}</p>}
         </div>
         <div>
-          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5 3xl:mb-2">
-            Contract Type
+          <label className="block text-[13px] 3xl:text-[15px] font-semibold text-slate-800 mb-1.5">
+            State
           </label>
-          <ThemedSelect
-            value={form.contractType}
-            onChange={(e) => handleChange("contractType", e.target.value)}
-            className={
-              inputClass("contractType") + " appearance-none cursor-pointer"
-            }
-          >
-            {contractOptions.map((ct) => (
-              <option key={ct} value={ct}>
-                {ct}
-              </option>
-            ))}
-          </ThemedSelect>
+          <input
+            type="text"
+            placeholder="e.g. Karnataka"
+            value={form.contactPerson}
+            onChange={(e) => handleChange("contactPerson", e.target.value)}
+            className={inputClass("contactPerson")}
+          />
         </div>
       </div>
 
-      {/* Customer Name */}
+      {/* Name */}
       <div>
-        <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5 3xl:mb-2">
+        <label className="block text-[13px] 3xl:text-[15px] font-semibold text-slate-800 mb-1.5">
           Customer Name *
         </label>
         <input
@@ -195,55 +174,28 @@ function CustomerForm({ initialData, onSave, onCancel, isEditing }) {
           onChange={(e) => handleChange("name", e.target.value)}
           className={inputClass("name")}
         />
-        {errors.name && (
-          <p className="mt-1 text-[11px] 3xl:text-[13px] text-red-500 font-medium">
-            {errors.name}
-          </p>
-        )}
+        {errors.name && <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.name}</p>}
       </div>
 
-      {/* Contact Person + Location */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 3xl:gap-5">
-        <div>
-          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5 3xl:mb-2">
-            Contact Person *
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. Rajiv Sharma"
-            value={form.contactPerson}
-            onChange={(e) => handleChange("contactPerson", e.target.value)}
-            className={inputClass("contactPerson")}
-          />
-          {errors.contactPerson && (
-            <p className="mt-1 text-[11px] 3xl:text-[13px] text-red-500 font-medium">
-              {errors.contactPerson}
-            </p>
-          )}
-        </div>
-        <div>
-          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5 3xl:mb-2">
-            Location *
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. Bellary, Karnataka"
-            value={form.location}
-            onChange={(e) => handleChange("location", e.target.value)}
-            className={inputClass("location")}
-          />
-          {errors.location && (
-            <p className="mt-1 text-[11px] 3xl:text-[13px] text-red-500 font-medium">
-              {errors.location}
-            </p>
-          )}
-        </div>
+      {/* Address */}
+      <div>
+        <label className="block text-[13px] 3xl:text-[15px] font-semibold text-slate-800 mb-1.5">
+          Address *
+        </label>
+        <input
+          type="text"
+          placeholder="e.g. Bellary, Karnataka"
+          value={form.location}
+          onChange={(e) => handleChange("location", e.target.value)}
+          className={inputClass("location")}
+        />
+        {errors.location && <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.location}</p>}
       </div>
 
-      {/* Status */}
+      {/* Status (add only) */}
       {!isEditing && (
         <div>
-          <label className="block text-[13px] 3xl:text-[15px] 5xl:text-[20px] font-semibold text-slate-800 mb-1.5 3xl:mb-2">
+          <label className="block text-[13px] 3xl:text-[15px] font-semibold text-slate-800 mb-1.5">
             Status
           </label>
           <ThemedSelect
@@ -257,114 +209,183 @@ function CustomerForm({ initialData, onSave, onCancel, isEditing }) {
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex items-center justify-end gap-3 3xl:gap-4 pt-4 3xl:pt-6 border-t border-slate-100">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 3xl:px-6 3xl:py-3 5xl:px-8 5xl:py-4 text-[14px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50 transition-all"
-        >
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+        <button type="button" onClick={onCancel}
+          className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[14px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50 transition-all">
           Cancel
         </button>
-        <button
-          type="submit"
-          className="rounded-lg bg-blue-600 px-5 py-2.5 3xl:px-6 3xl:py-3 5xl:px-8 5xl:py-4 text-[14px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-white shadow-sm hover:bg-blue-700 transition-all active:scale-[0.98]"
-        >
-          {isEditing ? "Update Customer" : "Add Customer"}
+        <button type="submit" disabled={saving}
+          className="rounded-lg bg-blue-600 px-5 py-2.5 text-[14px] font-semibold text-white shadow-sm hover:bg-blue-700 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed">
+          {saving ? "Saving…" : isEditing ? "Update Customer" : "Add Customer"}
         </button>
       </div>
     </form>
   );
 }
 
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+const PAGE_SIZE = 10;
+
 export default function CustomerMaster() {
   const { navigate, currentRoute } = useRouter();
-  const crud = useCrud(customersData, "code");
   const addRoute = "customer-master-add";
   const editRoute = "customer-master-edit";
   const baseRoute = "customer-master";
   const isAddPage = currentRoute === addRoute;
   const isEditPage = currentRoute === editRoute;
-  const [sortBy, setSortBy] = useState("code");
+
+  // List state
+  const [customers, setCustomers] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("customer_code");
   const [sortOrder, setSortOrder] = useState("asc");
-  const pageSize = customersMeta.pageSize;
-  const sortedData = [...crud.data].sort((a, b) => {
-    const aValue = String(a[sortBy] ?? "").toLowerCase();
-    const bValue = String(b[sortBy] ?? "").toLowerCase();
-    if (aValue === bValue) return 0;
-    const comparison = aValue > bValue ? 1 : -1;
-    return sortOrder === "asc" ? comparison : -comparison;
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  // Form state
+  const [editingItem, setEditingItem] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  // Confirm dialog
+  const [statusToggleItem, setStatusToggleItem] = useState(null);
+  const [isStatusToggleOpen, setIsStatusToggleOpen] = useState(false);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  function showToast(message, type = "success") {
+    setToast({ message, type, id: Date.now() });
+    setTimeout(() => setToast(null), 3000);
+  }
+
+  // ── Fetch list ──────────────────────────────────────────────────────────────
+  const loadCustomers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const filters = {};
+      if (search.trim()) {
+        filters.customer_name = search.trim();
+      }
+      const res = await fetchCustomers(filters);
+      const results = res?.results ?? res ?? [];
+      setCustomers(results.map(toUi));
+      setTotalCount(res?.count ?? results.length);
+    } catch (err) {
+      showToast(err.message || "Failed to load customers.", "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [search]);
+
+  useEffect(() => {
+    if (!isAddPage && !isEditPage) loadCustomers();
+  }, [isAddPage, isEditPage, loadCustomers]);
+
+  // ── Sort (client-side on current page data) ─────────────────────────────────
+  const sortedCustomers = [...customers].sort((a, b) => {
+    const aVal = String(a[sortBy] ?? "").toLowerCase();
+    const bVal = String(b[sortBy] ?? "").toLowerCase();
+    if (aVal === bVal) return 0;
+    return (aVal > bVal ? 1 : -1) * (sortOrder === "asc" ? 1 : -1);
   });
-  const totalFiltered = sortedData.length;
-  const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
-  const paginatedData = sortedData.slice(
-    (crud.currentPage - 1) * pageSize,
-    crud.currentPage * pageSize,
+
+  const paginatedData = sortedCustomers.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
   );
 
-  const handleSort = (field) => {
-    if (sortBy === field) {
-      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortBy(field);
-      setSortOrder("asc");
-    }
-    crud.setCurrentPage(1);
-  };
+  function handleSort(field) {
+    if (sortBy === field) setSortOrder((p) => (p === "asc" ? "desc" : "asc"));
+    else { setSortBy(field); setSortOrder("asc"); }
+    setCurrentPage(1);
+  }
 
-  const renderSortButton = (label, field) => {
+  function renderSortButton(label, field) {
     const isActive = sortBy === field;
     return (
-      <button
-        type="button"
-        onClick={() => handleSort(field)}
-        className={`inline-flex items-center gap-1.5 transition-colors ${
-          isActive ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
-        }`}
-      >
+      <button type="button" onClick={() => handleSort(field)}
+        className={`inline-flex items-center gap-1.5 transition-colors ${isActive ? "text-slate-700" : "text-slate-500 hover:text-slate-700"}`}>
         <span>{label}</span>
         <SortIcon isActive={isActive} order={sortOrder} />
       </button>
     );
-  };
+  }
 
-  const handleAddClick = () => {
-    crud.closeForm();
+  // ── Add ─────────────────────────────────────────────────────────────────────
+  function handleAddClick() {
+    setEditingItem(null);
     navigate(addRoute);
-  };
+  }
 
-  const handleAddSave = (formData) => {
-    const success = crud.saveItem(formData);
-    if (success) {
+  async function handleAddSave(formData) {
+    setSaving(true);
+    try {
+      await createCustomer(toApi(formData));
+      showToast(`"${formData.name}" added successfully.`);
       navigate(baseRoute);
+      loadCustomers();
+    } catch (err) {
+      showToast(err.message || "Failed to add customer.", "error");
+    } finally {
+      setSaving(false);
     }
-  };
+  }
 
-  const handleEditClick = (item) => {
-    crud.openEditForm(item);
+  // ── Edit ────────────────────────────────────────────────────────────────────
+  function handleEditClick(item) {
+    setEditingItem(item);
     navigate(editRoute);
-  };
+  }
 
-  const handleEditSave = (formData) => {
-    const success = crud.saveItem(formData);
-    if (success) {
+  async function handleEditSave(formData) {
+    setSaving(true);
+    try {
+      await updateCustomer(editingItem.id, toApi(formData));
+      showToast(`"${formData.name}" updated successfully.`);
+      setEditingItem(null);
       navigate(baseRoute);
+      loadCustomers();
+    } catch (err) {
+      showToast(err.message || "Failed to update customer.", "error");
+    } finally {
+      setSaving(false);
     }
-  };
+  }
 
-  if (isEditPage && !crud.editingItem) {
+  // ── Status toggle ───────────────────────────────────────────────────────────
+  function openStatusToggle(item) {
+    setStatusToggleItem(item);
+    setIsStatusToggleOpen(true);
+  }
+
+  async function confirmStatusToggle() {
+    if (!statusToggleItem) return;
+    const newStatus = statusToggleItem.status !== "active";
+    try {
+      await patchCustomer(statusToggleItem.id, { status: newStatus });
+      showToast(
+        `"${statusToggleItem.name}" ${newStatus ? "enabled" : "disabled"} successfully.`
+      );
+      loadCustomers();
+    } catch (err) {
+      showToast(err.message || "Failed to update status.", "error");
+    } finally {
+      setStatusToggleItem(null);
+      setIsStatusToggleOpen(false);
+    }
+  }
+
+  // ── Guard: edit page without item ───────────────────────────────────────────
+  if (isEditPage && !editingItem) {
     return (
-      <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
-        <Toast toast={crud.toast} />
+      <div className="space-y-6">
+        <Toast toast={toast} />
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-[14px] 3xl:text-[16px] text-slate-600">
-            Select a customer from the list to edit.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate(baseRoute)}
-            className="mt-4 rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[14px] 3xl:text-[16px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
-          >
+          <p className="text-[14px] text-slate-600">Select a customer from the list to edit.</p>
+          <button type="button" onClick={() => navigate(baseRoute)}
+            className="mt-4 rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[14px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50">
             Back to List
           </button>
         </div>
@@ -372,66 +393,55 @@ export default function CustomerMaster() {
     );
   }
 
+  // ── Add / Edit form page ─────────────────────────────────────────────────────
   if (isAddPage || isEditPage) {
-    const isEditing = isEditPage;
     return (
-      <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
-        <Toast toast={crud.toast} />
-
+      <div className="space-y-6 3xl:space-y-8">
+        <Toast toast={toast} />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
-              {isEditing ? "Edit Customer" : "Add New Customer"}
+            <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] font-bold text-slate-800">
+              {isEditPage ? "Edit Customer" : "Add New Customer"}
             </h2>
-            <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
+            <p className="mt-1 text-[14px] 3xl:text-[17px] text-slate-500">
               Fill in the customer details.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (isEditing) crud.closeForm();
-              navigate(baseRoute);
-            }}
-            className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[14px] 3xl:text-[16px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
-          >
+          <button type="button"
+            onClick={() => { setEditingItem(null); navigate(baseRoute); }}
+            className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[14px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50">
             Back to List
           </button>
         </div>
-
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <CustomerForm
-            initialData={isEditing ? crud.editingItem : { ...emptyForm }}
-            onSave={isEditing ? handleEditSave : handleAddSave}
-            onCancel={() => {
-              if (isEditing) crud.closeForm();
-              navigate(baseRoute);
-            }}
-            isEditing={isEditing}
+            initialData={isEditPage ? editingItem : { ...emptyForm }}
+            onSave={isEditPage ? handleEditSave : handleAddSave}
+            onCancel={() => { setEditingItem(null); navigate(baseRoute); }}
+            isEditing={isEditPage}
+            saving={saving}
           />
         </div>
       </div>
     );
   }
 
+  // ── List page ────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 3xl:space-y-8 5xl:space-y-12">
-      <Toast toast={crud.toast} />
+    <div className="space-y-6 3xl:space-y-8">
+      <Toast toast={toast} />
 
-      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
+          <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] font-bold text-slate-800">
             {customersMeta.title}
           </h2>
-          <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
+          <p className="mt-1 text-[14px] 3xl:text-[17px] text-slate-500">
             {customersMeta.subtitle}
           </p>
         </div>
-        <button
-          onClick={handleAddClick}
-          className="flex items-center gap-2 3xl:gap-3 rounded-lg bg-blue-600 px-5 py-2.5 3xl:px-6 3xl:py-3 5xl:px-8 5xl:py-4 text-[13px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-white shadow-sm hover:bg-blue-700 transition-all self-start active:scale-[0.98]"
-        >
+        <button onClick={handleAddClick}
+          className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 3xl:px-6 3xl:py-3 text-[13px] 3xl:text-[16px] font-semibold text-white shadow-sm hover:bg-blue-700 transition-all self-start active:scale-[0.98]">
           <PlusIcon />
           <span>{customersMeta.addLabel}</span>
         </button>
@@ -439,105 +449,79 @@ export default function CustomerMaster() {
 
       <SearchBar
         placeholder={customersMeta.searchPlaceholder}
-        value={crud.search}
-        onChange={(v) => {
-          crud.setSearch(v);
-          crud.setCurrentPage(1);
-        }}
+        value={search}
+        onChange={(v) => { setSearch(v); setCurrentPage(1); }}
         showFilter={false}
       />
 
-      {/* Table */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full" data-print-table>
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
-                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  {renderSortButton("Customer Code", "code")}
+                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                  {renderSortButton("Code", "code")}
                 </th>
-                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   {renderSortButton("Customer Name", "name")}
                 </th>
-                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden sm:table-cell">
-                  {renderSortButton("Contact Person", "contactPerson")}
+                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden sm:table-cell">
+                  {renderSortButton("State", "contactPerson")}
                 </th>
-                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden md:table-cell">
-                  {renderSortButton("Location", "location")}
+                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden md:table-cell">
+                  {renderSortButton("Address", "location")}
                 </th>
-                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden lg:table-cell">
-                  {renderSortButton("Contract", "contractType")}
-                </th>
-                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   {renderSortButton("Status", "status")}
                 </th>
-                <th className="px-5 py-3.5 text-right text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                <th className="px-5 py-3.5 text-right text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {paginatedData.length === 0 ? (
+              {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center">
+                  <td colSpan={6} className="px-5 py-12 text-center">
+                    <p className="text-[14px] text-slate-400 animate-pulse">Loading customers…</p>
+                  </td>
+                </tr>
+              ) : paginatedData.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
-                      <svg
-                        width="40"
-                        height="40"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#94a3b8"
-                        strokeWidth="1.5"
-                        className="mb-2"
-                      >
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" className="mb-2">
                         <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                         <path d="M23 21v-2a4 4 0 00-3-3.87" />
                         <path d="M16 3.13a4 4 0 010 7.75" />
                       </svg>
-                      <p className="text-[15px] 3xl:text-[18px] font-semibold text-slate-400">
-                        No customers found
-                      </p>
-                      <p className="text-[13px] 3xl:text-[15px] text-slate-400">
-                        Try adjusting your search or filters
-                      </p>
+                      <p className="text-[15px] font-semibold text-slate-400">No customers found</p>
+                      <p className="text-[13px] text-slate-400">Try adjusting your search</p>
                     </div>
                   </td>
                 </tr>
               ) : (
                 paginatedData.map((cust) => (
-                  <tr
-                    key={cust.code}
-                    className="hover:bg-slate-50/60 transition-colors group"
-                  >
+                  <tr key={cust.id} className="hover:bg-slate-50/60 transition-colors group">
                     <td className="px-5 py-4 3xl:px-6 3xl:py-5">
-                      <span className="text-[13px] 3xl:text-[15px] 5xl:text-[19px] font-semibold text-blue-600">
-                        {cust.code}
+                      <span className="text-[13px] 3xl:text-[15px] font-semibold text-blue-600">
+                        {cust.code || "—"}
                       </span>
                     </td>
                     <td className="px-5 py-4 3xl:px-6 3xl:py-5">
-                      <span className="text-[13px] 3xl:text-[15px] 5xl:text-[19px] font-semibold text-slate-800">
+                      <span className="text-[13px] 3xl:text-[15px] font-semibold text-slate-800">
                         {cust.name}
                       </span>
                     </td>
                     <td className="px-5 py-4 3xl:px-6 3xl:py-5 hidden sm:table-cell">
-                      <span className="text-[13px] 3xl:text-[15px] 5xl:text-[19px] text-slate-600">
-                        {cust.contactPerson}
+                      <span className="text-[13px] 3xl:text-[15px] text-slate-600">
+                        {cust.contactPerson || "—"}
                       </span>
                     </td>
                     <td className="px-5 py-4 3xl:px-6 3xl:py-5 hidden md:table-cell">
-                      <span className="text-[13px] 3xl:text-[15px] 5xl:text-[19px] text-slate-600">
-                        {cust.location}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 3xl:px-6 3xl:py-5 hidden lg:table-cell">
-                      <span
-                        className={`inline-flex rounded-md border px-2.5 py-1 text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-semibold ${
-                          contractBadgeColors[cust.contractType] ||
-                          "bg-slate-100 text-slate-600 border-slate-200"
-                        }`}
-                      >
-                        {cust.contractType}
+                      <span className="text-[13px] 3xl:text-[15px] text-slate-600">
+                        {cust.location || "—"}
                       </span>
                     </td>
                     <td className="px-5 py-4 3xl:px-6 3xl:py-5">
@@ -558,7 +542,7 @@ export default function CustomerMaster() {
                           <EditIcon />
                         </button>
                         <button
-                          onClick={() => crud.openStatusToggleConfirm(cust)}
+                          onClick={() => openStatusToggle(cust)}
                           className={`flex h-8 w-8 3xl:h-10 3xl:w-10 items-center justify-center rounded-lg transition-colors ${
                             cust.status === "inactive"
                               ? "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"
@@ -578,34 +562,29 @@ export default function CustomerMaster() {
         </div>
         <div className="px-5 py-4 3xl:px-6 3xl:py-5">
           <Pagination
-            currentPage={crud.currentPage}
+            currentPage={currentPage}
             totalPages={totalPages}
-            totalCount={totalFiltered}
-            pageSize={pageSize}
-            onPageChange={crud.setCurrentPage}
+            totalCount={totalCount}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
           />
         </div>
       </div>
 
       <ConfirmDialog
-        isOpen={crud.isStatusToggleOpen}
-        onClose={crud.closeStatusToggleConfirm}
-        onConfirm={crud.confirmStatusToggle}
-        title={crud.statusToggleItem?.status === "inactive" ? "Enable Customer" : "Disable Customer"}
+        isOpen={isStatusToggleOpen}
+        onClose={() => { setStatusToggleItem(null); setIsStatusToggleOpen(false); }}
+        onConfirm={confirmStatusToggle}
+        title={statusToggleItem?.status === "inactive" ? "Enable Customer" : "Disable Customer"}
         message={
-          crud.statusToggleItem?.status === "inactive"
+          statusToggleItem?.status === "inactive"
             ? "Are you sure you want to enable this customer?"
             : "Are you sure you want to disable this customer?"
         }
-        itemName={crud.statusToggleItem?.code || ""}
-        confirmLabel={crud.statusToggleItem?.status === "inactive" ? "Enable" : "Disable"}
-        variant={crud.statusToggleItem?.status === "inactive" ? "warning" : "danger"}
+        itemName={statusToggleItem?.name || ""}
+        confirmLabel={statusToggleItem?.status === "inactive" ? "Enable" : "Disable"}
+        variant={statusToggleItem?.status === "inactive" ? "warning" : "danger"}
       />
-</div>
+    </div>
   );
 }
-
-
-
-
-
