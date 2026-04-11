@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, USER_ROLES } from "../../context/RouterContext";
 import { Logo } from "../icons";
+import { loginWithCredentials } from "../../services/authService";
 
 function EyeIcon() {
   return (
@@ -38,17 +39,8 @@ function EyeOffIcon() {
 }
 
 const DEMO_ACCOUNTS = {
-  admin: { username: "admin", password: "admin123", name: "Harish Kumar" },
-  operator: {
-    username: "operator",
-    password: "operator123",
-    name: "Operator User",
-  },
-  superadmin: {
-    username: "superadmin",
-    password: "super123",
-    name: "System Admin",
-  },
+  admin: { username: "admin@nmdc.com", password: "admin123", name: "Harish Kumar" },
+  superadmin: { username: "superadmin@nmdc.com", password: "super123", name: "System Admin" },
 };
 
 const LOGIN_HERO_IMAGE =
@@ -90,6 +82,7 @@ export default function LoginPage() {
   const { login } = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -112,57 +105,42 @@ export default function LoginPage() {
     if (error) setError("");
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     const { username, password, remember } = formData;
 
     if (!username.trim() || !password.trim()) {
-      setError("Please enter both username and password.");
+      setError("Please enter both email and password.");
       return;
     }
 
-    if (remember) {
-      writeRememberedCredentials(username.trim(), password);
-    } else {
-      clearRememberedCredentials();
-    }
+    setLoading(true);
+    try {
+      const tokens = await loginWithCredentials(username.trim(), password);
 
-    // Superadmin check
-    if (
-      username === DEMO_ACCOUNTS.superadmin.username &&
-      password === DEMO_ACCOUNTS.superadmin.password
-    ) {
-      login(USER_ROLES.SUPERADMIN, {
-        name: DEMO_ACCOUNTS.superadmin.name,
-        username,
-      }, remember);
-      return;
-    }
+      if (remember) {
+        writeRememberedCredentials(username.trim(), password);
+      } else {
+        clearRememberedCredentials();
+      }
 
-    // Admin check
-    if (
-      username === DEMO_ACCOUNTS.admin.username &&
-      password === DEMO_ACCOUNTS.admin.password
-    ) {
-      login(USER_ROLES.ADMIN, { name: DEMO_ACCOUNTS.admin.name, username }, remember);
-      return;
-    }
+      // Determine role from token payload (if backend encodes it), else default to admin
+      let role = USER_ROLES.ADMIN;
+      try {
+        const payload = JSON.parse(atob(tokens.access.split(".")[1]));
+        if (payload?.role === "superadmin") role = USER_ROLES.SUPERADMIN;
+        else if (payload?.role === "operator") role = USER_ROLES.OPERATOR;
+      } catch {
+        // Payload decode failed — keep default role
+      }
 
-    // Operator check
-    if (
-      username === DEMO_ACCOUNTS.operator.username &&
-      password === DEMO_ACCOUNTS.operator.password
-    ) {
-      login(USER_ROLES.OPERATOR, {
-        name: DEMO_ACCOUNTS.operator.name,
-        username,
-      }, remember);
-      return;
+      login(role, { username: username.trim(), name: username.trim() }, remember, tokens);
+    } catch (err) {
+      setError(err.message || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    // Any other credentials → admin (demo mode)
-    login(USER_ROLES.ADMIN, { name: username, username }, remember);
   }
 
   function quickLogin(role) {
@@ -205,7 +183,7 @@ export default function LoginPage() {
           </p>
 
           {/* Quick Login Buttons */}
-          <div className="mt-6 3xl:mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 3xl:gap-4">
+          <div className="mt-6 3xl:mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3 3xl:gap-4">
             <button
               type="button"
               onClick={() => quickLogin("admin")}
@@ -273,11 +251,11 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-5 3xl:space-y-7">
             <div>
               <label className="block text-[13px] sm:text-[14px] 3xl:text-[17px] font-semibold text-brand-900 mb-2">
-                Username
+                Email
               </label>
               <input
-                type="text"
-                placeholder="Enter your username"
+                type="email"
+                placeholder="Enter your email"
                 value={formData.username}
                 onChange={(e) => handleChange("username", e.target.value)}
                 className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 3xl:py-4 text-[14px] 3xl:text-[17px] text-brand-900 placeholder-slate-400 outline-none transition-all focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
@@ -325,9 +303,10 @@ export default function LoginPage() {
             </div>
             <button
               type="submit"
-              className="w-full rounded-lg bg-brand-600 px-6 py-3.5 3xl:py-4 text-[15px] 3xl:text-[18px] font-semibold text-white shadow-sm transition-all hover:bg-brand-700 hover:shadow-md active:scale-[0.99]"
+              disabled={loading}
+              className="w-full rounded-lg bg-brand-600 px-6 py-3.5 3xl:py-4 text-[15px] 3xl:text-[18px] font-semibold text-white shadow-sm transition-all hover:bg-brand-700 hover:shadow-md active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Log In
+              {loading ? "Logging in…" : "Log In"}
             </button>
           </form>
         </div>
