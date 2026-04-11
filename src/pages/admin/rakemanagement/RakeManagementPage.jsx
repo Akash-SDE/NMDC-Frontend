@@ -25,6 +25,7 @@ const adjustmentReasonOptions = [
   "Route Congestion",
   "Loading Delay",
 ];
+const upcomingDraftRowCount = 5;
 
 const initialOfferedRakes = [
   {
@@ -217,6 +218,25 @@ function formatTableDateTimeForInput(value) {
   return localValue.toISOString().slice(0, 16);
 }
 
+function getLocalDateTimeValue(value = new Date()) {
+  const localValue = new Date(value.getTime() - value.getTimezoneOffset() * 60000);
+  return localValue.toISOString().slice(0, 16);
+}
+
+function createUpcomingRow(index = 0) {
+  return {
+    id: `upcoming-${Date.now()}-${index}`,
+    oreType: "",
+    siding: "",
+    destination: "",
+    placementTime: getLocalDateTimeValue(),
+  };
+}
+
+function createInitialUpcomingRows(count = upcomingDraftRowCount) {
+  return Array.from({ length: count }, (_, index) => createUpcomingRow(index));
+}
+
 export default function RakeManagementPage() {
   const { navigate, currentRoute, routeParams } = useRouter();
   const [offeredRows, setOfferedRows] = useState(initialOfferedRakes);
@@ -231,6 +251,8 @@ export default function RakeManagementPage() {
   const [statusConfirmRakeId, setStatusConfirmRakeId] = useState("");
   const [inlineActionMode, setInlineActionMode] = useState("add");
   const [activeInlineRakeId, setActiveInlineRakeId] = useState("");
+  const [upcomingRows, setUpcomingRows] = useState(() => createInitialUpcomingRows());
+  const [upcomingMessage, setUpcomingMessage] = useState("");
 
   const inputClass = uniformInputClass;
   const isOfferingPage = currentRoute === "rake-offering" || currentRoute === "rake-adjustment";
@@ -287,6 +309,83 @@ export default function RakeManagementPage() {
 
   function updateOffering(field, value) {
     setOfferingForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function updateUpcomingRow(rowId, field, value) {
+    setUpcomingRows((prev) =>
+      prev.map((row) =>
+        row.id === rowId
+          ? { ...row, [field]: value }
+          : row,
+      ),
+    );
+    setUpcomingMessage("");
+  }
+
+  function handleAddUpcomingRow() {
+    setUpcomingRows((prev) => [...prev, createUpcomingRow(prev.length)]);
+    setUpcomingMessage("");
+  }
+
+  function handleClearUpcomingRakes() {
+    setUpcomingRows(createInitialUpcomingRows());
+    setUpcomingMessage("");
+  }
+
+  function handleSaveUpcomingRakes() {
+    const readyRows = upcomingRows.filter((row) =>
+      [row.oreType, row.siding, row.destination, row.placementTime].every((value) =>
+        String(value || "").trim(),
+      ),
+    );
+
+    if (readyRows.length === 0) {
+      setUpcomingMessage("Fill ore type, siding, destination, and placement time for at least one row.");
+      return;
+    }
+
+    const nextSno = offeredRows.length > 0
+      ? Math.max(...offeredRows.map((row) => Number(row.sno) || 0)) + 1
+      : 1;
+    const maxRakeIdNumber = offeredRows.reduce((max, row) => {
+      const matchedDigits = String(row.rakeId || "").match(/(\d+)$/);
+      const parsed = matchedDigits ? Number(matchedDigits[1]) : 0;
+      return Math.max(max, Number.isNaN(parsed) ? 0 : parsed);
+    }, 0);
+    const year = new Date().getFullYear();
+    const defaultWagonType = wagonTypeOptions[0] || "BOXN";
+    const defaultRoute = routeOptions[0] || "R-14";
+    const defaultCustomer = customerOptions[0] || "NMDC";
+
+    const normalizedRows = readyRows.map((row, index) => {
+      const sequence = nextSno + index;
+      const rakeIdNumber = maxRakeIdNumber + index + 1;
+      const offeredTime = formatDateTimeForTable(row.placementTime);
+
+      return {
+        sno: sequence,
+        rakeId: `RK-${String(rakeIdNumber).padStart(4, "0")}`,
+        rakeNumber: `R-${year}-${String(sequence).padStart(3, "0")}`,
+        wagonSupply: 58,
+        wagonType: defaultWagonType,
+        siding: row.siding,
+        route: defaultRoute,
+        oreType: row.oreType,
+        customer: defaultCustomer,
+        oreTypeCustomer: `${row.oreType} / ${defaultCustomer}`,
+        destination: row.destination,
+        fNote: "-",
+        placementTime: offeredTime,
+        offerTime: offeredTime,
+        adjustOfferFor: "-",
+        adjustedOfferTime: "-",
+        isDisabled: false,
+      };
+    });
+
+    setOfferedRows((prev) => [...normalizedRows, ...prev]);
+    setUpcomingRows(createInitialUpcomingRows());
+    setUpcomingMessage(`${normalizedRows.length} upcoming rake(s) saved to offered list.`);
   }
 
   function handleOfferingSubmit(event) {
@@ -832,6 +931,118 @@ export default function RakeManagementPage() {
               Manage and monitor all offered rakes across routes, sidings, and destinations.
             </p>
           </div>
+        </div>
+
+        <div className="overflow-hidden rounded-xl border border-sky-200 bg-sky-50/70 shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-sky-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-[15px] font-bold text-slate-800">Add Upcoming Rakes</h3>
+              <p className="mt-0.5 text-[12px] text-slate-600">
+                Prepare upcoming placements and push them into the offered rake list.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleAddUpcomingRow}
+                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-[12px] font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+              >
+                <PlusIcon className="h-3.5 w-3.5" />
+                Add Row
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveUpcomingRakes}
+                className="inline-flex h-8 items-center rounded-md bg-blue-600 px-3 text-[12px] font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={handleClearUpcomingRakes}
+                className="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-[12px] font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-190">
+              <thead>
+                <tr className="border-b border-sky-100 bg-sky-100/70">
+                  <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">SNo</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Ore Type</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Siding</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Destination</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Placement Time</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-sky-100">
+                {upcomingRows.map((row, index) => (
+                  <tr key={row.id} className="bg-white/80 [&>td]:py-2.5">
+                    <td className="px-4 text-[12px] font-semibold text-slate-500">{index + 1}</td>
+                    <td className="px-4">
+                      <ThemedSelect
+                        value={row.oreType}
+                        onChange={(event) => updateUpcomingRow(row.id, "oreType", event.target.value)}
+                        className={`${inputClass} h-9`}
+                      >
+                        <option value="">--Select--</option>
+                        {oreTypeOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </ThemedSelect>
+                    </td>
+                    <td className="px-4">
+                      <ThemedSelect
+                        value={row.siding}
+                        onChange={(event) => updateUpcomingRow(row.id, "siding", event.target.value)}
+                        className={`${inputClass} h-9`}
+                      >
+                        <option value="">--Select--</option>
+                        {sidingOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </ThemedSelect>
+                    </td>
+                    <td className="px-4">
+                      <ThemedSelect
+                        value={row.destination}
+                        onChange={(event) => updateUpcomingRow(row.id, "destination", event.target.value)}
+                        className={`${inputClass} h-9`}
+                      >
+                        <option value="">--Select--</option>
+                        {destinationOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </ThemedSelect>
+                    </td>
+                    <td className="px-4">
+                      <input
+                        type="datetime-local"
+                        value={row.placementTime}
+                        onChange={(event) => updateUpcomingRow(row.id, "placementTime", event.target.value)}
+                        className={`${inputClass} h-9`}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {upcomingMessage ? (
+            <p className="border-t border-sky-100 bg-white/60 px-4 py-2 text-[12px] font-medium text-blue-700">
+              {upcomingMessage}
+            </p>
+          ) : null}
         </div>
 
         <SearchBar
