@@ -255,6 +255,7 @@ export default function RakeManagementPage() {
   const [upcomingMessage, setUpcomingMessage] = useState("");
 
   const inputClass = uniformInputClass;
+  const isUpcomingPage = currentRoute === "rake-upcoming";
   const isOfferingPage = currentRoute === "rake-offering" || currentRoute === "rake-adjustment";
   const isAdjustmentPage = currentRoute === "rake-adjustment";
   const isAdjustmentFlow = routeParams?.formType === "adjustment" || currentRoute === "rake-adjustment";
@@ -933,117 +934,7 @@ export default function RakeManagementPage() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-sky-200 bg-sky-50/70 shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-sky-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-[15px] font-bold text-slate-800">Add Upcoming Rakes</h3>
-              <p className="mt-0.5 text-[12px] text-slate-600">
-                Prepare upcoming placements and push them into the offered rake list.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={handleAddUpcomingRow}
-                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-[12px] font-semibold text-slate-700 transition-colors hover:bg-slate-100"
-              >
-                <PlusIcon className="h-3.5 w-3.5" />
-                Add Row
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveUpcomingRakes}
-                className="inline-flex h-8 items-center rounded-md bg-blue-600 px-3 text-[12px] font-semibold text-white transition-colors hover:bg-blue-700"
-              >
-                Save
-              </button>
-              <button
-                type="button"
-                onClick={handleClearUpcomingRakes}
-                className="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-[12px] font-semibold text-slate-700 transition-colors hover:bg-slate-100"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-190">
-              <thead>
-                <tr className="border-b border-sky-100 bg-sky-100/70">
-                  <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">SNo</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Ore Type</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Siding</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Destination</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Placement Time</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-sky-100">
-                {upcomingRows.map((row, index) => (
-                  <tr key={row.id} className="bg-white/80 [&>td]:py-2.5">
-                    <td className="px-4 text-[12px] font-semibold text-slate-500">{index + 1}</td>
-                    <td className="px-4">
-                      <ThemedSelect
-                        value={row.oreType}
-                        onChange={(event) => updateUpcomingRow(row.id, "oreType", event.target.value)}
-                        className={`${inputClass} h-9`}
-                      >
-                        <option value="">--Select--</option>
-                        {oreTypeOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </ThemedSelect>
-                    </td>
-                    <td className="px-4">
-                      <ThemedSelect
-                        value={row.siding}
-                        onChange={(event) => updateUpcomingRow(row.id, "siding", event.target.value)}
-                        className={`${inputClass} h-9`}
-                      >
-                        <option value="">--Select--</option>
-                        {sidingOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </ThemedSelect>
-                    </td>
-                    <td className="px-4">
-                      <ThemedSelect
-                        value={row.destination}
-                        onChange={(event) => updateUpcomingRow(row.id, "destination", event.target.value)}
-                        className={`${inputClass} h-9`}
-                      >
-                        <option value="">--Select--</option>
-                        {destinationOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </ThemedSelect>
-                    </td>
-                    <td className="px-4">
-                      <input
-                        type="datetime-local"
-                        value={row.placementTime}
-                        onChange={(event) => updateUpcomingRow(row.id, "placementTime", event.target.value)}
-                        className={`${inputClass} h-9`}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {upcomingMessage ? (
-            <p className="border-t border-sky-100 bg-white/60 px-4 py-2 text-[12px] font-medium text-blue-700">
-              {upcomingMessage}
-            </p>
-          ) : null}
-        </div>
+        {renderUpcomingRakesTable()}
 
         <SearchBar
           placeholder="Search by rake id, number, route or customer..."
@@ -1481,6 +1372,148 @@ export default function RakeManagementPage() {
     );
   }
 
+  function renderUpcomingRakesTable() {
+    return (
+      <div className="overflow-hidden rounded-xl border border-sky-200 bg-sky-50/70 shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-sky-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-[15px] font-bold text-slate-800">Add Upcoming Rakes</h3>
+            <p className="mt-0.5 text-[12px] text-slate-600">
+              Prepare upcoming placements and push them into the offered rake list.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleAddUpcomingRow}
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-[12px] font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+            >
+              <PlusIcon className="h-3.5 w-3.5" />
+              Add Row
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveUpcomingRakes}
+              className="inline-flex h-8 items-center rounded-md bg-blue-600 px-3 text-[12px] font-semibold text-white transition-colors hover:bg-blue-700"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={handleClearUpcomingRakes}
+              className="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-[12px] font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-190">
+            <thead>
+              <tr className="border-b border-sky-100 bg-sky-100/70">
+                <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">SNo</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Ore Type</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Siding</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Destination</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Placement Time</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-sky-100">
+              {upcomingRows.map((row, index) => (
+                <tr key={row.id} className="bg-white/80 [&>td]:py-2.5">
+                  <td className="px-4 text-[12px] font-semibold text-slate-500">{index + 1}</td>
+                  <td className="px-4">
+                    <ThemedSelect
+                      value={row.oreType}
+                      onChange={(event) => updateUpcomingRow(row.id, "oreType", event.target.value)}
+                      className={`${inputClass} h-9`}
+                    >
+                      <option value="">--Select--</option>
+                      {oreTypeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </ThemedSelect>
+                  </td>
+                  <td className="px-4">
+                    <ThemedSelect
+                      value={row.siding}
+                      onChange={(event) => updateUpcomingRow(row.id, "siding", event.target.value)}
+                      className={`${inputClass} h-9`}
+                    >
+                      <option value="">--Select--</option>
+                      {sidingOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </ThemedSelect>
+                  </td>
+                  <td className="px-4">
+                    <ThemedSelect
+                      value={row.destination}
+                      onChange={(event) => updateUpcomingRow(row.id, "destination", event.target.value)}
+                      className={`${inputClass} h-9`}
+                    >
+                      <option value="">--Select--</option>
+                      {destinationOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </ThemedSelect>
+                  </td>
+                  <td className="px-4">
+                    <input
+                      type="datetime-local"
+                      value={row.placementTime}
+                      onChange={(event) => updateUpcomingRow(row.id, "placementTime", event.target.value)}
+                      className={`${inputClass} h-9`}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {upcomingMessage ? (
+          <p className="border-t border-sky-100 bg-white/60 px-4 py-2 text-[12px] font-medium text-blue-700">
+            {upcomingMessage}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  function renderUpcomingPage() {
+    return (
+      <div className="space-y-6 3xl:space-y-8 5xl:space-y-12 animate-fadeIn">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
+              Upcoming Rakes
+            </h2>
+            <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
+              Prepare and stage upcoming rake entries before moving them into the offered list.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("rake-management")}
+            className={uniformSecondaryButtonClass}
+          >
+            Back to Rake Management
+          </button>
+        </div>
+
+        {renderUpcomingRakesTable()}
+      </div>
+    );
+  }
+
   function renderAdjustmentPage() {
     return (
       <div className="space-y-6 3xl:space-y-8 5xl:space-y-12 animate-fadeIn">
@@ -1606,6 +1639,10 @@ export default function RakeManagementPage() {
         </UniformSectionCard>
       </div>
     );
+  }
+
+  if (isUpcomingPage) {
+    return renderUpcomingPage();
   }
 
   if (!isOfferingPage && !isAdjustmentPage) {

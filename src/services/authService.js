@@ -1,4 +1,4 @@
-const BASE_URL = "https://iron-ore-rdms.onrender.com";
+const BASE_URL = "https://iron-ore-rdms.onrender.com/api";
 
 /**
  * Login with email + password. Returns { access, refresh }

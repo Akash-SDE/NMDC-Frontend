@@ -1,4 +1,4 @@
-const API_BASE = "https://iron-ore-rdms.onrender.com";
+const API_BASE = "https://iron-ore-rdms.onrender.com/api";
 const TOKEN_KEY = "nmdc_auth_tokens";
 
 function getAccessToken() {

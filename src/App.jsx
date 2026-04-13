@@ -76,6 +76,8 @@ function AppRoutes() {
         return <EDemandManagementPage />;
       case "rake-management":
         return <RakeManagementPage />;
+      case "rake-upcoming":
+        return <RakeManagementPage />;
       case "rake-offering":
         return <RakeManagementPage />;
       case "rake-adjustment":
