@@ -282,7 +282,7 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -294,12 +294,6 @@ export default function LoginPage() {
                   Remember me
                 </span>
               </label>
-              <button
-                type="button"
-                className="text-[13px] 3xl:text-[16px] font-semibold text-brand-600 hover:text-brand-700 transition-colors"
-              >
-                Forgot password?
-              </button>
             </div>
             <button
               type="submit"
