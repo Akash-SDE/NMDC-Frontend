@@ -93,7 +93,6 @@ export default function Sidebar({
   const [openSubmenus, setOpenSubmenus] = useState({
     "master-data": true,
     "e-demand": true,
-    "rake-management": true,
     loading: true,
     delay: true,
     reports: true,

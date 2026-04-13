@@ -923,7 +923,7 @@ export default function RakeManagementPage() {
 
     return (
       <div className="space-y-6 3xl:space-y-8 5xl:space-y-12 animate-fadeIn">
-        <div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
               Rake Management
@@ -932,9 +932,14 @@ export default function RakeManagementPage() {
               Manage and monitor all offered rakes across routes, sidings, and destinations.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => navigate("rake-upcoming")}
+            className={uniformPrimaryButtonClass}
+          >
+            Add Upcoming Rakes
+          </button>
         </div>
-
-        {renderUpcomingRakesTable()}
 
         <SearchBar
           placeholder="Search by rake id, number, route or customer..."
@@ -1374,8 +1379,8 @@ export default function RakeManagementPage() {
 
   function renderUpcomingRakesTable() {
     return (
-      <div className="overflow-hidden rounded-xl border border-sky-200 bg-sky-50/70 shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-sky-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-[15px] font-bold text-slate-800">Add Upcoming Rakes</h3>
             <p className="mt-0.5 text-[12px] text-slate-600">
@@ -1411,7 +1416,7 @@ export default function RakeManagementPage() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-190">
             <thead>
-              <tr className="border-b border-sky-100 bg-sky-100/70">
+              <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">SNo</th>
                 <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Ore Type</th>
                 <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Siding</th>
@@ -1419,9 +1424,9 @@ export default function RakeManagementPage() {
                 <th className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-600">Placement Time</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sky-100">
+            <tbody className="divide-y divide-slate-100">
               {upcomingRows.map((row, index) => (
-                <tr key={row.id} className="bg-white/80 [&>td]:py-2.5">
+                <tr key={row.id} className="bg-white [&>td]:py-2.5">
                   <td className="px-4 text-[12px] font-semibold text-slate-500">{index + 1}</td>
                   <td className="px-4">
                     <ThemedSelect
@@ -1480,7 +1485,7 @@ export default function RakeManagementPage() {
         </div>
 
         {upcomingMessage ? (
-          <p className="border-t border-sky-100 bg-white/60 px-4 py-2 text-[12px] font-medium text-blue-700">
+          <p className="border-t border-slate-100 bg-slate-50/60 px-4 py-2 text-[12px] font-medium text-slate-600">
             {upcomingMessage}
           </p>
         ) : null}

@@ -83,7 +83,7 @@ export default function ThemedSelect({
       </button>
 
       {isOpen ? (
-        <div className="absolute z-40 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+        <div className="absolute z-100 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
           <div className="max-h-56 overflow-y-auto">
             {options.map((option) => {
               const isSelected = String(option.value) === String(value ?? "");

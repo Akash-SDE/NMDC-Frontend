@@ -27,12 +27,6 @@ const adminSidebarSections = [
         id: "rake-management",
         label: "Rake Management",
         icon: "rake",
-        children: [
-          {
-            id: "rake-upcoming",
-            label: "Upcoming Rakes",
-          },
-        ],
       },
       {
         id: "loading",
