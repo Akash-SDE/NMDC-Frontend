@@ -297,6 +297,8 @@ const dispatchGridHierarchy = [
   },
 ];
 
+const dispatchRouteCount = dispatchGridHierarchy.reduce((count, siding) => count + siding.routes.length, 0);
+
 const dispatchGridEvents = [
   { id: "dispatch-1", siding: "siding-1a", route: "route-1a-1", start: 0.0, end: 4.0, status: "completed", label: "RK-7729" },
   { id: "dispatch-1a-idle", siding: "siding-1a", route: "route-1a-1", start: 4.0, end: 6.0, status: "Siding Idle", label: "IDLE-1" },
@@ -647,7 +649,7 @@ function LiveWagonCountCard({ rows, seriesMeta }) {
     };
   }, [fullDayRows, seriesMeta]);
 
-  return (
+  /*
     <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 px-4 py-4">
         <div>
@@ -822,17 +824,27 @@ function CardIcon({ type }) {
 
 function MetricCard({ card }) {
   return (
-    <article className="relative overflow-hidden rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <span className={`absolute left-0 top-0 h-full w-0.75 ${card.accent}`} />
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-[10px] font-bold tracking-[0.11em] text-slate-500">{card.title}</p>
-        <CardIcon type={card.icon} />
+    <article className="group relative overflow-hidden rounded-3xl border border-slate-200/70 bg-linear-to-br from-white via-white to-[#f3f7fd] px-4 py-4 shadow-[0_20px_50px_-38px_rgba(15,47,103,0.65)] transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_30px_60px_-35px_rgba(15,47,103,0.52)]">
+      <span className={`absolute inset-y-0 left-0 w-1 ${card.accent}`} />
+      <span className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-slate-200 to-transparent" />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{card.title}</p>
+          <div className="mt-3 flex items-end gap-2">
+            <p className="text-[40px] font-black leading-none tracking-[-0.04em] text-[#0f2f67]">{card.value}</p>
+            {card.unit ? <span className="pb-1 text-[14px] font-bold text-slate-400">{card.unit}</span> : null}
+          </div>
+        </div>
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-500 shadow-inner">
+          <CardIcon type={card.icon} />
+        </div>
       </div>
-      <div className="mt-2 flex items-end gap-1.5">
-        <p className="text-[39px] font-extrabold leading-none tracking-tight text-[#0f2f67]">{card.value}</p>
-        {card.unit ? <span className="pb-1 text-[14px] font-bold text-[#9ca3af]">{card.unit}</span> : null}
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-200/70 pt-3">
+        <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${card.noteColor}`}>{card.note || "Shift snapshot"}</p>
+        <span className="rounded-full border border-slate-200/70 bg-white px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">
+          Live
+        </span>
       </div>
-      <p className={`mt-1 text-[10px] font-semibold ${card.noteColor}`}>{card.note}</p>
       {card.title === "TOTAL RAKES COMPLETED" ? (
         <div className="mt-2 h-0.75 rounded bg-slate-200">
           <span className="block h-full w-[93%] rounded bg-[#2f79e9]" />
@@ -886,7 +898,7 @@ function DispatchTimelineCard({ hierarchy, events }) {
   }, [eventsByRouteId, hierarchy]);
 
   return (
-    <article className="overflow-hidden rounded-[24px] border border-rose-200 bg-white shadow-sm">
+    <article className="overflow-hidden rounded-3xl border border-rose-200 bg-white shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-rose-200 px-5 py-4">
         <div>
           <h3 className="text-[22px] font-extrabold leading-tight text-[#102a57]">REAL-TIME DISPATCH GRID</h3>
@@ -901,12 +913,12 @@ function DispatchTimelineCard({ hierarchy, events }) {
 
       <div className="grid gap-4 px-3 py-3 xl:grid-cols-[minmax(0,1fr)_210px] xl:px-4 xl:pb-4">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1650px] border-separate border-spacing-0">
+          <table className="w-full min-w-412.5 border-separate border-spacing-0">
             <thead>
               <tr>
                 <th
                   rowSpan={2}
-                  className="sticky left-0 z-30 border-r border-b border-rose-300 bg-[#f8fafc] px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-700"
+                  className="sticky left-0 z-30 border-r border-b border-rose-300 bg-surface px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-700"
                 >
                   Siding / Route
                 </th>
@@ -914,7 +926,7 @@ function DispatchTimelineCard({ hierarchy, events }) {
                   <th
                     key={hour}
                     className={`border-r border-b border-rose-300 px-1 py-3 text-center text-[15px] font-bold leading-none text-slate-800 ${
-                      hour === currentHour ? "bg-[#dfeafb] text-[#1565c0]" : "bg-[#f8fafc]"
+                      hour === currentHour ? "bg-[#dfeafb] text-[#1565c0]" : "bg-surface"
                     }`}
                   >
                     {formatDispatchHour(hour)}
@@ -922,7 +934,7 @@ function DispatchTimelineCard({ hierarchy, events }) {
                 ))}
                 <th
                   colSpan={dispatchSummaryOrder.length}
-                  className="border-b border-rose-300 bg-[#f8fafc] px-4 py-3 text-center text-[18px] font-extrabold text-slate-800"
+                  className="border-b border-rose-300 bg-surface px-4 py-3 text-center text-[18px] font-extrabold text-slate-800"
                 >
                   Summary
                 </th>
@@ -970,6 +982,217 @@ function DispatchTimelineCard({ hierarchy, events }) {
                     </td>
 
                     {dispatchGridHours.map((hour) => {
+                      return (
+                        <article className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white/95 shadow-[0_24px_60px_-45px_rgba(15,47,103,0.6)] backdrop-blur">
+                          <div className="border-b border-slate-200/70 bg-linear-to-r from-[#f8fbff] via-white to-[#eef4ff] px-5 py-5">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <h3 className="text-[22px] font-extrabold leading-tight text-[#102a57]">HOURLY WAGON COUNT</h3>
+                                <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-500">TIME-STAMPED WAGON SNAPSHOT</p>
+                              </div>
+                              <span className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#1565c0]">
+                                Live trend
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="border-b border-slate-200/70 bg-[#f7fbff] px-5 py-5">
+                            <div className="rounded-3xl border border-slate-200/70 bg-white/85 p-4 shadow-sm">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">WAGON COUNT TREND</p>
+
+                              <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-bold text-slate-600">
+                                {seriesMeta.map((series) => (
+                                  <span
+                                    key={`trend-legend-${series.key}`}
+                                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 bg-slate-50 px-3 py-1.5 uppercase tracking-[0.04em] shadow-sm"
+                                  >
+                                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: resolveSeriesStroke(series.color) }} />
+                                    {series.label}
+                                  </span>
+                                ))}
+                              </div>
+
+                              <div className="mt-3 min-h-10">
+                                {hoveredTrendPoint ? (
+                                  <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: hoveredTrendPoint.color }} />
+                                    <p className="text-[11px] font-semibold text-[#0f2f67]">
+                                      {hoveredTrendPoint.label} at {hoveredTrendPoint.hour}: <span className="font-extrabold">{hoveredTrendPoint.value}</span>
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-400">Hover a dot to view details</p>
+                                )}
+                              </div>
+
+                              <div className="mt-4 overflow-x-auto rounded-[20px] border border-slate-200/60 bg-white p-3">
+                                <svg viewBox={`0 0 ${lineChartData.chartWidth} ${lineChartData.chartHeight}`} className="h-72 w-full min-w-240">
+                                  {lineChartData.guides.map((guide) => (
+                                    <g key={`guide-${guide.value}-${guide.y}`}>
+                                      <line
+                                        x1={lineChartData.left}
+                                        y1={guide.y}
+                                        x2={lineChartData.chartWidth - lineChartData.right}
+                                        y2={guide.y}
+                                        stroke="#dbe4ef"
+                                        strokeWidth="1"
+                                      />
+                                      <text x={lineChartData.left - 8} y={guide.y + 4} textAnchor="end" fontSize="10" fill="#738299" fontWeight="700">
+                                        {guide.value}
+                                      </text>
+                                    </g>
+                                  ))}
+
+                                  {lineChartData.lines.map((series) => (
+                                    <g key={`${series.key}-line`}>
+                                      <path d={series.path} fill="none" stroke={series.stroke} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                                      {series.points.map((point) => (
+                                        <circle
+                                          key={`${series.key}-${point.hour}`}
+                                          cx={point.x}
+                                          cy={point.y}
+                                          r="3"
+                                          fill={series.stroke}
+                                          tabIndex={0}
+                                          className="cursor-pointer"
+                                          onMouseEnter={() =>
+                                            setHoveredTrendPoint({
+                                              label: series.label,
+                                              hour: point.hour,
+                                              value: point.value,
+                                              color: series.stroke,
+                                            })
+                                          }
+                                          onMouseLeave={() => setHoveredTrendPoint(null)}
+                                          onFocus={() =>
+                                            setHoveredTrendPoint({
+                                              label: series.label,
+                                              hour: point.hour,
+                                              value: point.value,
+                                              color: series.stroke,
+                                            })
+                                          }
+                                          onBlur={() => setHoveredTrendPoint(null)}
+                                        >
+                                          <title>{`${series.label} ${point.hour}: ${point.value}`}</title>
+                                        </circle>
+                                      ))}
+                                    </g>
+                                  ))}
+
+                                  {lineChartData.rowsAscending.map((row, index) => {
+                                    const x = lineChartData.left + lineChartData.stepX * index;
+                                    return (
+                                      <text key={`x-label-${row.hour}`} x={x} y={lineChartData.chartHeight - 10} textAnchor="middle" fontSize="10" fill="#738299" fontWeight="700">
+                                        {row.hour}
+                                      </text>
+                                    );
+                                  })}
+                                </svg>
+                              </div>
+                            </div>
+                          </div>
+
+                        </article>
+  */
+
+  return (
+    <article className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white/95 shadow-[0_28px_70px_-45px_rgba(15,47,103,0.58)] backdrop-blur">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200/70 bg-linear-to-r from-[#f8fbff] via-white to-[#edf3fb] px-5 py-5">
+        <div>
+          <span className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#1565c0]">
+            Live dispatch
+          </span>
+          <h3 className="mt-3 text-[22px] font-extrabold leading-tight text-[#102a57]">REAL-TIME DISPATCH GRID</h3>
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-500">
+            24-HOUR SIDING & ROUTE ALLOCATION
+          </p>
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-600">
+            CURRENT TIME: <span className="text-[#1565c0]">{currentTimeLabel}</span>
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600 shadow-sm">
+            24h view
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600 shadow-sm">
+            Clock sync {currentTimeLabel}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid gap-4 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_220px] xl:px-5 xl:pb-5">
+        <div className="overflow-x-auto rounded-3xl border border-slate-200/70 bg-white shadow-sm">
+          <table className="w-full min-w-412.5 border-separate border-spacing-0">
+            <thead>
+              <tr>
+                <th
+                  rowSpan={2}
+                  className="sticky left-0 z-30 border-r border-b border-slate-200/70 bg-surface px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-700"
+                >
+                  Siding / Route
+                </th>
+                {dispatchGridHours.map((hour) => (
+                  <th
+                    key={hour}
+                    className={`border-r border-b border-slate-200/70 px-1 py-3 text-center text-[15px] font-bold leading-none text-slate-800 ${
+                      hour === currentHour ? "bg-[#dfeafb] text-[#1565c0]" : "bg-surface"
+                    }`}
+                  >
+                    {formatDispatchHour(hour)}
+                  </th>
+                ))}
+                <th
+                  colSpan={dispatchSummaryOrder.length}
+                  className="border-b border-slate-200/70 bg-surface px-4 py-3 text-center text-[18px] font-extrabold text-slate-800"
+                >
+                  Summary
+                </th>
+              </tr>
+              <tr>
+                <th colSpan={dispatchGridHours.length} className="border-r border-b border-slate-200/70 bg-white p-0" />
+                {dispatchSummaryOrder.map((columnKey) => {
+                  const meta = dispatchStatusMeta[columnKey];
+
+                  return (
+                    <th
+                      key={columnKey}
+                      className="border-r border-b border-slate-200/70 bg-white px-3 py-2 text-center text-[13px] font-bold capitalize tracking-[0.06em] text-slate-600"
+                    >
+                      {meta.summaryLabel}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+
+            <tbody>
+              {sheetRows.map((row, rowIndex) => {
+                const rowBackground = rowIndex % 2 === 0 ? "bg-white" : "bg-[#fcfcfd]";
+
+                return (
+                  <tr key={`${row.siding.id}-${row.route.id}`}>
+                    <td className={`sticky left-0 z-20 border-r border-b border-slate-200/70 px-4 py-3 align-middle ${rowBackground}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-bold text-[#0f2f67]">{row.route.name}</p>
+                          <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500">
+                            {row.siding.name}
+                          </p>
+                        </div>
+                        <div className="ml-auto flex items-center gap-2">
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-700">
+                            {row.route.code}
+                          </span>
+                          <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[9px] font-bold text-slate-500">
+                            {row.route.count}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {dispatchGridHours.map((hour) => {
                       const status = row.hourStatuses[hour];
                       const meta = dispatchStatusMeta[status] || dispatchStatusMeta.neutral;
                       const isCurrentHour = hour === currentHour;
@@ -977,7 +1200,7 @@ function DispatchTimelineCard({ hierarchy, events }) {
                       return (
                         <td
                           key={`${row.route.id}-${hour}`}
-                          className={`h-10 border-r border-b border-rose-300 p-0 ${meta.cellClass} ${meta.textClass} ${
+                          className={`h-10 border-r border-b border-slate-200/70 p-0 ${meta.cellClass} ${meta.textClass} ${
                             isCurrentHour ? "ring-2 ring-inset ring-[#1565c0]" : ""
                           }`}
                           title={`${row.route.name} • ${hour}:00`}
@@ -988,7 +1211,7 @@ function DispatchTimelineCard({ hierarchy, events }) {
                     {dispatchSummaryOrder.map((columnKey) => (
                       <td
                         key={`${row.route.id}-${columnKey}`}
-                        className="border-r border-b border-rose-300 bg-white px-3 py-3 text-center text-[14px] font-semibold text-slate-800"
+                        className="border-r border-b border-slate-200/70 bg-white px-3 py-3 text-center text-[14px] font-semibold text-slate-800"
                       >
                         {row.summary[columnKey]}
                       </td>
@@ -1001,18 +1224,18 @@ function DispatchTimelineCard({ hierarchy, events }) {
         </div>
 
         <aside className="self-start">
-          <div className="overflow-hidden rounded-[20px] border border-rose-300 bg-white shadow-sm">
-            <div className="border-b border-rose-300 px-4 py-3 text-center text-[18px] font-extrabold text-slate-800">
+          <div className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-[0_16px_40px_-30px_rgba(15,47,103,0.45)]">
+            <div className="border-b border-slate-200/70 bg-surface px-4 py-3 text-center text-[18px] font-extrabold text-slate-800">
               Index
             </div>
-            <div className="divide-y divide-rose-300">
+            <div className="divide-y divide-slate-200/70">
               {dispatchLegendOrder.map((statusKey) => {
                 const meta = dispatchStatusMeta[statusKey];
 
                 return (
                   <div
                     key={statusKey}
-                    className={`${meta.cellClass} px-4 py-2 text-center text-[13px] font-semibold ${meta.textClass}`}
+                    className={`${meta.cellClass} px-4 py-2.5 text-center text-[13px] font-semibold ${meta.textClass}`}
                   >
                     {meta.label}
                   </div>
@@ -1027,51 +1250,6 @@ function DispatchTimelineCard({ hierarchy, events }) {
 }
 
 export default function Dashboard() {
-  const [dashboardDate, setDashboardDate] = useState(() => formatDashboardDate(new Date()));
-  const storedWagonTypes = useMemo(() => {
-    return getWagonTypesMasterData().filter(
-      (item) => item?.code && item?.name && item.status !== "inactive",
-    );
-  }, []);
-
-  const hourlySeriesMeta = useMemo(() => {
-    const baseSeries = [...baseHourlySeriesMeta];
-    const existingKeys = new Set(baseSeries.map((series) => series.key));
-
-    const dynamicSeries = storedWagonTypes
-      .map((item, index) => ({
-        key: toWagonSeriesKey(item.code),
-        label: `${item.name.toUpperCase()} WAGONS`,
-        color: extraWagonSeriesColors[index % extraWagonSeriesColors.length],
-      }))
-      .filter((series) => !existingKeys.has(series.key));
-
-    return [...baseSeries, ...dynamicSeries];
-  }, [storedWagonTypes]);
-
-  const hourlySeries = useMemo(() => {
-    return baseHourlySeries.map((item) => {
-      const normalized = { ...item };
-
-      hourlySeriesMeta.forEach((series) => {
-        if (normalized[series.key] == null) {
-          normalized[series.key] = 0;
-        }
-      });
-
-      return normalized;
-    });
-  }, [hourlySeriesMeta]);
-
-  const [tablePage, setTablePage] = useState(1);
-  const [sortBy, setSortBy] = useState("rakeId");
-  const [sortOrder, setSortOrder] = useState("asc");
-  const [activeHourlySeries, setActiveHourlySeries] = useState(() => {
-    return hourlySeriesMeta.reduce((accumulator, series) => {
-      accumulator[series.key] = true;
-      return accumulator;
-    }, {});
-  });
   const [hoveredHourlySeries, setHoveredHourlySeries] = useState(null);
 
   const metricCards = baseMetricCards;
@@ -1169,50 +1347,120 @@ export default function Dashboard() {
     };
   }, [hoveredHourlySeries, activeHourlySeries, hourlySeriesMeta]);
 
+  const dashboardDateLabel = formatDashboardDateLabel(dashboardDate);
+  const dashboardHeroStats = [
+    {
+      label: "ACTIVE RAKES",
+      value: activeRakeRows.length,
+      detail: "live in the log",
+    },
+    {
+      label: "SIDINGS / ROUTES",
+      value: `${dispatchGridHierarchy.length}/${dispatchRouteCount}`,
+      detail: "network coverage",
+    },
+    {
+      label: "WAGON SERIES",
+      value: hourlySeriesMeta.length,
+      detail: "hourly channels",
+    },
+  ];
+
   return (
-    <div className="space-y-4">
-      <section className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">REPORT DATE</p>
-            <p className="mt-1 text-[12px] font-semibold text-[#0f2f67]">Pick the dashboard date to review</p>
+    <div className="relative isolate overflow-hidden rounded-[34px] border border-white/70 bg-linear-to-br from-[#f8fbff] via-white to-[#edf3fb] p-4 shadow-[0_32px_70px_-48px_rgba(15,47,103,0.45)] sm:p-5 lg:p-6">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-24 top-0 h-64 w-64 rounded-full bg-[#dce9ff]/70 blur-3xl" />
+        <div className="absolute right-0 top-20 h-80 w-80 rounded-full bg-[#eef4ff] blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-[#e2f0ff]/60 blur-3xl" />
+      </div>
+
+      <div className="relative space-y-4 lg:space-y-5">
+        <section className="overflow-hidden rounded-4xl border border-slate-200/70 bg-linear-to-r from-[#081b3d] via-[#12396b] to-[#1f4f96] px-5 py-5 text-white shadow-[0_24px_60px_-42px_rgba(8,29,61,0.8)] sm:px-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.12),transparent_28%)]" />
+          <div className="relative grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.8fr)] xl:items-stretch">
+            <div className="space-y-4">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-sky-100 backdrop-blur">
+                Operations cockpit
+              </span>
+              <div>
+                <h1 className="text-[31px] font-black leading-tight tracking-[-0.04em] sm:text-[42px]">Premium dispatch intelligence</h1>
+                <p className="mt-3 max-w-2xl text-[13px] leading-6 text-sky-100/85">
+                  A polished real-time command surface for siding allocation, wagon flow, and rake readiness across the network.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-100 backdrop-blur">
+                  Live grid
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-100 backdrop-blur">
+                  24-hour window
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-100 backdrop-blur">
+                  Selected date {dashboardDateLabel}
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-white/15 bg-white/10 p-4 shadow-[0_20px_45px_-30px_rgba(8,29,61,0.7)] backdrop-blur">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-100/80">Report date</p>
+                  <p className="mt-1 text-[22px] font-black tracking-[-0.03em] text-white">{dashboardDateLabel}</p>
+                </div>
+                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-100">
+                  Live
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-sky-100/80">Select date</label>
+                <input
+                  type="date"
+                  value={dashboardDate}
+                  onChange={(event) => setDashboardDate(event.target.value)}
+                  className="w-full rounded-2xl border border-white/15 bg-white px-4 py-3 text-sm font-semibold text-[#0f2f67] shadow-sm outline-none transition focus:border-[#9bc4ff] focus:ring-2 focus:ring-[#9bc4ff]/30"
+                />
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                {dashboardHeroStats.map((stat) => (
+                  <div key={stat.label} className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-sky-100/75">{stat.label}</p>
+                    <p className="mt-2 text-[24px] font-black leading-none text-white">{stat.value}</p>
+                    <p className="mt-1 text-[10px] font-medium text-sky-100/80">{stat.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
+        </section>
 
-          <div className="w-full sm:w-60">
-            <label className="mb-1 block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Select date</label>
-            <input
-              type="date"
-              value={dashboardDate}
-              onChange={(event) => setDashboardDate(event.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-[#0f2f67] outline-none transition focus:border-[#1565c0] focus:ring-1 focus:ring-[#1565c0]"
-            />
-          </div>
-        </div>
-      </section>
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {metricCards.map((card) => (
+            <MetricCard key={card.title} card={card} />
+          ))}
+        </section>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metricCards.map((card) => (
-          <MetricCard key={card.title} card={card} />
-        ))}
-      </section>
+        <section>
+          <DispatchTimelineCard
+            hierarchy={dispatchGridHierarchy}
+            events={dispatchGridEvents}
+          />
+        </section>
 
-      <section>
-        <DispatchTimelineCard
-          hierarchy={dispatchGridHierarchy}
-          events={dispatchGridEvents}
-        />
-      </section>
+        <section>
+          <LiveWagonCountCard rows={hourlyChartData.bars} seriesMeta={hourlySeriesMeta} />
+        </section>
 
-      <section>
-        <LiveWagonCountCard rows={hourlyChartData.bars} seriesMeta={hourlySeriesMeta} />
-      </section>
-
-      <section>
-        <article className="rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-            <h3 className="text-[17px] font-extrabold tracking-[0.01em] text-[#102a57]">
+        <section>
+          <article className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white/95 shadow-[0_24px_60px_-45px_rgba(15,47,103,0.58)] backdrop-blur">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/70 bg-linear-to-r from-[#f8fbff] via-white to-[#eef4ff] px-5 py-4">
+            <div>
+            <h3 className="text-[17px] font-extrabold tracking-[-0.02em] text-[#102a57]">
               Active Rake Log &amp; Clearances
             </h3>
+            <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Realtime clearance register</p>
+            </div>
             <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
               <span className="inline-flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-[#1f4f96]" />
@@ -1222,65 +1470,68 @@ export default function Dashboard() {
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
                 Cleared
               </span>
+              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[9px] font-bold tracking-[0.14em] text-slate-500 shadow-sm">
+                Page {tablePage} / {totalPages}
+              </span>
             </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-375">
+            <table className="w-full min-w-375 border-separate border-spacing-0">
               <thead>
-                <tr className="border-b border-slate-100 bg-[#f3f4f6]">
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                <tr className="border-b border-slate-200/70 bg-surface">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Rake ID" field="rakeId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Rake Number" field="rakeNumber" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="F-Note" field="fNote" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Siding" field="siding" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Route" field="route" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Ore Type" field="oreType" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Customer" field="customer" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Wagons" field="wagons" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Tonnage" field="tonnage" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Destination" field="destination" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Offer Date" field="offerDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Offer Time" field="offerTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Completion Date" field="completionDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Completion Time" field="completionTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Feed Rate" field="feedRate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Updated At" field="updatedAt" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Lag" field="lag" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                 </tr>
@@ -1289,7 +1540,7 @@ export default function Dashboard() {
                 {pagedRows.map((row, index) => (
                   <tr
                     key={`${row.rakeId}-${row.updatedAt}`}
-                    className={`border-b border-white ${index % 2 === 0 ? "bg-[#eff1f3]" : "bg-[#f4f5f7]"}`}
+                    className={`border-b border-slate-200/70 ${index % 2 === 0 ? "bg-white" : "bg-[#fbfcfe]"}`}
                   >
                     <td className="whitespace-nowrap px-4 py-3 text-[12px] font-bold text-[#155eef]">{row.rakeId}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-[12px] font-bold text-[#0f2f67]">{row.rakeNumber}</td>
@@ -1346,9 +1597,9 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
-        </article>
-      </section>
-
+          </article>
+        </section>
+      </div>
     </div>
   );
 }
