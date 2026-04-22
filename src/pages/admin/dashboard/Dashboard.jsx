@@ -104,6 +104,12 @@ const extraWagonSeriesColors = [
 const dispatchGridHours = Array.from({ length: 24 }, (_, index) => index);
 
 const dispatchStatusMeta = {
+  neutral: {
+    label: "",
+    summaryLabel: "",
+    cellClass: "bg-white",
+    textClass: "text-slate-900",
+  },
   idle: {
     label: "Siding Idle",
     summaryLabel: "Idle",
@@ -149,7 +155,11 @@ const dispatchStatusPriority = {
 function resolveDispatchVisualStatus(status) {
   const normalizedStatus = String(status || "").trim().toLowerCase();
 
-  if (!normalizedStatus || normalizedStatus === "idle" || normalizedStatus === "siding idle") {
+  if (!normalizedStatus) {
+    return null;
+  }
+
+  if (normalizedStatus === "idle" || normalizedStatus === "siding idle") {
     return "idle";
   }
 
@@ -172,21 +182,33 @@ function resolveDispatchHourStatus(routeEvents, hour) {
   const matchingEvents = routeEvents.filter((event) => event.start < hour + 1 && event.end > hour);
 
   if (matchingEvents.length === 0) {
-    return "idle";
+    return null;
   }
 
   return matchingEvents.reduce((bestStatus, event) => {
     const currentStatus = resolveDispatchVisualStatus(event.status);
+    if (!currentStatus) {
+      return bestStatus;
+    }
+
+    if (!bestStatus) {
+      return currentStatus;
+    }
+
     return dispatchStatusPriority[currentStatus] > dispatchStatusPriority[bestStatus]
       ? currentStatus
       : bestStatus;
-  }, "idle");
+  }, null);
 }
 
 function buildDispatchRowSummary(routeEvents) {
   return dispatchGridHours.reduce(
     (summary, hour) => {
       const status = resolveDispatchHourStatus(routeEvents, hour);
+
+      if (!status) {
+        return summary;
+      }
 
       if (status === "idle") {
         summary.idle += 1;
@@ -277,13 +299,18 @@ const dispatchGridHierarchy = [
 
 const dispatchGridEvents = [
   { id: "dispatch-1", siding: "siding-1a", route: "route-1a-1", start: 0.0, end: 4.0, status: "completed", label: "RK-7729" },
-  { id: "dispatch-2", siding: "siding-1a", route: "route-1a-2", start: 4.0, end: 8.0, status: "offered", label: "RK-8812" },
-  { id: "dispatch-3", siding: "siding-4b", route: "route-4b-1", start: 1.0, end: 4.0, status: "delayed", label: "RK-7655" },
-  { id: "dispatch-4", siding: "siding-2c", route: "route-2c-1", start: 6.0, end: 11.0, status: "offered", label: "RK-9003" },
-  { id: "dispatch-5", siding: "siding-north-junc", route: "route-nj-1", start: 8.0, end: 13.0, status: "delayed", label: "RK-6541" },
-  { id: "dispatch-6", siding: "siding-1a", route: "route-1a-1", start: 11.0, end: 15.5, status: "offered", label: "RK-3318" },
-  { id: "dispatch-7", siding: "siding-4b", route: "route-4b-1", start: 8.0, end: 12.0, status: "completed", label: "RK-2205" },
-  { id: "dispatch-8", siding: "siding-2c", route: "route-2c-1", start: 15.0, end: 19.0, status: "offered", label: "RK-4420" },
+  { id: "dispatch-1a-idle", siding: "siding-1a", route: "route-1a-1", start: 4.0, end: 6.0, status: "Siding Idle", label: "IDLE-1" },
+  { id: "dispatch-2", siding: "siding-1a", route: "route-1a-1", start: 13.0, end: 17.0, status: "offered", label: "RK-7729-A" },
+  { id: "dispatch-3", siding: "siding-1a", route: "route-1a-2", start: 4.0, end: 8.0, status: "unloading", label: "RK-8812" },
+  { id: "dispatch-3a-empty", siding: "siding-1a", route: "route-1a-2", start: 8.0, end: 10.0, label: "UNSTATUS-1" },
+  { id: "dispatch-4", siding: "siding-2c", route: "route-2c-1", start: 6.0, end: 10.0, status: "offered", label: "RK-9003" },
+  { id: "dispatch-4a-idle", siding: "siding-2c", route: "route-2c-1", start: 10.0, end: 12.0, status: "Siding Idle", label: "IDLE-2" },
+  { id: "dispatch-5", siding: "siding-2c", route: "route-2c-1", start: 17.0, end: 21.0, status: "offered", label: "RK-4420" },
+  { id: "dispatch-6", siding: "siding-north-junc", route: "route-nj-1", start: 9.0, end: 14.0, status: "delayed", label: "RK-6541" },
+  { id: "dispatch-6a-empty", siding: "siding-north-junc", route: "route-nj-1", start: 14.0, end: 16.0, label: "UNSTATUS-2" },
+  { id: "dispatch-7", siding: "siding-4b", route: "route-4b-1", start: 2.0, end: 5.0, status: "delayed", label: "RK-7655" },
+  { id: "dispatch-7a-idle", siding: "siding-4b", route: "route-4b-1", start: 5.0, end: 7.0, status: "Siding Idle", label: "IDLE-3" },
+  { id: "dispatch-8", siding: "siding-4b", route: "route-4b-1", start: 8.0, end: 12.0, status: "completed", label: "RK-2205" },
 ];
 
 function toWagonSeriesKey(code) {
@@ -500,6 +527,7 @@ function formatDispatchTime(date) {
   return date.toLocaleTimeString("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
     hour12: false,
   });
 }
@@ -943,7 +971,7 @@ function DispatchTimelineCard({ hierarchy, events }) {
 
                     {dispatchGridHours.map((hour) => {
                       const status = row.hourStatuses[hour];
-                      const meta = dispatchStatusMeta[status] || dispatchStatusMeta.shutdown;
+                      const meta = dispatchStatusMeta[status] || dispatchStatusMeta.neutral;
                       const isCurrentHour = hour === currentHour;
 
                       return (
