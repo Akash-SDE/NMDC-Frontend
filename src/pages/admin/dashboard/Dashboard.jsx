@@ -4,35 +4,66 @@ import { getWagonTypesMasterData } from "../../../data/adminmasterdatafiles/wago
 
 const baseMetricCards = [
   {
-    title: "TOTAL RAKES OFFERED",
-    value: "42",
-    note: "+ 12% vs yesterday",
-    accent: "bg-[#15366f]",
-    noteColor: "text-emerald-600",
+    title: "Received",
+    value: "12",
+    note: "",
+    accent: "bg-[#1d6fb8]",
+    noteColor: "text-slate-500",
     icon: "offer",
   },
   {
-    title: "TOTAL RAKES COMPLETED",
-    value: "28",
-    note: "Target: 30",
-    accent: "bg-[#2f79e9]",
+    title: "Loaded",
+    value: "8",
+    note: "",
+    accent: "bg-[#405f22]",
     noteColor: "text-slate-500",
     icon: "completed",
   },
   {
-    title: "TOTAL UNDER LOADING",
-    value: "14",
-    note: "Active Load Priority High",
-    accent: "bg-[#e1a74a]",
-    noteColor: "text-[#c97600]",
+    title: "Under Loading",
+    value: "4",
+    note: "",
+    accent: "bg-[#1d6fb8]",
+    noteColor: "text-slate-500",
     icon: "loading",
   },
   {
-    title: "TOTAL TONNAGE",
-    value: "14,500",
-    unit: "MT",
-    note: "Cumulative today",
-    accent: "bg-[#1f2937]",
+    title: "Load adjustment",
+    value: "2",
+    note: "",
+    accent: "bg-[#dc2626]",
+    noteColor: "text-slate-500",
+    icon: "offer",
+  },
+  {
+    title: "demurraged Hours",
+    value: "11",
+    note: "",
+    accent: "bg-[#dc2626]",
+    noteColor: "text-slate-500",
+    icon: "offer",
+  },
+  {
+    title: "Gross Loading Hours",
+    value: "5.5",
+    note: "",
+    accent: "bg-[#dc2626]",
+    noteColor: "text-slate-500",
+    icon: "loading",
+  },
+  {
+    title: "Pending Indents",
+    value: "33",
+    note: "",
+    accent: "bg-[#1d6fb8]",
+    noteColor: "text-slate-500",
+    icon: "completed",
+  },
+  {
+    title: "Dispatch Qty",
+    value: "32845",
+    note: "",
+    accent: "bg-[#1d6fb8]",
     noteColor: "text-slate-500",
     icon: "tonnage",
   },
@@ -73,11 +104,105 @@ const extraWagonSeriesColors = [
 const dispatchGridHours = Array.from({ length: 24 }, (_, index) => index);
 
 const dispatchStatusMeta = {
-  offered: { label: "OFFERED", dot: "bg-[#1565c0]", block: "bg-[#1565c0]" },
-  completed: { label: "COMPLETED", dot: "bg-[#10b981]", block: "bg-[#10b981]" },
-  unloading: { label: "UNLOADING", dot: "bg-[#f59e0b]", block: "bg-[#f59e0b]" },
-  delayed: { label: "DELAYED", dot: "bg-[#dc2626]", block: "bg-[#dc2626]" },
+  idle: {
+    label: "Siding Idle",
+    summaryLabel: "Idle",
+    cellClass: "bg-[#6f6f6f]",
+    textClass: "text-white",
+  },
+  shutdown: {
+    label: "Under Shutdown",
+    summaryLabel: "Shutdown",
+    cellClass: "bg-[#1f8dd8]",
+    textClass: "text-white",
+  },
+  loading: {
+    label: "Under Loading",
+    summaryLabel: "loading",
+    cellClass: "bg-[#f5df10]",
+    textClass: "text-slate-900",
+  },
+  completed: {
+    label: "Completed",
+    summaryLabel: "Completed",
+    cellClass: "bg-[#405f22]",
+    textClass: "text-white",
+  },
+  demurrage: {
+    label: "Demurraged Rake",
+    summaryLabel: "Demurrage",
+    cellClass: "bg-[#b91c1c]",
+    textClass: "text-white",
+  },
 };
+
+const dispatchLegendOrder = ["idle", "shutdown", "loading", "completed", "demurrage"];
+const dispatchSummaryOrder = ["loading", "idle", "shutdown", "demurrage"];
+const dispatchStatusPriority = {
+  idle: 0,
+  shutdown: 1,
+  completed: 2,
+  loading: 3,
+  demurrage: 4,
+};
+
+function resolveDispatchVisualStatus(status) {
+  const normalizedStatus = String(status || "").trim().toLowerCase();
+
+  if (!normalizedStatus || normalizedStatus === "idle" || normalizedStatus === "siding idle") {
+    return "idle";
+  }
+
+  if (["completed", "loaded", "complete", "done"].includes(normalizedStatus)) {
+    return "completed";
+  }
+
+  if (["loading", "under loading", "in progress"].includes(normalizedStatus)) {
+    return "loading";
+  }
+
+  if (["delayed", "demurrage", "demurraged", "under demurrage"].includes(normalizedStatus)) {
+    return "demurrage";
+  }
+
+  return "shutdown";
+}
+
+function resolveDispatchHourStatus(routeEvents, hour) {
+  const matchingEvents = routeEvents.filter((event) => event.start < hour + 1 && event.end > hour);
+
+  if (matchingEvents.length === 0) {
+    return "idle";
+  }
+
+  return matchingEvents.reduce((bestStatus, event) => {
+    const currentStatus = resolveDispatchVisualStatus(event.status);
+    return dispatchStatusPriority[currentStatus] > dispatchStatusPriority[bestStatus]
+      ? currentStatus
+      : bestStatus;
+  }, "idle");
+}
+
+function buildDispatchRowSummary(routeEvents) {
+  return dispatchGridHours.reduce(
+    (summary, hour) => {
+      const status = resolveDispatchHourStatus(routeEvents, hour);
+
+      if (status === "idle") {
+        summary.idle += 1;
+      } else if (status === "shutdown") {
+        summary.shutdown += 1;
+      } else if (status === "demurrage") {
+        summary.demurrage += 1;
+      } else {
+        summary.loading += 1;
+      }
+
+      return summary;
+    },
+    { loading: 0, idle: 0, shutdown: 0, demurrage: 0 },
+  );
+}
 
 const dispatchGridHierarchy = [
   {
@@ -151,14 +276,14 @@ const dispatchGridHierarchy = [
 ];
 
 const dispatchGridEvents = [
-  { id: "dispatch-1", siding: "siding-1a", route: "route-1a-1", start: 0.5, end: 3.5, status: "completed", label: "RK-7729" },
-  { id: "dispatch-2", siding: "siding-1a", route: "route-1a-2", start: 5.0, end: 8.5, status: "unloading", label: "RK-8812" },
-  { id: "dispatch-3", siding: "siding-4b", route: "route-4b-1", start: 2.0, end: 5.0, status: "delayed", label: "RK-7655" },
-  { id: "dispatch-4", siding: "siding-2c", route: "route-2c-1", start: 7.0, end: 12.0, status: "offered", label: "RK-9003" },
-  { id: "dispatch-5", siding: "siding-north-junc", route: "route-nj-1", start: 11.0, end: 15.5, status: "delayed", label: "RK-6541" },
-  { id: "dispatch-6", siding: "siding-1a", route: "route-1a-1", start: 14.0, end: 18.5, status: "unloading", label: "RK-3318" },
-  { id: "dispatch-7", siding: "siding-4b", route: "route-4b-1", start: 10.0, end: 13.5, status: "completed", label: "RK-2205" },
-  { id: "dispatch-8", siding: "siding-2c", route: "route-2c-1", start: 18.0, end: 22.0, status: "offered", label: "RK-4420" },
+  { id: "dispatch-1", siding: "siding-1a", route: "route-1a-1", start: 0.0, end: 4.0, status: "completed", label: "RK-7729" },
+  { id: "dispatch-2", siding: "siding-1a", route: "route-1a-2", start: 4.0, end: 8.0, status: "offered", label: "RK-8812" },
+  { id: "dispatch-3", siding: "siding-4b", route: "route-4b-1", start: 1.0, end: 4.0, status: "delayed", label: "RK-7655" },
+  { id: "dispatch-4", siding: "siding-2c", route: "route-2c-1", start: 6.0, end: 11.0, status: "offered", label: "RK-9003" },
+  { id: "dispatch-5", siding: "siding-north-junc", route: "route-nj-1", start: 8.0, end: 13.0, status: "delayed", label: "RK-6541" },
+  { id: "dispatch-6", siding: "siding-1a", route: "route-1a-1", start: 11.0, end: 15.5, status: "offered", label: "RK-3318" },
+  { id: "dispatch-7", siding: "siding-4b", route: "route-4b-1", start: 8.0, end: 12.0, status: "completed", label: "RK-2205" },
+  { id: "dispatch-8", siding: "siding-2c", route: "route-2c-1", start: 15.0, end: 19.0, status: "offered", label: "RK-4420" },
 ];
 
 function toWagonSeriesKey(code) {
@@ -368,7 +493,7 @@ function getLagClasses(lag) {
 }
 
 function formatDispatchHour(hour) {
-  return `${String(hour).padStart(2, "0")}h`;
+  return String(hour);
 }
 
 function formatDispatchTime(date) {
@@ -397,33 +522,6 @@ function formatDashboardDateLabel(dateValue) {
   }
 
   return `${day}/${month}/${year}`;
-}
-
-function assignDispatchLanes(events) {
-  const sortedEvents = [...events].sort((a, b) => {
-    if (a.start === b.start) {
-      return a.end - b.end;
-    }
-    return a.start - b.start;
-  });
-
-  const laneEndTimes = [];
-
-  return sortedEvents.map((event) => {
-    let laneIndex = laneEndTimes.findIndex((laneEndTime) => event.start >= laneEndTime);
-
-    if (laneIndex === -1) {
-      laneIndex = laneEndTimes.length;
-      laneEndTimes.push(event.end);
-    } else {
-      laneEndTimes[laneIndex] = event.end;
-    }
-
-    return {
-      ...event,
-      laneIndex,
-    };
-  });
 }
 
 function LiveWagonCountCard({ rows, seriesMeta }) {
@@ -716,20 +814,8 @@ function MetricCard({ card }) {
   );
 }
 
-function DispatchTimelineCard({
-  hierarchy,
-  events,
-  startHour = 0,
-  endHour = 23,
-}) {
-  const hourSpan = Math.max(endHour - startHour, 1);
+function DispatchTimelineCard({ hierarchy, events }) {
   const [currentTime, setCurrentTime] = useState(() => new Date());
-  const [expandedSidings, setExpandedSidings] = useState(
-    hierarchy.reduce((acc, siding) => {
-      acc[siding.id] = true;
-      return acc;
-    }, {}),
-  );
 
   useEffect(() => {
     const syncCurrentTime = () => {
@@ -745,13 +831,6 @@ function DispatchTimelineCard({
   const currentHour = currentTime.getHours();
   const currentTimeLabel = formatDispatchTime(currentTime);
 
-  const toggleSidingExpand = (sidingId) => {
-    setExpandedSidings((prev) => ({
-      ...prev,
-      [sidingId]: !prev[sidingId],
-    }));
-  };
-
   const eventsByRouteId = useMemo(() => {
     return events.reduce((accumulator, event) => {
       const routeKey = event.route || event.siding;
@@ -763,161 +842,157 @@ function DispatchTimelineCard({
     }, {});
   }, [events]);
 
-  const eventsByRouteLanes = useMemo(() => {
-    return Object.entries(eventsByRouteId).reduce((accumulator, [routeId, routeEvents]) => {
-      accumulator[routeId] = assignDispatchLanes(routeEvents);
-      return accumulator;
-    }, {});
-  }, [eventsByRouteId]);
+  const sheetRows = useMemo(() => {
+    return hierarchy.flatMap((siding) =>
+      siding.routes.map((route) => {
+        const routeEvents = eventsByRouteId[route.id] || [];
 
-  const nowMarkerPercent = useMemo(() => {
-    const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60 + currentTime.getSeconds() / 3600;
-    const clampedNow = Math.min(Math.max(nowInHours, startHour), endHour);
-    return ((clampedNow - startHour) / hourSpan) * 100;
-  }, [currentTime, endHour, hourSpan, startHour]);
+        return {
+          siding,
+          route,
+          hourStatuses: dispatchGridHours.map((hour) => resolveDispatchHourStatus(routeEvents, hour)),
+          summary: buildDispatchRowSummary(routeEvents),
+        };
+      }),
+    );
+  }, [eventsByRouteId, hierarchy]);
 
   return (
-    <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-4 py-4">
+    <article className="overflow-hidden rounded-[24px] border border-rose-200 bg-white shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-rose-200 px-5 py-4">
         <div>
           <h3 className="text-[22px] font-extrabold leading-tight text-[#102a57]">REAL-TIME DISPATCH GRID</h3>
-          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-500">24-HOUR SIDING & ROUTE ALLOCATION</p>
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-500">
+            24-HOUR SIDING & ROUTE ALLOCATION
+          </p>
           <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-600">
             CURRENT TIME: <span className="text-[#1565c0]">{currentTimeLabel}</span>
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3 text-[11px] font-bold text-slate-600">
-          {Object.entries(dispatchStatusMeta).map(([key, meta]) => (
-            <span key={key} className="inline-flex items-center gap-1.5 uppercase tracking-[0.04em]">
-              <span className={`h-2.5 w-2.5 rounded-full ${meta.dot}`} />
-              {meta.label}
-            </span>
-          ))}
-        </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="relative min-w-240">
-          <div className="pointer-events-none absolute inset-y-0 left-70 right-0 z-30">
-            <span
-              className="absolute inset-y-0 w-0.5 bg-[#1565c0]/90 shadow-[0_0_0_1px_rgba(21,101,192,0.12)]"
-              style={{ left: `${nowMarkerPercent}%` }}
-            />
-          </div>
-
-          <div className="grid grid-cols-[280px_repeat(24,minmax(0,1fr))] border-b border-slate-200 bg-[#f3f4f6] sticky top-0 z-20">
-            <div className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-[0.06em] text-slate-600">SIDING / ROUTE</div>
-            {dispatchGridHours.map((hour) => (
-              <div
-                key={hour}
-                className={`px-1 py-3 text-center text-[10px] font-bold border-l border-slate-300/50 ${
-                  hour === currentHour ? "bg-[#dfeafb] text-[#1565c0]" : "text-slate-500"
-                }`}
-              >
-                {formatDispatchHour(hour)}
-              </div>
-            ))}
-          </div>
-
-          {hierarchy.map((siding) => {
-            const isExpanded = expandedSidings[siding.id];
-
-            return (
-              <div key={siding.id}>
-                <div className="grid grid-cols-[280px_repeat(24,minmax(0,1fr))] border-b border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors">
-                  <button
-                    type="button"
-                    onClick={() => toggleSidingExpand(siding.id)}
-                    className="flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-slate-100 transition-colors"
+      <div className="grid gap-4 px-3 py-3 xl:grid-cols-[minmax(0,1fr)_210px] xl:px-4 xl:pb-4">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1650px] border-separate border-spacing-0">
+            <thead>
+              <tr>
+                <th
+                  rowSpan={2}
+                  className="sticky left-0 z-30 border-r border-b border-rose-300 bg-[#f8fafc] px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-700"
+                >
+                  Siding / Route
+                </th>
+                {dispatchGridHours.map((hour) => (
+                  <th
+                    key={hour}
+                    className={`border-r border-b border-rose-300 px-1 py-3 text-center text-[15px] font-bold leading-none text-slate-800 ${
+                      hour === currentHour ? "bg-[#dfeafb] text-[#1565c0]" : "bg-[#f8fafc]"
+                    }`}
                   >
-                    <div className="flex items-center gap-3 flex-1">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className={`text-slate-600 transition-transform shrink-0 ${
-                          isExpanded ? "rotate-90" : ""
-                        }`}
-                      >
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
-                      <div>
-                        <p className="text-[13px] font-bold text-[#0f2f67]">{siding.name}</p>
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-slate-500 mt-0.5">{siding.count} ASSIGNED</p>
-                      </div>
-                    </div>
-                    {siding.alert && (
-                      <span className="inline-flex items-center rounded-full bg-[#dc2626] px-2 py-0.5 text-[9px] font-bold tracking-[0.06em] text-white">
-                        {siding.alert}
-                      </span>
-                    )}
-                  </button>
+                    {formatDispatchHour(hour)}
+                  </th>
+                ))}
+                <th
+                  colSpan={dispatchSummaryOrder.length}
+                  className="border-b border-rose-300 bg-[#f8fafc] px-4 py-3 text-center text-[18px] font-extrabold text-slate-800"
+                >
+                  Summary
+                </th>
+              </tr>
+              <tr>
+                <th colSpan={dispatchGridHours.length} className="border-r border-b border-rose-300 bg-white p-0" />
+                {dispatchSummaryOrder.map((columnKey) => {
+                  const meta = dispatchStatusMeta[columnKey];
 
-                  <div className="col-span-24 relative bg-white/40" style={{ height: "0px" }} />
-                </div>
+                  return (
+                    <th
+                      key={columnKey}
+                      className="border-r border-b border-rose-300 bg-white px-3 py-2 text-center text-[13px] font-bold capitalize tracking-[0.06em] text-slate-600"
+                    >
+                      {meta.summaryLabel}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
 
-                {isExpanded &&
-                  siding.routes.map((route) => {
-                    const routeEvents = eventsByRouteLanes[route.id] || [];
-                    const laneDepth = Math.max(
-                      routeEvents.reduce((max, event) => Math.max(max, event.laneIndex + 1), 0),
-                      1,
-                    );
-                    const rowHeight = laneDepth * 28 + 10;
+            <tbody>
+              {sheetRows.map((row, rowIndex) => {
+                const rowBackground = rowIndex % 2 === 0 ? "bg-white" : "bg-[#fcfcfd]";
 
-                    return (
-                      <div key={route.id} className="grid grid-cols-[280px_1fr] border-b border-slate-100 bg-white hover:bg-slate-50 transition-colors">
-                        <div className="flex items-center gap-3 border-r border-slate-200 bg-slate-50 px-4 py-3">
-                          <span className="ml-8 text-[12px] font-semibold text-[#0f2f67]">{route.name}</span>
-                          <span className="inline-flex items-center rounded-full bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-700">
-                            {route.code}
+                return (
+                  <tr key={`${row.siding.id}-${row.route.id}`}>
+                    <td className={`sticky left-0 z-20 border-r border-b border-rose-300 px-4 py-3 align-middle ${rowBackground}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-bold text-[#0f2f67]">{row.route.name}</p>
+                          <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500">
+                            {row.siding.name}
+                          </p>
+                        </div>
+                        <div className="ml-auto flex items-center gap-2">
+                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[9px] font-bold text-slate-700">
+                            {row.route.code}
                           </span>
-                          <span className="ml-auto text-[10px] font-bold text-slate-500">{route.count}</span>
-                        </div>
-
-                        <div className="relative bg-white" style={{ height: `${rowHeight}px` }}>
-                          <div className="pointer-events-none absolute inset-0">
-                            {dispatchGridHours.map((hour) => (
-                              <span
-                                key={`${route.id}-divider-${hour}`}
-                                className="absolute bottom-0 top-0 border-l border-slate-200/60"
-                                style={{ left: `${((hour - startHour) / hourSpan) * 100}%` }}
-                              />
-                            ))}
-                          </div>
-
-                          {routeEvents.map((event) => {
-                            const meta = dispatchStatusMeta[event.status] || dispatchStatusMeta.offered;
-                            const left = ((event.start - startHour) / hourSpan) * 100;
-                            const width = Math.max(((event.end - event.start) / hourSpan) * 100, 1.2);
-                            const top = 5 + event.laneIndex * 28;
-
-                            return (
-                              <span
-                                key={event.id}
-                                className={`absolute inline-flex h-6 items-center rounded-md px-2 text-[9px] font-bold text-white shadow-md hover:shadow-lg transition-shadow cursor-pointer hover:z-30 ${meta.block}`}
-                                style={{
-                                  left: `${left}%`,
-                                  width: `${width}%`,
-                                  top: `${top}px`,
-                                }}
-                                title={`${event.label} • ${meta.label} • ${event.start.toFixed(1)}h-${event.end.toFixed(1)}h`}
-                              >
-                                {width >= 8 ? event.label : ""}
-                              </span>
-                            );
-                          })}
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-500">
+                            {row.route.count}
+                          </span>
                         </div>
                       </div>
-                    );
-                  })}
-              </div>
-            );
-          })}
+                    </td>
+
+                    {dispatchGridHours.map((hour) => {
+                      const status = row.hourStatuses[hour];
+                      const meta = dispatchStatusMeta[status] || dispatchStatusMeta.shutdown;
+                      const isCurrentHour = hour === currentHour;
+
+                      return (
+                        <td
+                          key={`${row.route.id}-${hour}`}
+                          className={`h-10 border-r border-b border-rose-300 p-0 ${meta.cellClass} ${meta.textClass} ${
+                            isCurrentHour ? "ring-2 ring-inset ring-[#1565c0]" : ""
+                          }`}
+                          title={`${row.route.name} • ${hour}:00`}
+                        />
+                      );
+                    })}
+
+                    {dispatchSummaryOrder.map((columnKey) => (
+                      <td
+                        key={`${row.route.id}-${columnKey}`}
+                        className="border-r border-b border-rose-300 bg-white px-3 py-3 text-center text-[14px] font-semibold text-slate-800"
+                      >
+                        {row.summary[columnKey]}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
+
+        <aside className="self-start">
+          <div className="overflow-hidden rounded-[20px] border border-rose-300 bg-white shadow-sm">
+            <div className="border-b border-rose-300 px-4 py-3 text-center text-[18px] font-extrabold text-slate-800">
+              Index
+            </div>
+            <div className="divide-y divide-rose-300">
+              {dispatchLegendOrder.map((statusKey) => {
+                const meta = dispatchStatusMeta[statusKey];
+
+                return (
+                  <div
+                    key={statusKey}
+                    className={`${meta.cellClass} px-4 py-2 text-center text-[13px] font-semibold ${meta.textClass}`}
+                  >
+                    {meta.label}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
       </div>
     </article>
   );
@@ -971,53 +1046,7 @@ export default function Dashboard() {
   });
   const [hoveredHourlySeries, setHoveredHourlySeries] = useState(null);
 
-  const statusCounts = useMemo(() => {
-    return activeRakeRows.reduce(
-      (accumulator, row) => {
-        accumulator[row.status] = (accumulator[row.status] ?? 0) + 1;
-        return accumulator;
-      },
-      {},
-    );
-  }, []);
-
-  const metricCards = useMemo(() => {
-    return [
-      ...baseMetricCards,
-      {
-        title: "IN PROGRESS RAKES",
-        value: String(statusCounts["IN PROGRESS"] ?? 0),
-        note: "Live loading activity",
-        accent: "bg-[#1d4ed8]",
-        noteColor: "text-blue-600",
-        icon: "loading",
-      },
-      {
-        title: "DELAYED RAKES",
-        value: String(statusCounts.DELAYED ?? 0),
-        note: "Needs intervention",
-        accent: "bg-[#dc2626]",
-        noteColor: "text-rose-600",
-        icon: "offer",
-      },
-      {
-        title: "READY RAKES",
-        value: String(statusCounts.READY ?? 0),
-        note: "Clear for dispatch",
-        accent: "bg-[#16a34a]",
-        noteColor: "text-emerald-600",
-        icon: "completed",
-      },
-      {
-        title: "DISPATCHED RAKES",
-        value: String(statusCounts.DISPATCHED ?? 0),
-        note: "Completed movement",
-        accent: "bg-[#334155]",
-        noteColor: "text-slate-500",
-        icon: "tonnage",
-      },
-    ];
-  }, [statusCounts]);
+  const metricCards = baseMetricCards;
 
   const handleSort = (field) => {
     if (sortBy === field) {
@@ -1143,8 +1172,6 @@ export default function Dashboard() {
         <DispatchTimelineCard
           hierarchy={dispatchGridHierarchy}
           events={dispatchGridEvents}
-          startHour={0}
-          endHour={23}
         />
       </section>
 
