@@ -1,69 +1,53 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 
 const baseMetricCards = [
   {
     title: "Received",
     value: "12",
-    note: "",
-    accent: "bg-[#1d6fb8]",
-    noteColor: "text-slate-500",
+    accent: "bg-[#0f2f67]",
     icon: "offer",
   },
   {
     title: "Loaded",
     value: "8",
-    note: "",
-    accent: "bg-[#405f22]",
-    noteColor: "text-slate-500",
+    accent: "bg-[#166534]",
     icon: "completed",
   },
   {
     title: "Under Loading",
     value: "4",
-    note: "",
     accent: "bg-[#1d6fb8]",
-    noteColor: "text-slate-500",
     icon: "loading",
   },
   {
     title: "Load adjustment",
     value: "2",
-    note: "",
     accent: "bg-[#dc2626]",
-    noteColor: "text-slate-500",
     icon: "offer",
   },
   {
-    title: "demurraged Hours",
+    title: "Demurraged Hours",
     value: "11",
-    note: "",
     accent: "bg-[#dc2626]",
-    noteColor: "text-slate-500",
     icon: "offer",
   },
   {
     title: "Gross Loading Hours",
     value: "5.5",
-    note: "",
-    accent: "bg-[#dc2626]",
-    noteColor: "text-slate-500",
+    accent: "bg-[#d97706]",
     icon: "loading",
   },
   {
     title: "Pending Indents",
     value: "33",
-    note: "",
-    accent: "bg-[#1d6fb8]",
-    noteColor: "text-slate-500",
+    accent: "bg-[#475569]",
     icon: "completed",
   },
   {
     title: "Dispatch Qty",
-    value: "32845",
-    note: "",
-    accent: "bg-[#1d6fb8]",
-    noteColor: "text-slate-500",
+    value: "32,845",
+    accent: "bg-[#1e40af]",
     icon: "tonnage",
   },
 ];
@@ -83,21 +67,10 @@ const baseHourlySeries = [
 ];
 
 const baseHourlySeriesMeta = [
-  { key: "lump", label: "LUMP WAGONS", color: "bg-[#1f3d72]" },
-  { key: "fines", label: "FINES WAGONS", color: "bg-[#4787e0]" },
-  { key: "pellet", label: "PELLET WAGONS", color: "bg-[#16a34a]" },
+  { key: "lump", label: "LUMP WAGONS", color: "bg-[#0f2f67]" },
+  { key: "fines", label: "FINES WAGONS", color: "bg-[#1d6fb8]" },
+  { key: "pellet", label: "PELLET WAGONS", color: "bg-[#166534]" },
   { key: "rom", label: "ROM WAGONS", color: "bg-[#d97706]" },
-];
-
-const extraWagonSeriesColors = [
-  "bg-[#7c3aed]",
-  "bg-[#0f766e]",
-  "bg-[#c026d3]",
-  "bg-[#ea580c]",
-  "bg-[#0891b2]",
-  "bg-[#be123c]",
-  "bg-[#4f46e5]",
-  "bg-[#166534]",
 ];
 
 const dispatchGridHours = Array.from({ length: 24 }, (_, index) => index);
@@ -200,6 +173,19 @@ function resolveDispatchHourStatus(routeEvents, hour) {
   }, null);
 }
 
+function resolveDispatchHourDetail(routeEvents, hour) {
+  const matchingEvents = routeEvents.filter((event) => event.start < hour + 1 && event.end > hour);
+  if (matchingEvents.length === 0) return null;
+
+  return matchingEvents.reduce((best, current) => {
+    const bestStatus = resolveDispatchVisualStatus(best.status);
+    const currentStatus = resolveDispatchVisualStatus(current.status);
+    if (!bestStatus) return current;
+    if (!currentStatus) return best;
+    return dispatchStatusPriority[currentStatus] > dispatchStatusPriority[bestStatus] ? current : best;
+  }, matchingEvents[0]);
+}
+
 function buildDispatchRowSummary(routeEvents) {
   return dispatchGridHours.reduce(
     (summary, hour) => {
@@ -228,7 +214,7 @@ function buildDispatchRowSummary(routeEvents) {
 const dispatchGridHierarchy = [
   {
     id: "siding-1a",
-    name: "Siding 1A",
+    name: "SIDING 1A",
     type: "siding",
     count: 3,
     routes: [
@@ -236,21 +222,21 @@ const dispatchGridHierarchy = [
         id: "route-1a-1",
         name: "Route 1",
         type: "route",
-        code: "ALPHA",
+        code: "BOXN",
         count: 2,
       },
       {
         id: "route-1a-2",
         name: "Route 2",
         type: "route",
-        code: "BRAVO",
+        code: "BOBRN",
         count: 1,
       },
     ],
   },
   {
     id: "siding-2c",
-    name: "Siding 2C",
+    name: "SIDING 2C",
     type: "siding",
     count: 1,
     routes: [
@@ -258,30 +244,30 @@ const dispatchGridHierarchy = [
         id: "route-2c-1",
         name: "Route 1",
         type: "route",
-        code: "CHARLIE",
+        code: "BOXNHL",
         count: 1,
       },
     ],
   },
   {
     id: "siding-north-junc",
-    name: "North Junction",
+    name: "NORTH JCT",
     type: "siding",
     count: 1,
     alert: "HIGH ALERT",
     routes: [
       {
         id: "route-nj-1",
-        name: "Direct Line",
+        name: "Route 1",
         type: "route",
-        code: "DELTA",
+        code: "BOST",
         count: 1,
       },
     ],
   },
   {
     id: "siding-4b",
-    name: "Siding 4B",
+    name: "SIDING 4B",
     type: "siding",
     count: 2,
     routes: [
@@ -289,14 +275,12 @@ const dispatchGridHierarchy = [
         id: "route-4b-1",
         name: "Route 1",
         type: "route",
-        code: "ECHO",
+        code: "MIXED",
         count: 2,
       },
     ],
   },
 ];
-
-const dispatchRouteCount = dispatchGridHierarchy.reduce((count, siding) => count + siding.routes.length, 0);
 
 const dispatchGridEvents = [
   { id: "dispatch-1", siding: "siding-1a", route: "route-1a-1", start: 0.0, end: 4.0, status: "completed", label: "RK-7729" },
@@ -314,12 +298,7 @@ const dispatchGridEvents = [
   { id: "dispatch-8", siding: "siding-4b", route: "route-4b-1", start: 8.0, end: 12.0, status: "completed", label: "RK-2205" },
 ];
 
-function toWagonSeriesKey(code) {
-  return `wagon_${String(code || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")}`;
-}
+
 
 const activeRakeRows = [
   {
@@ -500,6 +479,23 @@ const activeRakeRows = [
   },
 ];
 
+const adjustmentRakeRows = [
+  {
+    sno: 1,
+    oreType: "LUMPS-62",
+    siding: "SIDING-A",
+    destination: "PORT-A",
+    placementTime: "10:15",
+  },
+  {
+    sno: 2,
+    oreType: "FINES-58",
+    siding: "SIDING-C",
+    destination: "STOCKPILE-2",
+    placementTime: "11:00",
+  }
+];
+
 function getStatusClasses(status) {
   if (status === "READY") {
     return "bg-emerald-100 text-emerald-700";
@@ -521,7 +517,7 @@ function getLagClasses(lag) {
 }
 
 function formatDispatchHour(hour) {
-  return String(hour);
+  return String(hour).padStart(2, "0") + "h";
 }
 
 function formatDispatchTime(date) {
@@ -540,18 +536,7 @@ function formatDashboardDate(date) {
   return `${year}-${month}-${day}`;
 }
 
-function formatDashboardDateLabel(dateValue) {
-  if (!dateValue) {
-    return "--/--/----";
-  }
 
-  const [year, month, day] = String(dateValue).split("-");
-  if (!year || !month || !day) {
-    return dateValue;
-  }
-
-  return `${day}/${month}/${year}`;
-}
 
 function LiveWagonCountCard({ rows, seriesMeta }) {
   const [hoveredTrendPoint, setHoveredTrendPoint] = useState(null);
@@ -634,55 +619,80 @@ function LiveWagonCountCard({ rows, seriesMeta }) {
       };
     });
 
+    const currentTime = new Date();
+    const currentHour = currentTime.getHours();
+    const currentMinutes = currentTime.getMinutes();
+    const currentHourIndex = rowsAscending.findIndex(r => r.hour.startsWith(String(currentHour).padStart(2, "0")));
+    
+    let currentTimeX = left;
+    if (currentHourIndex !== -1) {
+      currentTimeX = left + (currentHourIndex * stepX) + (currentMinutes / 60) * stepX;
+    }
+
     return {
       chartWidth,
       chartHeight,
       left,
       right,
+      top,
       bottom,
       rowsAscending,
       lines,
       guides,
       stepX,
+      currentTimeX
     };
   }, [fullDayRows, seriesMeta]);
 
-    return (
-    <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 px-4 py-4">
-        <div>
-          <h3 className="text-[22px] font-extrabold leading-tight text-[#102a57]">HOURLY WAGON COUNT</h3>
-          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-500">TIME-STAMPED WAGON SNAPSHOT</p>
+  return (
+    <article className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+      <div className="border-b border-slate-100 px-6 py-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-black tracking-tight text-slate-900 uppercase">Hourly Wagon Count</h3>
+            <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">Real-time Loading Snapshot</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            {seriesMeta.map((series) => (
+              <span key={`trend-legend-${series.key}`} className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <span className="h-2 w-2 rounded-full shadow-xs" style={{ backgroundColor: resolveSeriesStroke(series.color) }} />
+                {series.label}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="border-b border-slate-200 bg-[#f8fbff] px-4 py-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">WAGON COUNT TREND</p>
-
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] font-bold text-slate-600">
-          {seriesMeta.map((series) => (
-            <span key={`trend-legend-${series.key}`} className="inline-flex items-center gap-1.5 uppercase tracking-[0.04em]">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: resolveSeriesStroke(series.color) }} />
-              {series.label}
-            </span>
-          ))}
-        </div>
-
-        <div className="mt-2 min-h-10">
+      <div className="px-6 py-6">
+        <div className="mb-4 min-h-8">
           {hoveredTrendPoint ? (
-            <div className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: hoveredTrendPoint.color }} />
-              <p className="text-[11px] font-semibold text-[#0f2f67]">
-                {hoveredTrendPoint.label} at {hoveredTrendPoint.hour}: <span className="font-extrabold">{hoveredTrendPoint.value}</span>
+            <div className="inline-flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-1.5 transition-all">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: hoveredTrendPoint.color }} />
+              <p className="text-[12px] font-bold text-slate-900">
+                {hoveredTrendPoint.label} • {hoveredTrendPoint.hour} • <span className="text-blue-600 font-black">{hoveredTrendPoint.value} Wagons</span>
               </p>
             </div>
           ) : (
-            <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-400">Hover a dot to view details</p>
+            <div className="flex items-center gap-2 text-slate-400">
+              <div className="h-1.5 w-1.5 rounded-full bg-slate-200" />
+              <p className="text-[10px] font-bold uppercase tracking-widest">Interactive Trend Analysis • Hover for details</p>
+            </div>
           )}
         </div>
 
         <div className="mt-2 overflow-x-auto">
           <svg viewBox={`0 0 ${lineChartData.chartWidth} ${lineChartData.chartHeight}`} className="h-72 w-full min-w-240">
+            {/* Current Time Bold Line */}
+            <line
+              x1={lineChartData.currentTimeX}
+              y1={lineChartData.top}
+              x2={lineChartData.currentTimeX}
+              y2={lineChartData.chartHeight - lineChartData.bottom}
+              stroke="#1565c0"
+              strokeWidth="3"
+              strokeLinecap="round"
+              className="drop-shadow-sm"
+            />
             {lineChartData.guides.map((guide) => (
               <g key={`guide-${guide.value}-${guide.y}`}>
                 <line
@@ -820,33 +830,28 @@ function CardIcon({ type }) {
   );
 }
 
-function MetricCard({ card }) {
+const MetricCard = memo(function MetricCard({ card }) {
   return (
-    <article className="group relative overflow-hidden rounded-3xl border border-slate-200/70 bg-linear-to-br from-white via-white to-[#f3f7fd] px-4 py-4 shadow-[0_20px_50px_-38px_rgba(15,47,103,0.65)] transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_30px_60px_-35px_rgba(15,47,103,0.52)]">
-      <span className={`absolute inset-y-0 left-0 w-1 ${card.accent}`} />
-      <span className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-slate-200 to-transparent" />
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{card.title}</p>
-          <div className="mt-3 flex items-end gap-2">
-            <p className="text-[40px] font-black leading-none tracking-[-0.04em] text-[#0f2f67]">{card.value}</p>
-            {card.unit ? <span className="pb-1 text-[14px] font-bold text-slate-400">{card.unit}</span> : null}
+    <article className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 transition-all duration-300 hover:border-slate-300 hover:shadow-[0_20px_40px_-20px_rgba(0,0,0,0.1)]">
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
+          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500/80">{card.title}</p>
+          <div className="flex items-baseline gap-1">
+            <h4 className="text-3xl font-black tracking-tight text-slate-900">{card.value}</h4>
+            {card.unit && <span className="text-[13px] font-bold text-slate-400">{card.unit}</span>}
           </div>
         </div>
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-500 shadow-inner">
-          <CardIcon type={card.icon} />
+        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${card.accent} bg-opacity-10 text-slate-900 shadow-sm transition-colors group-hover:bg-opacity-20`}>
+          <div className={`${card.accent.replace('bg-', 'text-')} opacity-80`}>
+            <CardIcon type={card.icon} />
+          </div>
         </div>
       </div>
-      {card.title === "TOTAL RAKES COMPLETED" ? (
-        <div className="mt-2 h-0.75 rounded bg-slate-200">
-          <span className="block h-full w-[93%] rounded bg-[#2f79e9]" />
-        </div>
-      ) : null}
     </article>
   );
-}
+});
 
-function DispatchTimelineCard({ hierarchy, events }) {
+const DispatchTimelineCard = memo(function DispatchTimelineCard({ sheetRows }) {
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
   useEffect(() => {
@@ -863,31 +868,7 @@ function DispatchTimelineCard({ hierarchy, events }) {
   const currentHour = currentTime.getHours();
   const currentTimeLabel = formatDispatchTime(currentTime);
 
-  const eventsByRouteId = useMemo(() => {
-    return events.reduce((accumulator, event) => {
-      const routeKey = event.route || event.siding;
-      if (!accumulator[routeKey]) {
-        accumulator[routeKey] = [];
-      }
-      accumulator[routeKey].push(event);
-      return accumulator;
-    }, {});
-  }, [events]);
 
-  const sheetRows = useMemo(() => {
-    return hierarchy.flatMap((siding) =>
-      siding.routes.map((route) => {
-        const routeEvents = eventsByRouteId[route.id] || [];
-
-        return {
-          siding,
-          route,
-          hourStatuses: dispatchGridHours.map((hour) => resolveDispatchHourStatus(routeEvents, hour)),
-          summary: buildDispatchRowSummary(routeEvents),
-        };
-      }),
-    );
-  }, [eventsByRouteId, hierarchy]);
 
 
   return (
@@ -908,48 +889,56 @@ function DispatchTimelineCard({ hierarchy, events }) {
 
       </div>
 
-      <div className="grid gap-4 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_220px] xl:px-5 xl:pb-5">
+      <div className="space-y-6 px-4 py-4 xl:px-5 xl:pb-5">
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-2xl border border-slate-200/80 bg-white px-6 py-4 shadow-sm">
+          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400 border-r border-slate-100 pr-8">
+            Operations Key
+          </span>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            {dispatchLegendOrder.map((statusKey) => {
+              const meta = dispatchStatusMeta[statusKey];
+
+              return (
+                <div key={statusKey} className="flex items-center gap-2.5">
+                  <span className={`h-3 w-3 rounded-full shadow-sm ${meta.cellClass}`} />
+                  <span className="text-[12px] font-bold text-slate-700 uppercase tracking-tight">{meta.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="overflow-x-auto rounded-3xl border border-slate-200/70 bg-white shadow-sm">
-          <table className="w-full min-w-412.5 border-separate border-spacing-0">
+          <table className="w-full border-separate border-spacing-0">
             <thead>
               <tr>
                 <th
                   rowSpan={2}
-                  className="sticky left-0 z-30 border-r border-b border-slate-200/70 bg-surface px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-700"
+                  className="sticky left-0 z-30 border-r border-b border-slate-200/70 bg-surface px-3 py-2 text-left text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-700 w-px whitespace-nowrap"
                 >
                   Siding / Route
                 </th>
                 {dispatchGridHours.map((hour) => (
                   <th
                     key={hour}
-                    className={`border-r border-b border-slate-200/70 px-1 py-3 text-center text-[15px] font-bold leading-none text-slate-800 ${
+                    className={`border-r border-b border-slate-200/70 p-0 text-center text-[11px] font-bold leading-none text-slate-800 relative w-8 h-8 ${
                       hour === currentHour ? "bg-[#dfeafb] text-[#1565c0]" : "bg-surface"
                     }`}
                   >
-                    {formatDispatchHour(hour)}
+                    <div className="flex h-full w-full items-center justify-center">
+                      {formatDispatchHour(hour)}
+                    </div>
+                    {hour === currentHour && (
+                      <div 
+                        className="absolute top-0 bottom-0 w-[3px] bg-[#1565c0] z-10 shadow-[0_0_8px_rgba(21,101,192,0.4)]" 
+                        style={{ left: `${(new Date().getMinutes() / 60) * 100}%` }}
+                      />
+                    )}
                   </th>
                 ))}
-                <th
-                  colSpan={dispatchSummaryOrder.length}
-                  className="border-b border-slate-200/70 bg-surface px-4 py-3 text-center text-[18px] font-extrabold text-slate-800"
-                >
-                  Summary
-                </th>
               </tr>
               <tr>
-                <th colSpan={dispatchGridHours.length} className="border-r border-b border-slate-200/70 bg-white p-0" />
-                {dispatchSummaryOrder.map((columnKey) => {
-                  const meta = dispatchStatusMeta[columnKey];
 
-                  return (
-                    <th
-                      key={columnKey}
-                      className="border-r border-b border-slate-200/70 bg-white px-3 py-2 text-center text-[13px] font-bold capitalize tracking-[0.06em] text-slate-600"
-                    >
-                      {meta.summaryLabel}
-                    </th>
-                  );
-                })}
               </tr>
             </thead>
 
@@ -959,49 +948,55 @@ function DispatchTimelineCard({ hierarchy, events }) {
 
                 return (
                   <tr key={`${row.siding.id}-${row.route.id}`}>
-                    <td className={`sticky left-0 z-20 border-r border-b border-slate-200/70 px-4 py-3 align-middle ${rowBackground}`}>
-                      <div className="flex items-center gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-bold text-[#0f2f67]">{row.route.name}</p>
-                          <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500">
-                            {row.siding.name}
-                          </p>
-                        </div>
-                        <div className="ml-auto flex items-center gap-2">
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-700">
+                    <td className={`sticky left-0 z-20 border-r border-b border-slate-200/70 px-3 py-2 align-middle ${rowBackground}`}>
+                      <div className="flex items-center gap-2">
+                        <p className="min-w-[140px] text-[11px] font-bold text-[#0f2f67] whitespace-nowrap uppercase">
+                          {row.siding.name} / {row.route.name}
+                        </p>
+                        <div className="flex items-center">
+                          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[8px] font-black text-slate-700 border border-slate-200">
                             {row.route.code}
-                          </span>
-                          <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[9px] font-bold text-slate-500">
-                            {row.route.count}
                           </span>
                         </div>
                       </div>
                     </td>
 
                     {dispatchGridHours.map((hour) => {
-                      const status = row.hourStatuses[hour];
+                      const eventDetail = resolveDispatchHourDetail(row.routeEvents, hour);
+                      const status = eventDetail ? resolveDispatchVisualStatus(eventDetail.status) : null;
                       const meta = dispatchStatusMeta[status] || dispatchStatusMeta.neutral;
                       const isCurrentHour = hour === currentHour;
+
+                      const tooltipLines = [
+                        `Siding: ${row.siding.name}`,
+                        `Route: ${row.route.name} (${row.route.code})`,
+                        `Time: ${formatDispatchHour(hour)}`,
+                        status ? `Status: ${meta.label}` : "Status: Vacant"
+                      ];
+                      
+                      if (eventDetail?.label) {
+                        tooltipLines.push(`Rake: ${eventDetail.label}`);
+                      }
 
                       return (
                         <td
                           key={`${row.route.id}-${hour}`}
-                          className={`h-10 border-r border-b border-slate-200/70 p-0 ${meta.cellClass} ${meta.textClass} ${
-                            isCurrentHour ? "ring-2 ring-inset ring-[#1565c0]" : ""
-                          }`}
-                          title={`${row.route.name} • ${hour}:00`}
-                        />
+                          className={`w-8 h-8 border-r border-b border-slate-200/70 p-0 relative cursor-help transition-all ${meta.cellClass} ${meta.textClass} ${
+                            isCurrentHour ? "ring-2 ring-inset ring-[#1565c0]/30" : ""
+                          } hover:brightness-95 hover:z-10`}
+                          title={tooltipLines.join("\n")}
+                        >
+                          {isCurrentHour && (
+                            <div 
+                              className="absolute top-0 bottom-0 w-[3px] bg-[#1565c0] z-10 shadow-[0_0_8px_rgba(21,101,192,0.4)]" 
+                              style={{ left: `${(new Date().getMinutes() / 60) * 100}%` }}
+                            />
+                          )}
+                        </td>
                       );
                     })}
 
-                    {dispatchSummaryOrder.map((columnKey) => (
-                      <td
-                        key={`${row.route.id}-${columnKey}`}
-                        className="border-r border-b border-slate-200/70 bg-white px-3 py-3 text-center text-[14px] font-semibold text-slate-800"
-                      >
-                        {row.summary[columnKey]}
-                      </td>
-                    ))}
+
                   </tr>
                 );
               })}
@@ -1009,38 +1004,97 @@ function DispatchTimelineCard({ hierarchy, events }) {
           </table>
         </div>
 
-        <aside className="self-start">
-          <div className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-[0_16px_40px_-30px_rgba(15,47,103,0.45)]">
-            <div className="border-b border-slate-200/70 bg-surface px-4 py-3 text-center text-[18px] font-extrabold text-slate-800">
-              Index
-            </div>
-            <div className="divide-y divide-slate-200/70">
-              {dispatchLegendOrder.map((statusKey) => {
-                const meta = dispatchStatusMeta[statusKey];
-
-                return (
-                  <div
-                    key={statusKey}
-                    className={`${meta.cellClass} px-4 py-2.5 text-center text-[13px] font-semibold ${meta.textClass}`}
-                  >
-                    {meta.label}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </aside>
       </div>
     </article>
   );
-}
+});
+
+const DispatchSummaryCard = memo(function DispatchSummaryCard({ sheetRows }) {
+  const totals = useMemo(() => {
+    return sheetRows.reduce((acc, row) => {
+      acc.loading += row.summary.loading;
+      acc.idle += row.summary.idle;
+      acc.shutdown += row.summary.shutdown;
+      acc.demurrage += row.summary.demurrage;
+      return acc;
+    }, { loading: 0, idle: 0, shutdown: 0, demurrage: 0 });
+  }, [sheetRows]);
+
+  return (
+    <article className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+      <div className="border-b border-slate-100 px-6 py-4">
+        <h3 className="text-lg font-black tracking-tight text-slate-900 uppercase">Operational Summary</h3>
+        <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">Route-wise Breakdown of status hours</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full border-separate border-spacing-0">
+          <thead>
+            <tr className="bg-slate-50/50">
+              <th className="sticky left-0 z-10 border-r border-b border-slate-200/70 bg-slate-50/50 px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
+                Siding / Route
+              </th>
+              {dispatchSummaryOrder.map((statusKey) => (
+                <th key={statusKey} className="border-b border-slate-200/70 px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span className={`h-2 w-2 rounded-full ${dispatchStatusMeta[statusKey].cellClass}`} />
+                    {dispatchStatusMeta[statusKey].summaryLabel}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {sheetRows.map((row, rowIndex) => (
+              <tr key={row.route.id} className={rowIndex % 2 === 0 ? "bg-white" : "bg-[#fcfcfd]"}>
+                <td className="sticky left-0 z-10 border-r border-b border-slate-200/70 bg-inherit px-3 py-2 w-px whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <p className="min-w-[140px] text-[11px] font-bold text-[#0f2f67] uppercase">
+                      {row.siding.name} / {row.route.name}
+                    </p>
+                    <div className="flex items-center">
+                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[8px] font-black text-slate-700 border border-slate-200">
+                        {row.route.code}
+                      </span>
+                    </div>
+                  </div>
+                </td>
+                {dispatchSummaryOrder.map((statusKey) => (
+                  <td key={statusKey} className="border-b border-slate-200/70 px-3 py-2 text-center">
+                    <span className="text-[12px] font-black text-slate-900">
+                      {String(row.summary[statusKey]).padStart(2, "0")}
+                    </span>
+                    <span className="ml-1 text-[9px] font-bold text-slate-400 uppercase">h</span>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="bg-slate-900 text-white">
+              <td className="sticky left-0 z-10 border-r bg-slate-900 px-3 py-3 text-[11px] font-black uppercase tracking-widest">
+                System Totals
+              </td>
+              {dispatchSummaryOrder.map((statusKey) => (
+                <th key={statusKey} className="px-3 py-3 text-center">
+                  <span className="text-[14px] font-black text-white">
+                    {String(totals[statusKey]).padStart(2, "0")}
+                  </span>
+                  <span className="ml-1 text-[10px] font-bold text-slate-400 uppercase">h</span>
+                </th>
+              ))}
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </article>
+  );
+});
 
 export default function Dashboard() {
-  const [hoveredHourlySeries, setHoveredHourlySeries] = useState(null);
   const [sortBy, setSortBy] = useState("rakeId");
   const [sortOrder, setSortOrder] = useState("asc");
   const [tablePage, setTablePage] = useState(1);
-  const [dashboardDate, setDashboardDate] = useState(formatDashboardDate(new Date()));
+  const [dashboardDate, setDashboardDate] = useState(() => formatDashboardDate(new Date()));
   const [activeHourlySeries, setActiveHourlySeries] = useState(
     baseHourlySeriesMeta.reduce((acc, series) => {
       acc[series.key] = true;
@@ -1078,21 +1132,6 @@ export default function Dashboard() {
     const start = (tablePage - 1) * pageSize;
     return sortedRows.slice(start, start + pageSize);
   }, [tablePage, sortedRows]);
-  const toggleHourlySeries = (seriesKey) => {
-    setActiveHourlySeries((previous) => {
-      const currentlyEnabled = Object.values(previous).filter(Boolean).length;
-
-      if (previous[seriesKey] && currentlyEnabled === 1) {
-        return previous;
-      }
-
-      return {
-        ...previous,
-        [seriesKey]: !previous[seriesKey],
-      };
-    });
-    setHoveredHourlySeries(null);
-  };
 
   const hourlyChartData = useMemo(() => {
     const activeMeta = hourlySeriesMeta.filter((series) => activeHourlySeries[series.key]);
@@ -1132,33 +1171,63 @@ export default function Dashboard() {
       totals,
     };
   }, [activeHourlySeries, hourlySeries, hourlySeriesMeta]);
-  return (
-    <div className="relative isolate overflow-hidden rounded-[34px] border border-white/70 bg-linear-to-br from-[#f8fbff] via-white to-[#edf3fb] p-4 shadow-[0_32px_70px_-48px_rgba(15,47,103,0.45)] sm:p-5 lg:p-6">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-24 top-0 h-64 w-64 rounded-full bg-[#dce9ff]/70 blur-3xl" />
-        <div className="absolute right-0 top-20 h-80 w-80 rounded-full bg-[#eef4ff] blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-[#e2f0ff]/60 blur-3xl" />
-      </div>
 
-      <div className="relative space-y-4 lg:space-y-5">
-          <div className="flex items-center justify-end gap-3">
+  const eventsByRouteId = useMemo(() => {
+    return dispatchGridEvents.reduce((accumulator, event) => {
+      const routeKey = event.route || event.siding;
+      if (!accumulator[routeKey]) {
+        accumulator[routeKey] = [];
+      }
+      accumulator[routeKey].push(event);
+      return accumulator;
+    }, {});
+  }, []);
+
+  const sheetRows = useMemo(() => {
+    return dispatchGridHierarchy.flatMap((siding) =>
+      siding.routes.map((route) => {
+        const routeEvents = eventsByRouteId[route.id] || [];
+
+        return {
+          siding,
+          route,
+          routeEvents,
+          hourStatuses: dispatchGridHours.map((hour) => resolveDispatchHourStatus(routeEvents, hour)),
+          summary: buildDispatchRowSummary(routeEvents),
+        };
+      }),
+    );
+  }, [eventsByRouteId]);
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] p-4 lg:p-8">
+      <div className="mx-auto max-w-[1600px] space-y-8">
+        {/* Modern Header */}
+        <header className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-black tracking-tight text-slate-900">Operations Cockpit</h1>
+          </div>
+          
+          <div className="flex items-center gap-3">
             <input
               type="date"
               value={dashboardDate}
               onChange={(event) => setDashboardDate(event.target.value)}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-900 outline-none shadow-sm focus:ring-2 focus:ring-slate-100 transition-all"
             />
           </div>
+        </header>
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {metricCards.map((card) => (
             <MetricCard key={card.title} card={card} />
           ))}
         </section>
 
-        <section>
+        <section className="flex flex-col gap-6">
           <DispatchTimelineCard
-            hierarchy={dispatchGridHierarchy}
-            events={dispatchGridEvents}
+            sheetRows={sheetRows}
+          />
+          <DispatchSummaryCard 
+            sheetRows={sheetRows}
           />
         </section>
 
@@ -1166,34 +1235,69 @@ export default function Dashboard() {
           <LiveWagonCountCard rows={hourlyChartData.bars} seriesMeta={hourlySeriesMeta} />
         </section>
 
-        <section>
-          <article className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white/95 shadow-[0_24px_60px_-45px_rgba(15,47,103,0.58)] backdrop-blur">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/70 bg-linear-to-r from-[#f8fbff] via-white to-[#eef4ff] px-5 py-4">
-            <div>
-            <h3 className="text-[17px] font-extrabold tracking-[-0.02em] text-[#102a57]">
-              Active Rake Log &amp; Clearances
-            </h3>
-            <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Realtime clearance register</p>
+        {adjustmentRakeRows.length > 0 && (
+          <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/30 px-6 py-5">
+              <div>
+                <h3 className="text-lg font-black tracking-tight text-slate-900 uppercase">Adjustment Rake</h3>
+                <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">Load Correction Tracking</p>
+              </div>
             </div>
-            <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#1f4f96]" />
-                In Transit
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                Cleared
-              </span>
-              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[9px] font-bold tracking-[0.14em] text-slate-500 shadow-sm">
-                Page {tablePage} / {totalPages}
-              </span>
+
+            <div className="overflow-x-auto">
+              <table className="w-full border-separate border-spacing-0">
+                <thead>
+                  <tr className="bg-slate-50/50">
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">SNO</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">ORE TYPE</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">SIDING</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">DESTINATION</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">PLACEMENT TIME</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adjustmentRakeRows.map((row, index) => (
+                    <tr key={row.sno} className={`border-b border-slate-200/70 ${index % 2 === 0 ? "bg-white" : "bg-[#fbfcfe]"}`}>
+                      <td className="whitespace-nowrap px-6 py-3 text-[12px] font-bold text-slate-400">{row.sno}</td>
+                      <td className="whitespace-nowrap px-6 py-3 text-[12px] font-bold text-[#0f2f67]">{row.oreType}</td>
+                      <td className="whitespace-nowrap px-6 py-3 text-[12px] font-semibold text-slate-700">{row.siding}</td>
+                      <td className="whitespace-nowrap px-6 py-3 text-[12px] font-semibold text-slate-700">{row.destination}</td>
+                      <td className="whitespace-nowrap px-6 py-3 text-[12px] font-bold text-[#155eef]">{row.placementTime}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/30 px-6 py-5">
+            <div>
+              <h3 className="text-lg font-black tracking-tight text-slate-900 uppercase">Active Rake Log</h3>
+              <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">Operational Status & Clearances</p>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest">
+                <span className="flex items-center gap-2 text-slate-500">
+                  <span className="h-2 w-2 rounded-full bg-blue-600" />
+                  In Transit
+                </span>
+                <span className="flex items-center gap-2 text-slate-500">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  Cleared
+                </span>
+              </div>
+              <div className="flex items-center rounded-lg bg-slate-100 px-3 py-1.5 text-[10px] font-black tracking-widest text-slate-500">
+                PAGINATION {tablePage} / {totalPages}
+              </div>
             </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-375 border-separate border-spacing-0">
               <thead>
-                <tr className="border-b border-slate-200/70 bg-surface">
+                <tr className="bg-slate-50/50">
                   <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                     <SortHeaderButton label="Rake ID" field="rakeId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
@@ -1311,7 +1415,6 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
-          </article>
         </section>
       </div>
     </div>
