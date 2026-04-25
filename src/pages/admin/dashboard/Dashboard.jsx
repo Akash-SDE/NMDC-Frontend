@@ -1239,7 +1239,7 @@ export default function Dashboard() {
           <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/30 px-6 py-5">
               <div>
-                <h3 className="text-lg font-black tracking-tight text-slate-900 uppercase">Adjustment Rake</h3>
+                <h3 className="text-lg font-black tracking-tight text-slate-900 uppercase">Upcoming Rake</h3>
                 <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">Load Correction Tracking</p>
               </div>
             </div>
