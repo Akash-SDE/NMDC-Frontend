@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
-import { getWagonTypesMasterData } from "../../../data/adminmasterdatafiles/wagonTypes";
 
 const baseMetricCards = [
   {
@@ -555,7 +554,6 @@ function formatDashboardDateLabel(dateValue) {
 }
 
 function LiveWagonCountCard({ rows, seriesMeta }) {
-  const [fixedTime] = useState(() => new Date());
   const [hoveredTrendPoint, setHoveredTrendPoint] = useState(null);
 
   const resolveSeriesStroke = (colorClass) => {
@@ -649,7 +647,7 @@ function LiveWagonCountCard({ rows, seriesMeta }) {
     };
   }, [fullDayRows, seriesMeta]);
 
-  /*
+    return (
     <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 px-4 py-4">
         <div>
@@ -897,204 +895,6 @@ function DispatchTimelineCard({ hierarchy, events }) {
     );
   }, [eventsByRouteId, hierarchy]);
 
-  return (
-    <article className="overflow-hidden rounded-3xl border border-rose-200 bg-white shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-rose-200 px-5 py-4">
-        <div>
-          <h3 className="text-[22px] font-extrabold leading-tight text-[#102a57]">REAL-TIME DISPATCH GRID</h3>
-          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-500">
-            24-HOUR SIDING & ROUTE ALLOCATION
-          </p>
-          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-600">
-            CURRENT TIME: <span className="text-[#1565c0]">{currentTimeLabel}</span>
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-4 px-3 py-3 xl:grid-cols-[minmax(0,1fr)_210px] xl:px-4 xl:pb-4">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-412.5 border-separate border-spacing-0">
-            <thead>
-              <tr>
-                <th
-                  rowSpan={2}
-                  className="sticky left-0 z-30 border-r border-b border-rose-300 bg-surface px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-700"
-                >
-                  Siding / Route
-                </th>
-                {dispatchGridHours.map((hour) => (
-                  <th
-                    key={hour}
-                    className={`border-r border-b border-rose-300 px-1 py-3 text-center text-[15px] font-bold leading-none text-slate-800 ${
-                      hour === currentHour ? "bg-[#dfeafb] text-[#1565c0]" : "bg-surface"
-                    }`}
-                  >
-                    {formatDispatchHour(hour)}
-                  </th>
-                ))}
-                <th
-                  colSpan={dispatchSummaryOrder.length}
-                  className="border-b border-rose-300 bg-surface px-4 py-3 text-center text-[18px] font-extrabold text-slate-800"
-                >
-                  Summary
-                </th>
-              </tr>
-              <tr>
-                <th colSpan={dispatchGridHours.length} className="border-r border-b border-rose-300 bg-white p-0" />
-                {dispatchSummaryOrder.map((columnKey) => {
-                  const meta = dispatchStatusMeta[columnKey];
-
-                  return (
-                    <th
-                      key={columnKey}
-                      className="border-r border-b border-rose-300 bg-white px-3 py-2 text-center text-[13px] font-bold capitalize tracking-[0.06em] text-slate-600"
-                    >
-                      {meta.summaryLabel}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-
-            <tbody>
-              {sheetRows.map((row, rowIndex) => {
-                const rowBackground = rowIndex % 2 === 0 ? "bg-white" : "bg-[#fcfcfd]";
-
-                return (
-                  <tr key={`${row.siding.id}-${row.route.id}`}>
-                    <td className={`sticky left-0 z-20 border-r border-b border-rose-300 px-4 py-3 align-middle ${rowBackground}`}>
-                      <div className="flex items-center gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-bold text-[#0f2f67]">{row.route.name}</p>
-                          <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500">
-                            {row.siding.name}
-                          </p>
-                        </div>
-                        <div className="ml-auto flex items-center gap-2">
-                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[9px] font-bold text-slate-700">
-                            {row.route.code}
-                          </span>
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-500">
-                            {row.route.count}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {dispatchGridHours.map((hour) => {
-                      return (
-                        <article className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white/95 shadow-[0_24px_60px_-45px_rgba(15,47,103,0.6)] backdrop-blur">
-                          <div className="border-b border-slate-200/70 bg-linear-to-r from-[#f8fbff] via-white to-[#eef4ff] px-5 py-5">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div>
-                                <h3 className="text-[22px] font-extrabold leading-tight text-[#102a57]">HOURLY WAGON COUNT</h3>
-                                <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-500">TIME-STAMPED WAGON SNAPSHOT</p>
-                              </div>
-                              <span className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#1565c0]">
-                                Live trend
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="border-b border-slate-200/70 bg-[#f7fbff] px-5 py-5">
-                            <div className="rounded-3xl border border-slate-200/70 bg-white/85 p-4 shadow-sm">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">WAGON COUNT TREND</p>
-
-                              <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-bold text-slate-600">
-                                {seriesMeta.map((series) => (
-                                  <span
-                                    key={`trend-legend-${series.key}`}
-                                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 bg-slate-50 px-3 py-1.5 uppercase tracking-[0.04em] shadow-sm"
-                                  >
-                                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: resolveSeriesStroke(series.color) }} />
-                                    {series.label}
-                                  </span>
-                                ))}
-                              </div>
-
-                              <div className="mt-3 min-h-10">
-                                {hoveredTrendPoint ? (
-                                  <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: hoveredTrendPoint.color }} />
-                                    <p className="text-[11px] font-semibold text-[#0f2f67]">
-                                      {hoveredTrendPoint.label} at {hoveredTrendPoint.hour}: <span className="font-extrabold">{hoveredTrendPoint.value}</span>
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-400">Hover a dot to view details</p>
-                                )}
-                              </div>
-
-                              <div className="mt-4 overflow-x-auto rounded-[20px] border border-slate-200/60 bg-white p-3">
-                                <svg viewBox={`0 0 ${lineChartData.chartWidth} ${lineChartData.chartHeight}`} className="h-72 w-full min-w-240">
-                                  {lineChartData.guides.map((guide) => (
-                                    <g key={`guide-${guide.value}-${guide.y}`}>
-                                      <line
-                                        x1={lineChartData.left}
-                                        y1={guide.y}
-                                        x2={lineChartData.chartWidth - lineChartData.right}
-                                        y2={guide.y}
-                                        stroke="#dbe4ef"
-                                        strokeWidth="1"
-                                      />
-                                      <text x={lineChartData.left - 8} y={guide.y + 4} textAnchor="end" fontSize="10" fill="#738299" fontWeight="700">
-                                        {guide.value}
-                                      </text>
-                                    </g>
-                                  ))}
-
-                                  {lineChartData.lines.map((series) => (
-                                    <g key={`${series.key}-line`}>
-                                      <path d={series.path} fill="none" stroke={series.stroke} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                                      {series.points.map((point) => (
-                                        <circle
-                                          key={`${series.key}-${point.hour}`}
-                                          cx={point.x}
-                                          cy={point.y}
-                                          r="3"
-                                          fill={series.stroke}
-                                          tabIndex={0}
-                                          className="cursor-pointer"
-                                          onMouseEnter={() =>
-                                            setHoveredTrendPoint({
-                                              label: series.label,
-                                              hour: point.hour,
-                                              value: point.value,
-                                              color: series.stroke,
-                                            })
-                                          }
-                                          onMouseLeave={() => setHoveredTrendPoint(null)}
-                                          onFocus={() =>
-                                            setHoveredTrendPoint({
-                                              label: series.label,
-                                              hour: point.hour,
-                                              value: point.value,
-                                              color: series.stroke,
-                                            })
-                                          }
-                                          onBlur={() => setHoveredTrendPoint(null)}
-                                        >
-                                          <title>{`${series.label} ${point.hour}: ${point.value}`}</title>
-                                        </circle>
-                                      ))}
-                                    </g>
-                                  ))}
-
-                                  {lineChartData.rowsAscending.map((row, index) => {
-                                    const x = lineChartData.left + lineChartData.stepX * index;
-                                    return (
-                                      <text key={`x-label-${row.hour}`} x={x} y={lineChartData.chartHeight - 10} textAnchor="middle" fontSize="10" fill="#738299" fontWeight="700">
-                                        {row.hour}
-                                      </text>
-                                    );
-                                  })}
-                                </svg>
-                              </div>
-                            </div>
-                          </div>
-
-                        </article>
-  */
 
   return (
     <article className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white/95 shadow-[0_28px_70px_-45px_rgba(15,47,103,0.58)] backdrop-blur">
@@ -1251,6 +1051,19 @@ function DispatchTimelineCard({ hierarchy, events }) {
 
 export default function Dashboard() {
   const [hoveredHourlySeries, setHoveredHourlySeries] = useState(null);
+  const [sortBy, setSortBy] = useState("rakeId");
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [tablePage, setTablePage] = useState(1);
+  const [dashboardDate, setDashboardDate] = useState(formatDashboardDate(new Date()));
+  const [activeHourlySeries, setActiveHourlySeries] = useState(
+    baseHourlySeriesMeta.reduce((acc, series) => {
+      acc[series.key] = true;
+      return acc;
+    }, {})
+  );
+
+  const hourlySeries = baseHourlySeries;
+  const hourlySeriesMeta = baseHourlySeriesMeta;
 
   const metricCards = baseMetricCards;
 
@@ -1333,19 +1146,6 @@ export default function Dashboard() {
       totals,
     };
   }, [activeHourlySeries, hourlySeries, hourlySeriesMeta]);
-
-  const hourlyHoverSummary = useMemo(() => {
-    if (!hoveredHourlySeries || !activeHourlySeries[hoveredHourlySeries.key]) {
-      return null;
-    }
-
-    const seriesLabel = hourlySeriesMeta.find((series) => series.key === hoveredHourlySeries.key)?.label;
-    return {
-      hour: hoveredHourlySeries.hour,
-      label: seriesLabel,
-      value: hoveredHourlySeries.value,
-    };
-  }, [hoveredHourlySeries, activeHourlySeries, hourlySeriesMeta]);
 
   const dashboardDateLabel = formatDashboardDateLabel(dashboardDate);
   const dashboardHeroStats = [
