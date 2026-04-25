@@ -837,12 +837,6 @@ function MetricCard({ card }) {
           <CardIcon type={card.icon} />
         </div>
       </div>
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-200/70 pt-3">
-        <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${card.noteColor}`}>{card.note || "Shift snapshot"}</p>
-        <span className="rounded-full border border-slate-200/70 bg-white px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">
-          Live
-        </span>
-      </div>
       {card.title === "TOTAL RAKES COMPLETED" ? (
         <div className="mt-2 h-0.75 rounded bg-slate-200">
           <span className="block h-full w-[93%] rounded bg-[#2f79e9]" />
@@ -912,14 +906,6 @@ function DispatchTimelineCard({ hierarchy, events }) {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600 shadow-sm">
-            24h view
-          </span>
-          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600 shadow-sm">
-            Clock sync {currentTimeLabel}
-          </span>
-        </div>
       </div>
 
       <div className="grid gap-4 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_220px] xl:px-5 xl:pb-5">
@@ -1146,26 +1132,6 @@ export default function Dashboard() {
       totals,
     };
   }, [activeHourlySeries, hourlySeries, hourlySeriesMeta]);
-
-  const dashboardDateLabel = formatDashboardDateLabel(dashboardDate);
-  const dashboardHeroStats = [
-    {
-      label: "ACTIVE RAKES",
-      value: activeRakeRows.length,
-      detail: "live in the log",
-    },
-    {
-      label: "SIDINGS / ROUTES",
-      value: `${dispatchGridHierarchy.length}/${dispatchRouteCount}`,
-      detail: "network coverage",
-    },
-    {
-      label: "WAGON SERIES",
-      value: hourlySeriesMeta.length,
-      detail: "hourly channels",
-    },
-  ];
-
   return (
     <div className="relative isolate overflow-hidden rounded-[34px] border border-white/70 bg-linear-to-br from-[#f8fbff] via-white to-[#edf3fb] p-4 shadow-[0_32px_70px_-48px_rgba(15,47,103,0.45)] sm:p-5 lg:p-6">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -1175,66 +1141,14 @@ export default function Dashboard() {
       </div>
 
       <div className="relative space-y-4 lg:space-y-5">
-        <section className="overflow-hidden rounded-4xl border border-slate-200/70 bg-linear-to-r from-[#081b3d] via-[#12396b] to-[#1f4f96] px-5 py-5 text-white shadow-[0_24px_60px_-42px_rgba(8,29,61,0.8)] sm:px-6">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.12),transparent_28%)]" />
-          <div className="relative grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.8fr)] xl:items-stretch">
-            <div className="space-y-4">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-sky-100 backdrop-blur">
-                Operations cockpit
-              </span>
-              <div>
-                <h1 className="text-[31px] font-black leading-tight tracking-[-0.04em] sm:text-[42px]">Premium dispatch intelligence</h1>
-                <p className="mt-3 max-w-2xl text-[13px] leading-6 text-sky-100/85">
-                  A polished real-time command surface for siding allocation, wagon flow, and rake readiness across the network.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-100 backdrop-blur">
-                  Live grid
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-100 backdrop-blur">
-                  24-hour window
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-100 backdrop-blur">
-                  Selected date {dashboardDateLabel}
-                </span>
-              </div>
-            </div>
-
-            <div className="rounded-[28px] border border-white/15 bg-white/10 p-4 shadow-[0_20px_45px_-30px_rgba(8,29,61,0.7)] backdrop-blur">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-100/80">Report date</p>
-                  <p className="mt-1 text-[22px] font-black tracking-[-0.03em] text-white">{dashboardDateLabel}</p>
-                </div>
-                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-100">
-                  Live
-                </span>
-              </div>
-
-              <div className="mt-4 space-y-3">
-                <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-sky-100/80">Select date</label>
-                <input
-                  type="date"
-                  value={dashboardDate}
-                  onChange={(event) => setDashboardDate(event.target.value)}
-                  className="w-full rounded-2xl border border-white/15 bg-white px-4 py-3 text-sm font-semibold text-[#0f2f67] shadow-sm outline-none transition focus:border-[#9bc4ff] focus:ring-2 focus:ring-[#9bc4ff]/30"
-                />
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                {dashboardHeroStats.map((stat) => (
-                  <div key={stat.label} className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur">
-                    <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-sky-100/75">{stat.label}</p>
-                    <p className="mt-2 text-[24px] font-black leading-none text-white">{stat.value}</p>
-                    <p className="mt-1 text-[10px] font-medium text-sky-100/80">{stat.detail}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="flex items-center justify-end gap-3">
+            <input
+              type="date"
+              value={dashboardDate}
+              onChange={(event) => setDashboardDate(event.target.value)}
+              className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
           </div>
-        </section>
-
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {metricCards.map((card) => (
             <MetricCard key={card.title} card={card} />
@@ -1360,7 +1274,7 @@ export default function Dashboard() {
                     <td className="whitespace-nowrap px-4 py-3 text-[12px] font-medium text-slate-700">{row.updatedAt}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex rounded-full px-2 py-1 text-[9px] font-bold tracking-[0.06em] ${getStatusClasses(
+                        className={`inline-flex min-w-[90px] items-center justify-center whitespace-nowrap rounded-full px-3 py-1 text-[9px] font-bold tracking-[0.06em] ${getStatusClasses(
                           row.status,
                         )}`}
                       >
