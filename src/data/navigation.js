@@ -29,26 +29,14 @@ const adminSidebarSections = [
         icon: "rake",
       },
       {
-        id: "loading",
-        label: "Loading",
+        id: "loading-management",
+        label: "Load Management",
         icon: "loading",
-        children: [
-          {
-            id: "loading-management",
-            label: "Loading Management",
-          },
-        ],
       },
       {
-        id: "delay",
-        label: "Delay",
+        id: "delay-management",
+        label: "Delay Management",
         icon: "delay",
-        children: [
-          {
-            id: "delay-management",
-            label: "Delay Management",
-          },
-        ],
       },
       {
         id: "master-data",

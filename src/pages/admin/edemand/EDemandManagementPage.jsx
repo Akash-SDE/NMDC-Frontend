@@ -1,15 +1,10 @@
 import { useMemo, useState } from "react";
 import { PlusIcon } from "../../../components/icons";
+import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
-import {
-  UniformFormField,
-  UniformSectionCard,
-  uniformInputClass,
-  uniformPrimaryButtonClass,
-  uniformSecondaryButtonClass,
-} from "../../../components/shared/UniformUi";
+import { uniformInputClass } from "../../../components/shared/UniformUi";
 import { useRouter } from "../../../context/RouterContext";
 
 const customerOptions = [
@@ -134,6 +129,65 @@ const initialDemandForm = {
   salesType: "",
 };
 
+function EditIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+    >
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
+function DeleteIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+    >
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  );
+}
+
+function ClearIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
 const pageShellClass = "space-y-6 3xl:space-y-8 5xl:space-y-12";
 const pageHeaderClass = "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between";
 const pageTitleClass = "text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800";
@@ -158,17 +212,17 @@ function compareValues(a, b, order) {
 }
 
 export default function EDemandManagementPage() {
-  const { currentRoute, navigate } = useRouter();
-  const demandListRoute = "manage-e-demand";
-  const addDemandRoute = "manage-e-demand-add";
+  const { currentRoute } = useRouter();
   const isPermitRoute = currentRoute === "manage-e-permit";
-  const isAddDemandRoute = currentRoute === addDemandRoute;
 
   const [demands, setDemands] = useState(initialDemands);
   const [demandSearch, setDemandSearch] = useState("");
   const [demandSortBy, setDemandSortBy] = useState("id");
   const [demandSortOrder, setDemandSortOrder] = useState("asc");
   const [demandForm, setDemandForm] = useState(initialDemandForm);
+  const [inlineActionMode, setInlineActionMode] = useState("add");
+  const [activeInlineDemandId, setActiveInlineDemandId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const [permitData, setPermitData] = useState(initialPermitRows);
   const [savedPermitNumbers, setSavedPermitNumbers] = useState(() => {
@@ -226,6 +280,22 @@ export default function EDemandManagementPage() {
       .sort((a, b) => compareValues(a[permitSortBy], b[permitSortBy], permitSortOrder));
   }, [permitData, permitSearch, permitSortBy, permitSortOrder]);
 
+  const compactInputClass = `${uniformInputClass} h-8 px-2 text-[11px]`;
+
+  const requiredInlineMissing =
+    !demandForm.date ||
+    !demandForm.customer ||
+    !demandForm.destination ||
+    !demandForm.oreType ||
+    !demandForm.salesType;
+
+  const inlineSaveDisabled =
+    requiredInlineMissing ||
+    (inlineActionMode === "edit" && activeInlineDemandId === null);
+
+  const inlineActionLabel =
+    inlineActionMode === "edit" ? "Save Edit" : "Add E-Demand";
+
   function handleDemandSort(field) {
     if (demandSortBy === field) {
       setDemandSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -268,19 +338,17 @@ export default function EDemandManagementPage() {
     });
   }
 
-  function handleDemandFormChange(event) {
-    const { name, value } = event.target;
-    setDemandForm((prev) => ({ ...prev, [name]: value }));
+  function updateDemandField(field, value) {
+    setDemandForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  function closeDemandForm() {
+  function clearInlineDemand() {
     setDemandForm(initialDemandForm);
-    navigate(demandListRoute);
+    setInlineActionMode("add");
+    setActiveInlineDemandId(null);
   }
 
-  function handleAddDemandSubmit(event) {
-    event.preventDefault();
-
+  function handleInlineSaveDemand() {
     if (
       !demandForm.date ||
       !demandForm.customer ||
@@ -291,8 +359,31 @@ export default function EDemandManagementPage() {
       return;
     }
 
-    const nextId = demands.length > 0 ? Math.max(...demands.map((row) => row.id)) + 1 : 1;
+    if (inlineActionMode === "edit" && activeInlineDemandId !== null) {
+      const currentRow = demands.find((row) => row.id === activeInlineDemandId);
+      const resolvedFNote =
+        demandForm.fNote.trim() || currentRow?.fNote || String(1000 + activeInlineDemandId);
 
+      setDemands((prev) =>
+        prev.map((row) =>
+          row.id === activeInlineDemandId
+            ? {
+                ...row,
+                fNote: resolvedFNote,
+                date: demandForm.date,
+                customer: demandForm.customer,
+                destination: demandForm.destination,
+                oreType: demandForm.oreType,
+                salesType: demandForm.salesType,
+              }
+            : row,
+        ),
+      );
+      clearInlineDemand();
+      return;
+    }
+
+    const nextId = demands.length > 0 ? Math.max(...demands.map((row) => row.id)) + 1 : 1;
     setDemands((prev) => [
       {
         id: nextId,
@@ -306,138 +397,37 @@ export default function EDemandManagementPage() {
       ...prev,
     ]);
 
-    closeDemandForm();
+    clearInlineDemand();
   }
 
-  if (isAddDemandRoute) {
-    return (
-      <div className={pageShellClass}>
-        <div className={pageHeaderClass}>
-          <div>
-            <h2 className={pageTitleClass}>Add E-Demand</h2>
-            <p className={pageSubtitleClass}>
-              Create a new E-Demand record on a dedicated page.
-            </p>
-          </div>
+  function handleEditDemand(row) {
+    setDemandForm({
+      fNote: row.fNote || "",
+      date: row.date || "",
+      customer: row.customer || "",
+      destination: row.destination || "",
+      oreType: row.oreType || "",
+      salesType: row.salesType || "",
+    });
+    setInlineActionMode("edit");
+    setActiveInlineDemandId(row.id);
+  }
 
-          <button
-            type="button"
-            onClick={() => closeDemandForm()}
-            className={`${uniformSecondaryButtonClass} self-start`}
-          >
-            Back to Manage E-Demand
-          </button>
-        </div>
+  function requestDemandDelete(row) {
+    setDeleteTarget(row);
+  }
 
-        <UniformSectionCard
-          title="Add E-Demand"
-          subtitle="Use the same uniform admin style to register a new demand."
-        >
-          <form onSubmit={handleAddDemandSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <UniformFormField label="F-Note">
-                <input
-                  type="text"
-                  name="fNote"
-                  value={demandForm.fNote}
-                  onChange={handleDemandFormChange}
-                  className={uniformInputClass}
-                  placeholder="Enter F-Note"
-                />
-              </UniformFormField>
+  function closeDemandDelete() {
+    setDeleteTarget(null);
+  }
 
-              <UniformFormField label="Date">
-                <input
-                  type="date"
-                  name="date"
-                  value={demandForm.date}
-                  onChange={handleDemandFormChange}
-                  className={uniformInputClass}
-                  required
-                />
-              </UniformFormField>
-
-              <UniformFormField label="Customer">
-                <ThemedSelect
-                  name="customer"
-                  value={demandForm.customer}
-                  onChange={handleDemandFormChange}
-                  className={uniformInputClass}
-                  placeholder="Select customer"
-                >
-                  <option value="">Select customer</option>
-                  {customerOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </ThemedSelect>
-              </UniformFormField>
-
-              <UniformFormField label="Destination">
-                <ThemedSelect
-                  name="destination"
-                  value={demandForm.destination}
-                  onChange={handleDemandFormChange}
-                  className={uniformInputClass}
-                  placeholder="Select destination"
-                >
-                  <option value="">Select destination</option>
-                  {destinationOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </ThemedSelect>
-              </UniformFormField>
-
-              <UniformFormField label="Ore Type">
-                <ThemedSelect
-                  name="oreType"
-                  value={demandForm.oreType}
-                  onChange={handleDemandFormChange}
-                  className={uniformInputClass}
-                  placeholder="Select ore type"
-                >
-                  <option value="">Select ore type</option>
-                  {oreTypeOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </ThemedSelect>
-              </UniformFormField>
-
-              <UniformFormField label="Sales Type">
-                <ThemedSelect
-                  name="salesType"
-                  value={demandForm.salesType}
-                  onChange={handleDemandFormChange}
-                  className={uniformInputClass}
-                  placeholder="Select sales type"
-                >
-                  <option value="">Select sales type</option>
-                  {salesTypeOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </ThemedSelect>
-              </UniformFormField>
-            </div>
-
-            <div className="flex flex-wrap justify-end gap-2 pt-1">
-              <button type="button" onClick={closeDemandForm} className={uniformSecondaryButtonClass}>
-                Cancel
-              </button>
-              <button type="submit" className={uniformPrimaryButtonClass}>
-                Save E-Demand
-              </button>
-            </div>
-          </form>
-        </UniformSectionCard>
-      </div>
-    );
+  function confirmDemandDelete() {
+    if (!deleteTarget) return;
+    setDemands((prev) => prev.filter((row) => row.id !== deleteTarget.id));
+    if (activeInlineDemandId === deleteTarget.id) {
+      clearInlineDemand();
+    }
+    setDeleteTarget(null);
   }
 
   if (isPermitRoute) {
@@ -625,14 +615,6 @@ export default function EDemandManagementPage() {
             View and create E-Demand records with Master-page style alignment.
           </p>
         </div>
-
-        <button
-          onClick={() => navigate(addDemandRoute)}
-          className={`${uniformPrimaryButtonClass} flex items-center gap-2 self-start`}
-        >
-          <PlusIcon />
-          <span>Add New E-Demand</span>
-        </button>
       </div>
 
       <SearchBar
@@ -647,6 +629,9 @@ export default function EDemandManagementPage() {
           <table className="w-full" data-print-table>
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
+                <th className="sticky left-0 z-30 border-r border-slate-200/70 bg-slate-50 px-5 py-3.5 text-center text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                  Actions
+                </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   <SortHeaderButton
                     label="Sl No"

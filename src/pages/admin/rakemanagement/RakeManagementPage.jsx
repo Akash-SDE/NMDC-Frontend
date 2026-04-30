@@ -953,7 +953,7 @@ export default function RakeManagementPage() {
             <table className="w-full min-w-475 whitespace-nowrap">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
-                  <th className="px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                  <th className="sticky left-0 z-30 border-r border-slate-200/70 bg-slate-50 px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     Actions
                   </th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
@@ -999,7 +999,7 @@ export default function RakeManagementPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 <tr className="bg-blue-50/50 align-top [&>td]:py-4">
-                  <td className="px-5 py-3">
+                  <td className="sticky left-0 z-20 border-r border-slate-200/70 bg-blue-50 px-5 py-3">
                     <div className="flex flex-col items-center gap-2">
                       {inlineActionMode !== "add" ? (
                         <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500">
@@ -1251,6 +1251,10 @@ export default function RakeManagementPage() {
                     const oreType = row.oreType || "-";
                     const customer = row.customer || "-";
                     const offeredFor = row.adjustOfferFor && row.adjustOfferFor !== "-" ? row.adjustOfferFor : "";
+                    const actionCellClass =
+                      row.rakeId === activeInlineRakeId
+                        ? "bg-amber-50"
+                        : "bg-white group-hover:bg-slate-50";
 
                     return (
                       <tr
@@ -1259,7 +1263,9 @@ export default function RakeManagementPage() {
                           row.rakeId === activeInlineRakeId ? "bg-amber-50/60" : ""
                         } ${row.isDisabled ? "opacity-70" : ""}`}
                       >
-                        <td className="px-5 py-4">
+                        <td
+                          className={`sticky left-0 z-20 border-r border-slate-200/70 px-5 py-4 ${actionCellClass}`}
+                        >
                           <div className="flex items-center justify-center gap-2 opacity-60 transition-opacity group-hover:opacity-100">
                             <button
                               type="button"

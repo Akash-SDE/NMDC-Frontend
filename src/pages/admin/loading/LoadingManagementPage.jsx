@@ -239,38 +239,16 @@ export default function LoadingManagementPage() {
   const [activeInlineRakeId, setActiveInlineRakeId] = useState("");
   const [statusConfirmRakeId, setStatusConfirmRakeId] = useState("");
   const [message, setMessage] = useState("");
-  const [rowEdits, setRowEdits] = useState({});
-  const [activeAdjustmentRakeId, setActiveAdjustmentRakeId] = useState("");
 
   const compactInputClass = `${uniformInputClass} h-8 px-2 text-[11px]`;
 
-  function handleRowEditChange(rakeId, field, value) {
-    setRowEdits((prev) => ({
-      ...prev,
-      [rakeId]: {
-        ...prev[rakeId],
-        [field]: value,
-      },
-    }));
-    setMessage("");
-  }
+  function handleInlineAdjustmentSave(rakeId) {
+    if (!rakeId) return;
 
-  function handleSaveRowEdits(rakeId) {
-    const edits = rowEdits[rakeId];
-    if (!edits) return false;
-
-    const overloadedWagons = edits.overloadedWagons !== undefined && edits.overloadedWagons !== "" ? Number(edits.overloadedWagons) : undefined;
-    const weightRemoved = edits.weightRemoved !== undefined && edits.weightRemoved !== "" ? Number(edits.weightRemoved) : undefined;
-
-    if (overloadedWagons !== undefined && (Number.isNaN(overloadedWagons) || overloadedWagons < 0)) {
-      setMessage("No. of Overloaded Wagons must be a valid positive number.");
-      return false;
-    }
-
-    if (weightRemoved !== undefined && (Number.isNaN(weightRemoved) || weightRemoved < 0)) {
-      setMessage("Weight Removed must be a valid positive number.");
-      return false;
-    }
+    const overloadedWagons =
+      inlineForm.overloadedWagons !== "" ? Number(inlineForm.overloadedWagons) : undefined;
+    const weightRemoved =
+      inlineForm.weightRemoved !== "" ? Number(inlineForm.weightRemoved) : undefined;
 
     setRows((prev) =>
       prev.map((row) =>
@@ -284,36 +262,40 @@ export default function LoadingManagementPage() {
       ),
     );
 
-    setRowEdits((prev) => {
-      const next = { ...prev };
-      delete next[rakeId];
-      return next;
-    });
-
+    setInlineForm(initialInlineForm);
+    setInlineActionMode("add");
+    setActiveInlineRakeId("");
     setMessage(`Updated wagons and weight for rake ${rakeId}`);
-    return true;
   }
 
-  function handleAdjustmentAction(row) {
+  function handleOpenAdjustment(row) {
     if (row.isDisabled) {
       setMessage("Enable this row before making load adjustments.");
       return;
     }
 
-    if (activeAdjustmentRakeId === row.rakeId) {
-      if (!rowEdits[row.rakeId]) {
-        setActiveAdjustmentRakeId("");
-        return;
-      }
-
-      const saved = handleSaveRowEdits(row.rakeId);
-      if (saved) {
-        setActiveAdjustmentRakeId("");
-      }
-      return;
-    }
-
-    setActiveAdjustmentRakeId(row.rakeId);
+    setInlineForm({
+      rakeId: row.rakeId,
+      rakeNumber: row.rakeNumber,
+      wagonSupply: row.wagonSupply,
+      siding: row.siding,
+      route: row.route,
+      customer: row.customer,
+      destination: row.destination,
+      fNote: row.fNote === "-" ? "" : row.fNote,
+      placementTime: row.placementTime,
+      offerTime: row.offerTime,
+      operatorFtp: row.operatorFtp || "",
+      wagonSick: row.wagonSick || "No",
+      tonnage: row.tonnage || "",
+      stockpile: row.stockpile || "",
+      completionTime: row.completionTime || "",
+      clearanceTime: row.clearanceTime || "",
+      overloadedWagons: row.overloadedWagons !== undefined ? row.overloadedWagons : "",
+      weightRemoved: row.weightRemoved !== undefined ? row.weightRemoved : "",
+    });
+    setInlineActionMode("adjust");
+    setActiveInlineRakeId(row.rakeId);
     setMessage("");
   }
 
@@ -413,6 +395,18 @@ export default function LoadingManagementPage() {
   }
 
   function validateInlineForm() {
+    const isAdjustmentMode = inlineActionMode === "adjust";
+
+    if (isAdjustmentMode) {
+      const hasAdjustmentValue =
+        String(inlineForm.overloadedWagons || "").trim() ||
+        String(inlineForm.weightRemoved || "").trim();
+
+      if (!hasAdjustmentValue) {
+        return "Enter overloaded wagons or weight removed before saving adjustment.";
+      }
+    }
+
     const requiredFields = [
       inlineForm.rakeId,
       inlineForm.rakeNumber,
@@ -427,37 +421,43 @@ export default function LoadingManagementPage() {
       inlineForm.stockpile,
     ];
 
-    if (requiredFields.some((field) => !String(field || "").trim())) {
+    if (!isAdjustmentMode && requiredFields.some((field) => !String(field || "").trim())) {
       return "Please fill all required loading fields before saving.";
     }
 
-    if (
+    if (!isAdjustmentMode &&
+      (
       inlineForm.placementTime &&
       inlineForm.completionTime &&
       parseDateTimeToTimestamp(inlineForm.completionTime) <
         parseDateTimeToTimestamp(inlineForm.placementTime)
+      )
     ) {
       return "Completion time must be after placement time.";
     }
 
-    if (
+    if (!isAdjustmentMode &&
+      (
       inlineForm.completionTime &&
       inlineForm.clearanceTime &&
       parseDateTimeToTimestamp(inlineForm.clearanceTime) <
         parseDateTimeToTimestamp(inlineForm.completionTime)
+      )
     ) {
       return "Track clearance time must be after completion time.";
     }
 
-    const normalizedRakeId = inlineForm.rakeId.trim();
-    const duplicateRake = rows.some(
-      (row) =>
-        row.rakeId.toLowerCase() === normalizedRakeId.toLowerCase() &&
-        row.rakeId !== activeInlineRakeId,
-    );
+    if (!isAdjustmentMode) {
+      const normalizedRakeId = inlineForm.rakeId.trim();
+      const duplicateRake = rows.some(
+        (row) =>
+          row.rakeId.toLowerCase() === normalizedRakeId.toLowerCase() &&
+          row.rakeId !== activeInlineRakeId,
+      );
 
-    if (duplicateRake) {
-      return "Rake ID already exists. Use a different Rake ID.";
+      if (duplicateRake) {
+        return "Rake ID already exists. Use a different Rake ID.";
+      }
     }
 
     if (inlineForm.overloadedWagons && (Number.isNaN(Number(inlineForm.overloadedWagons)) || Number(inlineForm.overloadedWagons) < 0)) {
@@ -475,6 +475,11 @@ export default function LoadingManagementPage() {
     const validationMessage = validateInlineForm();
     if (validationMessage) {
       setMessage(validationMessage);
+      return;
+    }
+
+    if (inlineActionMode === "adjust") {
+      handleInlineAdjustmentSave(activeInlineRakeId);
       return;
     }
 
@@ -592,14 +597,31 @@ export default function LoadingManagementPage() {
     inlineForm.stockpile,
   ].some((field) => !String(field || "").trim());
 
-  const inlineSaveDisabled =
-    requiredInlineMissing ||
-    (inlineActionMode === "edit" && !activeInlineRakeId);
+  const isInlineAdjustmentMode = inlineActionMode === "adjust";
+  const isInlineEditMode = inlineActionMode === "edit";
+  const isInlineAddMode = inlineActionMode === "add";
+  const areMainFieldsEditable = !isInlineAdjustmentMode;
+  const areAdjustmentFieldsEditable = isInlineAdjustmentMode || isInlineAddMode;
 
-  const inlineSaveLabel =
-    inlineActionMode === "edit" ? "Save Edit" : "Add Loading";
+  const adjustmentMissing =
+    !String(inlineForm.overloadedWagons || "").trim() &&
+    !String(inlineForm.weightRemoved || "").trim();
 
-  const inlineStatusLabel = inlineActionMode === "edit" ? "Editing" : "Draft";
+  const inlineSaveDisabled = isInlineAdjustmentMode
+    ? adjustmentMissing || !activeInlineRakeId
+    : requiredInlineMissing || (isInlineEditMode && !activeInlineRakeId);
+
+  const inlineSaveLabel = isInlineAdjustmentMode
+    ? "Save Adjustment"
+    : isInlineEditMode
+      ? "Save Edit"
+      : "Add Loading";
+
+  const inlineStatusLabel = isInlineAdjustmentMode
+    ? "Adjusting"
+    : isInlineEditMode
+      ? "Editing"
+      : "Draft";
 
   return (
     <>
@@ -631,7 +653,7 @@ export default function LoadingManagementPage() {
             <table className="w-full min-w-650 whitespace-nowrap">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
-                  <th className="px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                  <th className="sticky left-0 z-30 border-r border-slate-200/70 bg-slate-50 px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     Actions
                   </th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
@@ -695,11 +717,13 @@ export default function LoadingManagementPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 <tr className="bg-blue-50/50 align-top [&>td]:py-4">
-                  <td className="px-5 py-3">
+                  <td className="sticky left-0 z-20 border-r border-slate-200/70 bg-blue-50 px-5 py-3">
                     <div className="flex flex-col items-center gap-2">
-                      {inlineActionMode === "edit" ? (
+                      {inlineActionMode !== "add" ? (
                         <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500">
-                          Editing {activeInlineRakeId}
+                          {inlineActionMode === "edit"
+                            ? `Editing ${activeInlineRakeId}`
+                            : `Adjusting ${activeInlineRakeId}`}
                         </span>
                       ) : null}
                       <div className="flex items-center justify-center gap-2">
@@ -736,6 +760,7 @@ export default function LoadingManagementPage() {
                       onChange={(event) => updateInline("rakeId", event.target.value)}
                       placeholder="Rake ID"
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -745,6 +770,7 @@ export default function LoadingManagementPage() {
                       onChange={(event) => updateInline("rakeNumber", event.target.value)}
                       placeholder="Rake Number"
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -754,6 +780,7 @@ export default function LoadingManagementPage() {
                       onChange={(event) => updateInline("wagonSupply", event.target.value)}
                       placeholder="Type/Count"
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -763,6 +790,7 @@ export default function LoadingManagementPage() {
                       onChange={(event) => updateInline("siding", event.target.value)}
                       placeholder="Siding"
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -772,6 +800,7 @@ export default function LoadingManagementPage() {
                       onChange={(event) => updateInline("route", event.target.value)}
                       placeholder="Route"
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -781,6 +810,7 @@ export default function LoadingManagementPage() {
                       onChange={(event) => updateInline("customer", event.target.value)}
                       placeholder="Customer"
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -790,6 +820,7 @@ export default function LoadingManagementPage() {
                       onChange={(event) => updateInline("destination", event.target.value)}
                       placeholder="Destination"
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -799,6 +830,7 @@ export default function LoadingManagementPage() {
                       onChange={(event) => updateInline("fNote", event.target.value)}
                       placeholder="F-Note"
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -807,6 +839,7 @@ export default function LoadingManagementPage() {
                       value={inlineForm.placementTime}
                       onChange={(event) => updateInline("placementTime", event.target.value)}
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -815,6 +848,7 @@ export default function LoadingManagementPage() {
                       value={inlineForm.offerTime}
                       onChange={(event) => updateInline("offerTime", event.target.value)}
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -824,6 +858,7 @@ export default function LoadingManagementPage() {
                       onChange={(event) => updateInline("operatorFtp", event.target.value)}
                       placeholder="Operator FTP"
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -831,6 +866,7 @@ export default function LoadingManagementPage() {
                       value={inlineForm.wagonSick}
                       onChange={(event) => updateInline("wagonSick", event.target.value)}
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     >
                       {wagonSickOptions.map((option) => (
                         <option key={option} value={option}>
@@ -846,6 +882,7 @@ export default function LoadingManagementPage() {
                       onChange={(event) => updateInline("tonnage", event.target.value)}
                       placeholder="Tonnage"
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -855,6 +892,7 @@ export default function LoadingManagementPage() {
                       onChange={(event) => updateInline("stockpile", event.target.value)}
                       placeholder="Stockpile"
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -863,6 +901,7 @@ export default function LoadingManagementPage() {
                       value={inlineForm.completionTime}
                       onChange={(event) => updateInline("completionTime", event.target.value)}
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -871,6 +910,7 @@ export default function LoadingManagementPage() {
                       value={inlineForm.clearanceTime}
                       onChange={(event) => updateInline("clearanceTime", event.target.value)}
                       className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -880,6 +920,7 @@ export default function LoadingManagementPage() {
                       onChange={(event) => updateInline("overloadedWagons", event.target.value)}
                       placeholder="Wagons"
                       className={compactInputClass}
+                      disabled={!areAdjustmentFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -890,6 +931,7 @@ export default function LoadingManagementPage() {
                       onChange={(event) => updateInline("weightRemoved", event.target.value)}
                       placeholder="Weight"
                       className={compactInputClass}
+                      disabled={!areAdjustmentFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -927,16 +969,12 @@ export default function LoadingManagementPage() {
                 ) : (
                   sortedRows.map((row) => {
                     const statusMeta = getStatusMeta(row);
-                    const isAdjusting = activeAdjustmentRakeId === row.rakeId;
-                    const adjustmentEditable = isAdjusting && !row.isDisabled;
-                    const overloadedDisplayValue =
-                      isAdjusting && rowEdits[row.rakeId]?.overloadedWagons !== undefined
-                        ? rowEdits[row.rakeId].overloadedWagons
-                        : row.overloadedWagons || "";
-                    const weightRemovedDisplayValue =
-                      isAdjusting && rowEdits[row.rakeId]?.weightRemoved !== undefined
-                        ? rowEdits[row.rakeId].weightRemoved
-                        : row.weightRemoved || "";
+                    const isAdjusting =
+                      inlineActionMode === "adjust" && activeInlineRakeId === row.rakeId;
+                    const actionCellClass =
+                      row.rakeId === activeInlineRakeId
+                        ? "bg-amber-50"
+                        : "bg-white group-hover:bg-slate-50";
 
                     return (
                       <tr
@@ -945,7 +983,9 @@ export default function LoadingManagementPage() {
                           row.rakeId === activeInlineRakeId ? "bg-amber-50/60" : ""
                         } ${row.isDisabled ? "opacity-70" : ""}`}
                       >
-                        <td className="px-5 py-4">
+                        <td
+                          className={`sticky left-0 z-20 border-r border-slate-200/70 px-5 py-4 ${actionCellClass}`}
+                        >
                           <div className="flex items-center justify-center gap-2 opacity-60 transition-opacity group-hover:opacity-100">
                             <button
                               type="button"
@@ -963,7 +1003,7 @@ export default function LoadingManagementPage() {
 
                             <button
                               type="button"
-                              onClick={() => handleAdjustmentAction(row)}
+                              onClick={() => handleOpenAdjustment(row)}
                               disabled={row.isDisabled}
                               className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
                                 row.isDisabled
@@ -972,7 +1012,8 @@ export default function LoadingManagementPage() {
                                     ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
                                     : "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                               }`}
-                              title={isAdjusting ? "Save adjustment" : "Start adjustment"}
+                              aria-label={row.isDisabled ? "Enable to adjust" : "Adjustment"}
+                              title={row.isDisabled ? "Enable to adjust" : "Adjustment"}
                             >
                               <LoadAdjustIcon className="h-4 w-4" />
                             </button>
@@ -1024,25 +1065,14 @@ export default function LoadingManagementPage() {
                         <td className="px-5 py-4 text-[13px] text-slate-700">{formatDateTimeForTable(row.completionTime)}</td>
                         <td className="px-5 py-4 text-[13px] text-slate-700">{formatDateTimeForTable(row.clearanceTime)}</td>
                         <td className="px-5 py-3">
-                          <input
-                            type="number"
-                            value={overloadedDisplayValue}
-                            onChange={(e) => handleRowEditChange(row.rakeId, "overloadedWagons", e.target.value)}
-                            placeholder="0"
-                            className={`${compactInputClass} w-20`}
-                            disabled={!adjustmentEditable}
-                          />
+                          <span className="text-[13px] text-slate-700">
+                            {row.overloadedWagons ?? "-"}
+                          </span>
                         </td>
                         <td className="px-5 py-3">
-                          <input
-                            type="number"
-                            step="any"
-                            value={weightRemovedDisplayValue}
-                            onChange={(e) => handleRowEditChange(row.rakeId, "weightRemoved", e.target.value)}
-                            placeholder="0.0"
-                            className={`${compactInputClass} w-24`}
-                            disabled={!adjustmentEditable}
-                          />
+                          <span className="text-[13px] text-slate-700">
+                            {row.weightRemoved ?? "-"}
+                          </span>
                         </td>
                         <td className="px-5 py-4">
                           <span
