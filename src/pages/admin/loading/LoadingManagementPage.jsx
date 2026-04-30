@@ -6,7 +6,22 @@ import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
-import { DelayClockIcon, LoadAdjustIcon, PlusIcon } from "../../../components/icons";
+import {
+  DelayIcon,
+  AdjustIcon as AdjustmentIcon,
+  PlusIcon,
+  EditIcon,
+  DeleteIcon,
+  ClearIcon,
+  DisableIcon,
+  EnableIcon,
+} from "../../../components/icons";
+import {
+  formatDateTimeForTable,
+  formatTableDateTimeForInput,
+  getLocalDateTimeValue,
+  parseDateTimeToTimestamp,
+} from "../../../utils/dateUtils";
 import { useRouter } from "../../../context/RouterContext";
 
 const wagonSickOptions = ["No", "Yes"];
@@ -98,104 +113,6 @@ const initialInlineForm = {
   weightRemoved: "",
 };
 
-function EditIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-    >
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-}
-
-function DisableIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-    >
-      <rect x="3" y="11" width="18" height="10" rx="2" ry="2" />
-      <line x1="12" y1="11" x2="12" y2="7" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}
-
-function EnableIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-    >
-      <path d="M17 11V7a5 5 0 0 0-10 0v4" />
-      <rect x="3" y="11" width="18" height="10" rx="2" ry="2" />
-      <polyline points="8 16 11 19 16 14" />
-    </svg>
-  );
-}
-
-function ClearIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  );
-}
-
-function formatDateTimeForTable(value) {
-  if (!value) return "-";
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "-";
-
-  const day = String(parsed.getDate()).padStart(2, "0");
-  const month = String(parsed.getMonth() + 1).padStart(2, "0");
-  const year = parsed.getFullYear();
-  const hours = String(parsed.getHours()).padStart(2, "0");
-  const minutes = String(parsed.getMinutes()).padStart(2, "0");
-
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
-}
-
-function parseDateTimeToTimestamp(value) {
-  if (!value) return 0;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
-}
-
 function getStatusMeta(row) {
   if (row.isDisabled) {
     return {
@@ -226,6 +143,15 @@ function getStatusMeta(row) {
     badgeClass: "border-amber-200 bg-amber-50 text-amber-700",
     dotClass: "bg-amber-500",
   };
+}
+
+function compareValues(a, b, order) {
+  const left = typeof a === "string" ? a.toLowerCase() : a;
+  const right = typeof b === "string" ? b.toLowerCase() : b;
+
+  if (left === right) return 0;
+  if (left > right) return order === "asc" ? 1 : -1;
+  return order === "asc" ? -1 : 1;
 }
 
 export default function LoadingManagementPage() {
@@ -1015,7 +941,7 @@ export default function LoadingManagementPage() {
                               aria-label={row.isDisabled ? "Enable to adjust" : "Adjustment"}
                               title={row.isDisabled ? "Enable to adjust" : "Adjustment"}
                             >
-                              <LoadAdjustIcon className="h-4 w-4" />
+                              <AdjustmentIcon className="h-4 w-4" />
                             </button>
 
                             <button
@@ -1029,7 +955,7 @@ export default function LoadingManagementPage() {
                               }`}
                               title="Delay management"
                             >
-                              <DelayClockIcon className="h-4 w-4" />
+                              <DelayIcon className="h-4 w-4" />
                             </button>
 
                             <button

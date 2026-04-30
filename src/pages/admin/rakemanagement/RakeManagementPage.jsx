@@ -9,7 +9,19 @@ import {
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import { useRouter } from "../../../context/RouterContext";
 import SearchBar from "../../../components/shared/SearchBar";
-import { PlusIcon } from "../../../components/icons";
+import {
+  PlusIcon,
+  EditIcon,
+  DisableIcon,
+  EnableIcon,
+  AdjustIcon as AdjustmentIcon,
+} from "../../../components/icons";
+import {
+  formatDateTimeForTable,
+  formatTableDateTimeForInput,
+  getLocalDateTimeValue,
+  parseDateTimeToTimestamp as parseTableDateTimeToTimestamp,
+} from "../../../utils/dateUtils";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
 
@@ -92,136 +104,6 @@ const initialOfferingForm = {
   placementTime: "",
   offerTime: "",
 };
-
-function EditIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-    >
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-}
-
-function DisableIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-    >
-      <rect x="3" y="11" width="18" height="10" rx="2" ry="2" />
-      <line x1="12" y1="11" x2="12" y2="7" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}
-
-function EnableIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-    >
-      <path d="M17 11V7a5 5 0 0 0-10 0v4" />
-      <rect x="3" y="11" width="18" height="10" rx="2" ry="2" />
-      <polyline points="8 16 11 19 16 14" />
-    </svg>
-  );
-}
-
-function AdjustmentIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-    >
-      <line x1="4" y1="21" x2="4" y2="14" />
-      <line x1="4" y1="10" x2="4" y2="3" />
-      <line x1="12" y1="21" x2="12" y2="12" />
-      <line x1="12" y1="8" x2="12" y2="3" />
-      <line x1="20" y1="21" x2="20" y2="16" />
-      <line x1="20" y1="12" x2="20" y2="3" />
-      <line x1="1" y1="14" x2="7" y2="14" />
-      <line x1="9" y1="8" x2="15" y2="8" />
-      <line x1="17" y1="16" x2="23" y2="16" />
-    </svg>
-  );
-}
-
-function formatDateTimeForTable(value) {
-  if (!value) return "";
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "";
-
-  const day = String(parsed.getDate()).padStart(2, "0");
-  const month = String(parsed.getMonth() + 1).padStart(2, "0");
-  const year = parsed.getFullYear();
-  const hours = String(parsed.getHours()).padStart(2, "0");
-  const minutes = String(parsed.getMinutes()).padStart(2, "0");
-
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
-}
-
-function parseTableDateTimeToTimestamp(value) {
-  const [datePart = "", timePart = ""] = String(value || "").split(" ");
-  const [day = "", month = "", year = ""] = datePart.split("/");
-  const [hours = "0", minutes = "0"] = timePart.split(":");
-
-  const parsed = new Date(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number(hours),
-    Number(minutes),
-  );
-
-  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
-}
-
-function formatTableDateTimeForInput(value) {
-  const timestamp = parseTableDateTimeToTimestamp(value);
-  if (!timestamp) return "";
-
-  const parsed = new Date(timestamp);
-  const localValue = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000);
-  return localValue.toISOString().slice(0, 16);
-}
-
-function getLocalDateTimeValue(value = new Date()) {
-  const localValue = new Date(value.getTime() - value.getTimezoneOffset() * 60000);
-  return localValue.toISOString().slice(0, 16);
-}
 
 function createUpcomingRow(index = 0) {
   return {
@@ -476,8 +358,16 @@ export default function RakeManagementPage() {
       return { wagonType: "", noOfWagons: String(value) };
     }
 
-    const [wagonType = "", count = ""] = String(value).split("/");
-    return { wagonType, noOfWagons: count };
+    if (!value || typeof value !== "string") {
+      return { wagonType: "", noOfWagons: "" };
+    }
+
+    if (value.includes("/")) {
+      const [wagonType = "", count = ""] = value.split("/");
+      return { wagonType: wagonType.trim(), noOfWagons: count.trim() };
+    }
+
+    return { wagonType: "", noOfWagons: value.trim() };
   }
 
   useEffect(() => {

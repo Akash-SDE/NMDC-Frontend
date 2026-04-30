@@ -1,5 +1,11 @@
 import { useMemo, useState } from "react";
-import { PlusIcon } from "../../../components/icons";
+import {
+  PlusIcon,
+  ClearIcon,
+  EditIcon,
+  DeleteIcon,
+} from "../../../components/icons";
+import { formatDateTimeForTable } from "../../../utils/dateUtils";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
@@ -129,65 +135,6 @@ const initialDemandForm = {
   salesType: "",
 };
 
-function EditIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-    >
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-}
-
-function DeleteIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-    >
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-      <path d="M10 11v6" />
-      <path d="M14 11v6" />
-      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-    </svg>
-  );
-}
-
-function ClearIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  );
-}
-
 const pageShellClass = "space-y-6 3xl:space-y-8 5xl:space-y-12";
 const pageHeaderClass = "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between";
 const pageTitleClass = "text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800";
@@ -195,11 +142,7 @@ const pageSubtitleClass = "mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text
 const tableCardClass = "rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden";
 
 function formatDate(value) {
-  if (!value) return "-";
-  if (value.includes(" ")) return value;
-  const [year, month, day] = value.split("-");
-  if (!year || !month || !day) return value;
-  return `${day}/${month}/${year}`;
+  return formatDateTimeForTable(value) || "-";
 }
 
 function compareValues(a, b, order) {
@@ -697,10 +640,152 @@ export default function EDemandManagementPage() {
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
+              {/* Inline Action Row */}
+              <tr className="bg-blue-50/50 align-top [&>td]:py-4">
+                <td className="sticky left-0 z-20 border-r border-slate-200/70 bg-blue-50 px-5 py-3">
+                  <div className="flex flex-col items-center gap-2">
+                    {inlineActionMode === "edit" ? (
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500 text-center">
+                        Editing ID: {activeInlineDemandId}
+                      </span>
+                    ) : null}
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleInlineSaveDemand}
+                        disabled={inlineSaveDisabled}
+                        className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-white transition-colors ${
+                          inlineSaveDisabled
+                            ? "cursor-not-allowed bg-slate-300"
+                            : "bg-blue-600 hover:bg-blue-700 shadow-sm"
+                        }`}
+                        title={inlineActionLabel}
+                      >
+                        <PlusIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearInlineDemand}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+                        title="Clear form"
+                      >
+                        <ClearIcon />
+                      </button>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-5 py-3">
+                  {/* Sl No - auto managed */}
+                  <div className="h-8 flex items-center text-[11px] text-slate-400 italic">
+                    {inlineActionMode === "edit" ? activeInlineDemandId : "Auto"}
+                  </div>
+                </td>
+                <td className="px-5 py-3">
+                  <input
+                    type="text"
+                    value={demandForm.fNote}
+                    onChange={(e) => updateDemandField("fNote", e.target.value)}
+                    placeholder="F-Note"
+                    className={compactInputClass}
+                  />
+                </td>
+                <td className="px-5 py-3">
+                  <input
+                    type="date"
+                    value={demandForm.date}
+                    onChange={(e) => updateDemandField("date", e.target.value)}
+                    className={compactInputClass}
+                  />
+                </td>
+                <td className="px-5 py-3">
+                  <ThemedSelect
+                    value={demandForm.customer}
+                    onChange={(e) => updateDemandField("customer", e.target.value)}
+                    className={compactInputClass}
+                  >
+                    <option value="">Select Customer</option>
+                    {customerOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </ThemedSelect>
+                </td>
+                <td className="px-5 py-3">
+                  <ThemedSelect
+                    value={demandForm.destination}
+                    onChange={(e) => updateDemandField("destination", e.target.value)}
+                    className={compactInputClass}
+                  >
+                    <option value="">Select Destination</option>
+                    {destinationOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </ThemedSelect>
+                </td>
+                <td className="px-5 py-3 hidden lg:table-cell">
+                  <ThemedSelect
+                    value={demandForm.oreType}
+                    onChange={(e) => updateDemandField("oreType", e.target.value)}
+                    className={compactInputClass}
+                  >
+                    <option value="">Select Ore Type</option>
+                    {oreTypeOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </ThemedSelect>
+                </td>
+                <td className="px-5 py-3 hidden xl:table-cell">
+                  <ThemedSelect
+                    value={demandForm.salesType}
+                    onChange={(e) => updateDemandField("salesType", e.target.value)}
+                    className={compactInputClass}
+                  >
+                    <option value="">Select Sales Type</option>
+                    {salesTypeOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </ThemedSelect>
+                </td>
+              </tr>
+
               {demandRows.length > 0 ? (
                 demandRows.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70">
+                  <tr
+                    key={row.id}
+                    className={`border-b border-slate-100 last:border-b-0 transition-colors ${
+                      row.id === activeInlineDemandId
+                        ? "bg-amber-50/50"
+                        : "hover:bg-slate-50/70"
+                    }`}
+                  >
+                    <td className="px-5 py-3.5 sticky left-0 z-10 border-r border-slate-200/50 bg-white group-hover:bg-slate-50">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEditDemand(row)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                          title="Edit"
+                        >
+                          <EditIcon />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => requestDemandDelete(row)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                          title="Delete"
+                        >
+                          <DeleteIcon />
+                        </button>
+                      </div>
+                    </td>
                     <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700">
                       {row.id}
                     </td>
@@ -727,7 +812,7 @@ export default function EDemandManagementPage() {
               ) : (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-5 py-12 text-center text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500"
                   >
                     There is no E-Demand data to display.

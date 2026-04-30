@@ -39,8 +39,8 @@ function EyeOffIcon() {
 }
 
 const DEMO_ACCOUNTS = {
-  admin: { username: "admin@nmdc.com", password: "admin123", name: "Harish Kumar" },
-  superadmin: { username: "superadmin@nmdc.com", password: "super123", name: "System Admin" },
+  admin: { username: "itsbikash.nishank1@gmail.com", password: "max@123", name: "Harish Kumar" },
+  superadmin: { username: "itsbikash.nishank1@gmail.com", password: "max@123", name: "System Admin" },
 };
 
 const LOGIN_HERO_IMAGE =
