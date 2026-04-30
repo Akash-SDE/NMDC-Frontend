@@ -104,6 +104,25 @@ export function DelayIcon({ className = "", size = 20 }) {
   );
 }
 
+export function DelayClockIcon({ className = "", size = 20 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15 15" />
+    </svg>
+  );
+}
+
 export function LoadAdjustIcon({ className = "", size = 20 }) {
   return (
     <svg
@@ -117,10 +136,12 @@ export function LoadAdjustIcon({ className = "", size = 20 }) {
       strokeLinejoin="round"
       className={className}
     >
-      <path d="M12 3v18" />
-      <path d="M5 12h14" />
-      <path d="M8 8l-3 4 3 4" />
-      <path d="M16 8l3 4-3 4" />
+      <line x1="6" y1="4" x2="6" y2="20" />
+      <line x1="12" y1="4" x2="12" y2="20" />
+      <line x1="18" y1="4" x2="18" y2="20" />
+      <circle cx="6" cy="12" r="2" />
+      <circle cx="12" cy="7" r="2" />
+      <circle cx="18" cy="16" r="2" />
     </svg>
   );
 }

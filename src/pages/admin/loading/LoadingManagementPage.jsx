@@ -6,7 +6,8 @@ import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
-import { PlusIcon } from "../../../components/icons";
+import { DelayClockIcon, LoadAdjustIcon, PlusIcon } from "../../../components/icons";
+import { useRouter } from "../../../context/RouterContext";
 
 const wagonSickOptions = ["No", "Yes"];
 
@@ -28,7 +29,8 @@ const initialRows = [
     stockpile: "SP-12",
     completionTime: "2026-03-19T13:20",
     clearanceTime: "2026-03-19T13:42",
-    delayReason: "-",
+    overloadedWagons: 0,
+    weightRemoved: 0,
     isDisabled: false,
   },
   {
@@ -48,7 +50,8 @@ const initialRows = [
     stockpile: "SP-04",
     completionTime: "",
     clearanceTime: "",
-    delayReason: "Track congestion",
+    overloadedWagons: 0,
+    weightRemoved: 0,
     isDisabled: false,
   },
   {
@@ -68,7 +71,8 @@ const initialRows = [
     stockpile: "SP-18",
     completionTime: "2026-03-19T14:08",
     clearanceTime: "2026-03-19T14:24",
-    delayReason: "-",
+    overloadedWagons: 0,
+    weightRemoved: 0,
     isDisabled: false,
   },
 ];
@@ -90,7 +94,8 @@ const initialInlineForm = {
   stockpile: "",
   completionTime: "",
   clearanceTime: "",
-  delayReason: "",
+  overloadedWagons: "",
+  weightRemoved: "",
 };
 
 function EditIcon() {
@@ -224,6 +229,7 @@ function getStatusMeta(row) {
 }
 
 export default function LoadingManagementPage() {
+  const { navigate } = useRouter();
   const [rows, setRows] = useState(initialRows);
   const [tableSearch, setTableSearch] = useState("");
   const [sortBy, setSortBy] = useState("rakeNumber");
@@ -233,8 +239,93 @@ export default function LoadingManagementPage() {
   const [activeInlineRakeId, setActiveInlineRakeId] = useState("");
   const [statusConfirmRakeId, setStatusConfirmRakeId] = useState("");
   const [message, setMessage] = useState("");
+  const [rowEdits, setRowEdits] = useState({});
+  const [activeAdjustmentRakeId, setActiveAdjustmentRakeId] = useState("");
 
   const compactInputClass = `${uniformInputClass} h-8 px-2 text-[11px]`;
+
+  function handleRowEditChange(rakeId, field, value) {
+    setRowEdits((prev) => ({
+      ...prev,
+      [rakeId]: {
+        ...prev[rakeId],
+        [field]: value,
+      },
+    }));
+    setMessage("");
+  }
+
+  function handleSaveRowEdits(rakeId) {
+    const edits = rowEdits[rakeId];
+    if (!edits) return false;
+
+    const overloadedWagons = edits.overloadedWagons !== undefined && edits.overloadedWagons !== "" ? Number(edits.overloadedWagons) : undefined;
+    const weightRemoved = edits.weightRemoved !== undefined && edits.weightRemoved !== "" ? Number(edits.weightRemoved) : undefined;
+
+    if (overloadedWagons !== undefined && (Number.isNaN(overloadedWagons) || overloadedWagons < 0)) {
+      setMessage("No. of Overloaded Wagons must be a valid positive number.");
+      return false;
+    }
+
+    if (weightRemoved !== undefined && (Number.isNaN(weightRemoved) || weightRemoved < 0)) {
+      setMessage("Weight Removed must be a valid positive number.");
+      return false;
+    }
+
+    setRows((prev) =>
+      prev.map((row) =>
+        row.rakeId === rakeId
+          ? {
+              ...row,
+              ...(overloadedWagons !== undefined && { overloadedWagons }),
+              ...(weightRemoved !== undefined && { weightRemoved }),
+            }
+          : row,
+      ),
+    );
+
+    setRowEdits((prev) => {
+      const next = { ...prev };
+      delete next[rakeId];
+      return next;
+    });
+
+    setMessage(`Updated wagons and weight for rake ${rakeId}`);
+    return true;
+  }
+
+  function handleAdjustmentAction(row) {
+    if (row.isDisabled) {
+      setMessage("Enable this row before making load adjustments.");
+      return;
+    }
+
+    if (activeAdjustmentRakeId === row.rakeId) {
+      if (!rowEdits[row.rakeId]) {
+        setActiveAdjustmentRakeId("");
+        return;
+      }
+
+      const saved = handleSaveRowEdits(row.rakeId);
+      if (saved) {
+        setActiveAdjustmentRakeId("");
+      }
+      return;
+    }
+
+    setActiveAdjustmentRakeId(row.rakeId);
+    setMessage("");
+  }
+
+  function handleDelayRedirect(row) {
+    if (!row?.rakeNumber) return;
+
+    navigate("delay-management", {
+      delayPrefill: {
+        rakeNumber: row.rakeNumber,
+      },
+    });
+  }
 
   const statusConfirmRake = useMemo(
     () => rows.find((item) => item.rakeId === statusConfirmRakeId),
@@ -258,7 +349,8 @@ export default function LoadingManagementPage() {
         row.fNote,
         row.operatorFtp,
         row.stockpile,
-        row.delayReason,
+        row.overloadedWagons,
+        row.weightRemoved,
         status,
       ]
         .join(" ")
@@ -278,8 +370,8 @@ export default function LoadingManagementPage() {
         return parseDateTimeToTimestamp(row[field]);
       }
 
-      if (field === "tonnage") {
-        const parsed = Number(row.tonnage);
+      if (field === "tonnage" || field === "overloadedWagons" || field === "weightRemoved") {
+        const parsed = Number(row[field]);
         return Number.isNaN(parsed) ? 0 : parsed;
       }
 
@@ -368,6 +460,14 @@ export default function LoadingManagementPage() {
       return "Rake ID already exists. Use a different Rake ID.";
     }
 
+    if (inlineForm.overloadedWagons && (Number.isNaN(Number(inlineForm.overloadedWagons)) || Number(inlineForm.overloadedWagons) < 0)) {
+      return "No. of Overloaded Wagons must be a valid positive number.";
+    }
+
+    if (inlineForm.weightRemoved && (Number.isNaN(Number(inlineForm.weightRemoved)) || Number(inlineForm.weightRemoved) < 0)) {
+      return "Weight Removed must be a valid positive number.";
+    }
+
     return "";
   }
 
@@ -395,7 +495,8 @@ export default function LoadingManagementPage() {
       stockpile: inlineForm.stockpile.trim(),
       completionTime: inlineForm.completionTime,
       clearanceTime: inlineForm.clearanceTime,
-      delayReason: inlineForm.delayReason.trim() || "-",
+      overloadedWagons: inlineForm.overloadedWagons !== "" ? Number(inlineForm.overloadedWagons) : 0,
+      weightRemoved: inlineForm.weightRemoved !== "" ? Number(inlineForm.weightRemoved) : 0,
     };
 
     if (inlineActionMode === "edit") {
@@ -448,7 +549,8 @@ export default function LoadingManagementPage() {
       stockpile: row.stockpile || "",
       completionTime: row.completionTime || "",
       clearanceTime: row.clearanceTime || "",
-      delayReason: row.delayReason === "-" ? "" : row.delayReason,
+      overloadedWagons: row.overloadedWagons !== undefined ? row.overloadedWagons : "",
+      weightRemoved: row.weightRemoved !== undefined ? row.weightRemoved : "",
     });
     setInlineActionMode("edit");
     setActiveInlineRakeId(row.rakeId);
@@ -581,7 +683,10 @@ export default function LoadingManagementPage() {
                     <SortHeaderButton label="Clearance Time" field="clearanceTime" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                    <SortHeaderButton label="Delay Reason" field="delayReason" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                    <SortHeaderButton label="No. of Overloaded Wagons" field="overloadedWagons" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <SortHeaderButton label="Weight Removed" field="weightRemoved" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
@@ -770,10 +875,20 @@ export default function LoadingManagementPage() {
                   </td>
                   <td className="px-5 py-3">
                     <input
-                      type="text"
-                      value={inlineForm.delayReason}
-                      onChange={(event) => updateInline("delayReason", event.target.value)}
-                      placeholder="Delay Reason"
+                      type="number"
+                      value={inlineForm.overloadedWagons}
+                      onChange={(event) => updateInline("overloadedWagons", event.target.value)}
+                      placeholder="Wagons"
+                      className={compactInputClass}
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="number"
+                      step="any"
+                      value={inlineForm.weightRemoved}
+                      onChange={(event) => updateInline("weightRemoved", event.target.value)}
+                      placeholder="Weight"
                       className={compactInputClass}
                     />
                   </td>
@@ -786,7 +901,7 @@ export default function LoadingManagementPage() {
 
                 {sortedRows.length === 0 ? (
                   <tr>
-                    <td colSpan={19} className="px-5 py-12 text-center">
+                    <td colSpan={20} className="px-5 py-12 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <svg
                           width="40"
@@ -812,6 +927,16 @@ export default function LoadingManagementPage() {
                 ) : (
                   sortedRows.map((row) => {
                     const statusMeta = getStatusMeta(row);
+                    const isAdjusting = activeAdjustmentRakeId === row.rakeId;
+                    const adjustmentEditable = isAdjusting && !row.isDisabled;
+                    const overloadedDisplayValue =
+                      isAdjusting && rowEdits[row.rakeId]?.overloadedWagons !== undefined
+                        ? rowEdits[row.rakeId].overloadedWagons
+                        : row.overloadedWagons || "";
+                    const weightRemovedDisplayValue =
+                      isAdjusting && rowEdits[row.rakeId]?.weightRemoved !== undefined
+                        ? rowEdits[row.rakeId].weightRemoved
+                        : row.weightRemoved || "";
 
                     return (
                       <tr
@@ -834,6 +959,36 @@ export default function LoadingManagementPage() {
                               title={row.isDisabled ? "Enable to edit" : "Edit"}
                             >
                               <EditIcon />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleAdjustmentAction(row)}
+                              disabled={row.isDisabled}
+                              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+                                row.isDisabled
+                                  ? "cursor-not-allowed text-slate-300"
+                                  : isAdjusting
+                                    ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                                    : "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                              }`}
+                              title={isAdjusting ? "Save adjustment" : "Start adjustment"}
+                            >
+                              <LoadAdjustIcon className="h-4 w-4" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDelayRedirect(row)}
+                              disabled={row.isDisabled}
+                              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+                                row.isDisabled
+                                  ? "cursor-not-allowed text-slate-300"
+                                  : "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                              }`}
+                              title="Delay management"
+                            >
+                              <DelayClockIcon className="h-4 w-4" />
                             </button>
 
                             <button
@@ -868,7 +1023,27 @@ export default function LoadingManagementPage() {
                         <td className="px-5 py-4 text-[13px] text-slate-700">{row.stockpile || "-"}</td>
                         <td className="px-5 py-4 text-[13px] text-slate-700">{formatDateTimeForTable(row.completionTime)}</td>
                         <td className="px-5 py-4 text-[13px] text-slate-700">{formatDateTimeForTable(row.clearanceTime)}</td>
-                        <td className="px-5 py-4 text-[13px] text-slate-700">{row.delayReason || "-"}</td>
+                        <td className="px-5 py-3">
+                          <input
+                            type="number"
+                            value={overloadedDisplayValue}
+                            onChange={(e) => handleRowEditChange(row.rakeId, "overloadedWagons", e.target.value)}
+                            placeholder="0"
+                            className={`${compactInputClass} w-20`}
+                            disabled={!adjustmentEditable}
+                          />
+                        </td>
+                        <td className="px-5 py-3">
+                          <input
+                            type="number"
+                            step="any"
+                            value={weightRemovedDisplayValue}
+                            onChange={(e) => handleRowEditChange(row.rakeId, "weightRemoved", e.target.value)}
+                            placeholder="0.0"
+                            className={`${compactInputClass} w-24`}
+                            disabled={!adjustmentEditable}
+                          />
+                        </td>
                         <td className="px-5 py-4">
                           <span
                             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold ${statusMeta.badgeClass}`}

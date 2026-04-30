@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   uniformInputClass,
 } from "../../../components/shared/UniformUi";
@@ -7,6 +7,7 @@ import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
 import { PlusIcon } from "../../../components/icons";
+import { useRouter } from "../../../context/RouterContext";
 
 const categories = [
   "Mechanical",
@@ -196,6 +197,7 @@ function getStatusMeta(row) {
 }
 
 export default function DelayManagementPage() {
+  const { routeParams } = useRouter();
   const [rows, setRows] = useState(initialRows);
   const [tableSearch, setTableSearch] = useState("");
   const [sortBy, setSortBy] = useState("startTime");
@@ -207,6 +209,19 @@ export default function DelayManagementPage() {
   const [message, setMessage] = useState("");
 
   const compactInputClass = `${uniformInputClass} h-8 px-2 text-[11px]`;
+
+  useEffect(() => {
+    const prefill = routeParams?.delayPrefill;
+    if (!prefill?.rakeNumber) return;
+
+    setInlineForm({
+      ...initialInlineForm,
+      rakeNumber: prefill.rakeNumber,
+    });
+    setInlineActionMode("add");
+    setActiveInlineLogId(null);
+    setTableSearch(prefill.rakeNumber);
+  }, [routeParams]);
 
   const currentInlineDuration = useMemo(
     () => formatDuration(getDurationMinutes(inlineForm.startTime, inlineForm.endTime)),

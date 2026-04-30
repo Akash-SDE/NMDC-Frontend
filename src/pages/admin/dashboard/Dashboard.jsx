@@ -766,13 +766,12 @@ function CardIcon({ type }) {
   if (type === "offer") {
     return (
       <svg
-        width="16"
-        height="16"
+        width="20"
+        height="20"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.8"
-        className="text-slate-300"
       >
         <rect x="3" y="3" width="18" height="14" rx="2" />
         <path d="M7 21h10" />
@@ -783,13 +782,12 @@ function CardIcon({ type }) {
   if (type === "completed") {
     return (
       <svg
-        width="16"
-        height="16"
+        width="20"
+        height="20"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.8"
-        className="text-[#92baf7]"
       >
         <circle cx="12" cy="12" r="8" />
         <path d="m8.5 12 2.2 2.3 4.8-4.8" />
@@ -799,13 +797,12 @@ function CardIcon({ type }) {
   if (type === "loading") {
     return (
       <svg
-        width="16"
-        height="16"
+        width="20"
+        height="20"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.8"
-        className="text-[#f0d5ab]"
       >
         <path d="M3 17h18" />
         <path d="m6 17 2-7h8l2 7" />
@@ -815,17 +812,16 @@ function CardIcon({ type }) {
   }
   return (
     <svg
-      width="16"
-      height="16"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
       strokeWidth="1.8"
-      className="text-slate-300"
     >
       <path d="M6 7h12" />
-      <path d="M8 7V5h8v2" />
       <path d="M7 7h10l-1 12H8L7 7Z" />
+      <path d="M8 7V5h8v2" />
     </svg>
   );
 }
@@ -841,7 +837,7 @@ const MetricCard = memo(function MetricCard({ card }) {
             {card.unit && <span className="text-[13px] font-bold text-slate-400">{card.unit}</span>}
           </div>
         </div>
-        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${card.accent} bg-opacity-10 text-slate-900 shadow-sm transition-colors group-hover:bg-opacity-20`}>
+        <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${card.accent.replace('bg-', 'border-')}/20 transition-colors`}>
           <div className={`${card.accent.replace('bg-', 'text-')} opacity-80`}>
             <CardIcon type={card.icon} />
           </div>
