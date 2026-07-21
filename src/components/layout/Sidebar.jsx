@@ -90,13 +90,7 @@ export default function Sidebar({
   const { currentRoute, navigate, userRole, logout } = useRouter();
   const sidebarSections = getSidebarSections(userRole);
 
-  const [openSubmenus, setOpenSubmenus] = useState({
-    "master-data": true,
-    "e-demand": true,
-    loading: true,
-    delay: true,
-    reports: true,
-  });
+  const [openSubmenus, setOpenSubmenus] = useState({});
   const [floatingSubmenu, setFloatingSubmenu] = useState(null);
   const floatingCloseTimerRef = useRef(null);
 
@@ -116,8 +110,11 @@ export default function Sidebar({
   /* ── effects ── */
   useEffect(() => {
     const parentId = submenuParentByRoute[currentRoute];
-    if (!parentId) return;
-    setOpenSubmenus((p) => ({ ...p, [parentId]: true }));
+    if (!parentId) {
+      setOpenSubmenus({});
+      return;
+    }
+    setOpenSubmenus({ [parentId]: true });
   }, [currentRoute, submenuParentByRoute]);
 
   useEffect(() => {
@@ -173,9 +170,9 @@ export default function Sidebar({
 
   function handleItemClick(item, isChild = false) {
     if (item.children && !isChild) {
-      if (!isCollapsed)
+      if (!isCollapsed) {
         setOpenSubmenus((p) => ({ ...p, [item.id]: !p[item.id] }));
-      navigate(item.id);
+      }
       return;
     }
     navigate(item.id);

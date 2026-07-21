@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   PlusIcon,
   ClearIcon,
@@ -12,6 +12,8 @@ import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
 import { uniformInputClass } from "../../../components/shared/UniformUi";
 import { useRouter } from "../../../context/RouterContext";
+import { useAuth } from "../../../context/AuthContext";
+import { edemandService } from "../../../services/operational";
 
 const customerOptions = [
   "Vaswani Industries",
@@ -24,107 +26,6 @@ const customerOptions = [
 const destinationOptions = ["JCB", "VSPS", "VPTG", "BDXK", "RPR"];
 const oreTypeOptions = ["CLO", "F", "L"];
 const salesTypeOptions = ["LTA", "AUCTION"];
-
-const initialDemands = [
-  {
-    id: 1,
-    fNote: "10",
-    date: "2025-04-01",
-    customer: "Vaswani Industries",
-    destination: "JCB",
-    oreType: "CLO",
-    salesType: "LTA",
-  },
-  {
-    id: 2,
-    fNote: "1002",
-    date: "2026-01-12",
-    customer: "Rashtriya Ispat Nigam Ltd",
-    destination: "VSPS",
-    oreType: "F",
-    salesType: "LTA",
-  },
-  {
-    id: 3,
-    fNote: "1003",
-    date: "2026-01-12",
-    customer: "Rashtriya Ispat Nigam Ltd",
-    destination: "VSPS",
-    oreType: "F",
-    salesType: "LTA",
-  },
-  {
-    id: 4,
-    fNote: "1004",
-    date: "2026-01-12",
-    customer: "Rashtriya Ispat Nigam Ltd",
-    destination: "VSPS",
-    oreType: "F",
-    salesType: "LTA",
-  },
-  {
-    id: 5,
-    fNote: "1006",
-    date: "2026-01-12",
-    customer: "Rashtriya Ispat Nigam Ltd",
-    destination: "VSPS",
-    oreType: "L",
-    salesType: "LTA",
-  },
-];
-
-const initialPermitRows = [
-  {
-    id: 1,
-    rackNumber: "NK 04",
-    customer: "NMDC Steel Limited",
-    stockpile: "DSFINE",
-    quantity: 3363.71,
-    completedOn: "2026-03-03 23:15",
-    ePermitNumber: "EPM-240301",
-    railwayTransitPass: "RTP-90301",
-  },
-  {
-    id: 2,
-    rackNumber: "CK 04",
-    customer: "NMDC Steel Limited",
-    stockpile: "DSFINE",
-    quantity: 3717.09,
-    completedOn: "2026-03-04 20:10",
-    ePermitNumber: "EPM-240302",
-    railwayTransitPass: "RTP-90302",
-  },
-  {
-    id: 3,
-    rackNumber: "NK 09",
-    customer: "Adani Steel and Power Raigarh",
-    stockpile: "DSCLO",
-    quantity: 4020.5,
-    completedOn: "2026-03-04 23:50",
-    ePermitNumber: "EPM-240303",
-    railwayTransitPass: "RTP-90303",
-  },
-  {
-    id: 4,
-    rackNumber: "GPWS 04",
-    customer: "JSPL Angle GPWS",
-    stockpile: "DSFINE",
-    quantity: 3985.5,
-    completedOn: "2026-03-04 23:00",
-    ePermitNumber: "EPM-240304",
-    railwayTransitPass: "RTP-90304",
-  },
-  {
-    id: 5,
-    rackNumber: "GPWS 03",
-    customer: "JSW Steel Ltd (ODJV Works) GPWS",
-    stockpile: "D10FINE",
-    quantity: 4504.9,
-    completedOn: "2026-03-05 00:00",
-    ePermitNumber: "EPM-240305",
-    railwayTransitPass: "RTP-90305",
-  },
-];
 
 const initialDemandForm = {
   fNote: "",
@@ -156,9 +57,11 @@ function compareValues(a, b, order) {
 
 export default function EDemandManagementPage() {
   const { currentRoute } = useRouter();
+  const { user } = useAuth();
   const isPermitRoute = currentRoute === "manage-e-permit";
 
-  const [demands, setDemands] = useState(initialDemands);
+  const [demands, setDemands] = useState([]);
+  const [demandsLoading, setDemandsLoading] = useState(true);
   const [demandSearch, setDemandSearch] = useState("");
   const [demandSortBy, setDemandSortBy] = useState("id");
   const [demandSortOrder, setDemandSortOrder] = useState("asc");
@@ -167,16 +70,59 @@ export default function EDemandManagementPage() {
   const [activeInlineDemandId, setActiveInlineDemandId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const [permitData, setPermitData] = useState(initialPermitRows);
-  const [savedPermitNumbers, setSavedPermitNumbers] = useState(() => {
-    return initialPermitRows.reduce((accumulator, row) => {
-      accumulator[row.id] = row.ePermitNumber;
-      return accumulator;
-    }, {});
-  });
+  const [permitData, setPermitData] = useState([]);
+  const [permitsLoading, setPermitsLoading] = useState(true);
+  const [savedPermitNumbers, setSavedPermitNumbers] = useState({});
   const [permitSearch, setPermitSearch] = useState("");
   const [permitSortBy, setPermitSortBy] = useState("id");
   const [permitSortOrder, setPermitSortOrder] = useState("asc");
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadDemands() {
+      setDemandsLoading(true);
+      try {
+        const rows = await edemandService.listDemands();
+        if (active) setDemands(rows);
+      } finally {
+        if (active) setDemandsLoading(false);
+      }
+    }
+
+    loadDemands();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isPermitRoute) return undefined;
+
+    let active = true;
+
+    async function loadPermits() {
+      setPermitsLoading(true);
+      try {
+        const rows = await edemandService.listPermits();
+        if (!active) return;
+        setPermitData(rows);
+        setSavedPermitNumbers(
+          rows.reduce((accumulator, row) => {
+            accumulator[row.id] = row.ePermitNumber;
+            return accumulator;
+          }, {}),
+        );
+      } finally {
+        if (active) setPermitsLoading(false);
+      }
+    }
+
+    loadPermits();
+    return () => {
+      active = false;
+    };
+  }, [isPermitRoute]);
 
   const demandRows = useMemo(() => {
     const query = demandSearch.trim().toLowerCase();
@@ -208,7 +154,7 @@ export default function EDemandManagementPage() {
         if (!query) return true;
         return [
           row.id,
-          row.rackNumber,
+          row.rakeNumber,
           row.customer,
           row.stockpile,
           row.quantity,
@@ -270,15 +216,22 @@ export default function EDemandManagementPage() {
   }
 
   function handleSavePermitNumber(rowId) {
-    setSavedPermitNumbers((prev) => {
-      const currentRow = permitData.find((row) => row.id === rowId);
-      if (!currentRow) return prev;
+    const currentRow = permitData.find((row) => row.id === rowId);
+    if (!currentRow) return;
 
-      return {
-        ...prev,
-        [rowId]: currentRow.ePermitNumber,
-      };
-    });
+    const updatedBy = user?.name || user?.username || "Admin";
+
+    edemandService
+      .updatePermit(rowId, { ePermitNumber: currentRow.ePermitNumber }, updatedBy)
+      .then((saved) => {
+        setPermitData((prev) =>
+          prev.map((row) => (row.id === rowId ? { ...row, ...saved } : row)),
+        );
+        setSavedPermitNumbers((prev) => ({
+          ...prev,
+          [rowId]: saved.ePermitNumber,
+        }));
+      });
   }
 
   function updateDemandField(field, value) {
@@ -291,7 +244,7 @@ export default function EDemandManagementPage() {
     setActiveInlineDemandId(null);
   }
 
-  function handleInlineSaveDemand() {
+  async function handleInlineSaveDemand() {
     if (
       !demandForm.date ||
       !demandForm.customer ||
@@ -307,39 +260,37 @@ export default function EDemandManagementPage() {
       const resolvedFNote =
         demandForm.fNote.trim() || currentRow?.fNote || String(1000 + activeInlineDemandId);
 
+      const updated = {
+        ...currentRow,
+        fNote: resolvedFNote,
+        date: demandForm.date,
+        customer: demandForm.customer,
+        destination: demandForm.destination,
+        oreType: demandForm.oreType,
+        salesType: demandForm.salesType,
+      };
+
+      await edemandService.upsertDemand(updated);
       setDemands((prev) =>
-        prev.map((row) =>
-          row.id === activeInlineDemandId
-            ? {
-                ...row,
-                fNote: resolvedFNote,
-                date: demandForm.date,
-                customer: demandForm.customer,
-                destination: demandForm.destination,
-                oreType: demandForm.oreType,
-                salesType: demandForm.salesType,
-              }
-            : row,
-        ),
+        prev.map((row) => (row.id === activeInlineDemandId ? updated : row)),
       );
       clearInlineDemand();
       return;
     }
 
     const nextId = demands.length > 0 ? Math.max(...demands.map((row) => row.id)) + 1 : 1;
-    setDemands((prev) => [
-      {
-        id: nextId,
-        fNote: demandForm.fNote.trim() || String(1000 + nextId),
-        date: demandForm.date,
-        customer: demandForm.customer,
-        destination: demandForm.destination,
-        oreType: demandForm.oreType,
-        salesType: demandForm.salesType,
-      },
-      ...prev,
-    ]);
+    const created = {
+      id: nextId,
+      fNote: demandForm.fNote.trim() || String(1000 + nextId),
+      date: demandForm.date,
+      customer: demandForm.customer,
+      destination: demandForm.destination,
+      oreType: demandForm.oreType,
+      salesType: demandForm.salesType,
+    };
 
+    await edemandService.upsertDemand(created);
+    setDemands((prev) => [created, ...prev]);
     clearInlineDemand();
   }
 
@@ -364,8 +315,9 @@ export default function EDemandManagementPage() {
     setDeleteTarget(null);
   }
 
-  function confirmDemandDelete() {
+  async function confirmDemandDelete() {
     if (!deleteTarget) return;
+    await edemandService.deleteDemand(deleteTarget.id);
     setDemands((prev) => prev.filter((row) => row.id !== deleteTarget.id));
     if (activeInlineDemandId === deleteTarget.id) {
       clearInlineDemand();
@@ -380,7 +332,7 @@ export default function EDemandManagementPage() {
           <div>
             <h2 className={pageTitleClass}>Manage E-Permit</h2>
             <p className={pageSubtitleClass}>
-              View permit register data in the same uniform style as E-Demand.
+              Completed loads sync here automatically. Edit E-Permit numbers — changes appear in Load Adjustment reports.
             </p>
           </div>
         </div>
@@ -409,7 +361,7 @@ export default function EDemandManagementPage() {
                   <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                     <SortHeaderButton
                       label="Rack Number"
-                      field="rackNumber"
+                      field="rakeNumber"
                       sortBy={permitSortBy}
                       sortOrder={permitSortOrder}
                       onSort={handlePermitSort}
@@ -466,7 +418,16 @@ export default function EDemandManagementPage() {
                 </tr>
               </thead>
               <tbody>
-                {permitRows.length > 0 ? (
+                {permitsLoading ? (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-5 py-12 text-center text-[14px] text-slate-500"
+                    >
+                      Loading E-Permit register…
+                    </td>
+                  </tr>
+                ) : permitRows.length > 0 ? (
                   permitRows.map((row) => {
                     const isPermitNumberDirty = (savedPermitNumbers[row.id] ?? "") !== row.ePermitNumber;
 
@@ -476,7 +437,7 @@ export default function EDemandManagementPage() {
                           {row.id}
                         </td>
                         <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-800 font-semibold">
-                          {row.rackNumber}
+                          {row.rakeNumber}
                         </td>
                         <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700">
                           {row.customer}
@@ -555,7 +516,7 @@ export default function EDemandManagementPage() {
         <div>
           <h2 className={pageTitleClass}>Manage E-Demand</h2>
           <p className={pageSubtitleClass}>
-            View and create E-Demand records with Master-page style alignment.
+            Create and manage E-Demand records. Saved entries feed the E-Demand Summary report.
           </p>
         </div>
       </div>
@@ -756,7 +717,16 @@ export default function EDemandManagementPage() {
                 </td>
               </tr>
 
-              {demandRows.length > 0 ? (
+              {demandsLoading ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-5 py-12 text-center text-[14px] text-slate-500"
+                  >
+                    Loading E-Demand records…
+                  </td>
+                </tr>
+              ) : demandRows.length > 0 ? (
                 demandRows.map((row) => (
                   <tr
                     key={row.id}

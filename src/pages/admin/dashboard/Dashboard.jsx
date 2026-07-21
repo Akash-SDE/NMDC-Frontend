@@ -1,54 +1,124 @@
 import { memo, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  CheckCircle2,
+  ClipboardList,
+  Clock,
+  Gauge,
+  Package,
+  Scale,
+  Timer,
+  Truck,
+} from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
+import { countPendingApprovals } from "../../../constants/approval";
+import { fetchApprovalRequests } from "../../../store/slices/approvalSlice";
+
+const METRIC_TONE_STYLES = {
+  navy: {
+    border: "border-l-[#102a57]",
+    iconBg: "bg-blue-50",
+    iconText: "text-blue-700",
+    valueText: "text-[#102a57]",
+  },
+  green: {
+    border: "border-l-emerald-500",
+    iconBg: "bg-emerald-50",
+    iconText: "text-emerald-700",
+    valueText: "text-emerald-700",
+  },
+  sky: {
+    border: "border-l-blue-500",
+    iconBg: "bg-sky-50",
+    iconText: "text-sky-700",
+    valueText: "text-sky-700",
+  },
+  rose: {
+    border: "border-l-rose-500",
+    iconBg: "bg-rose-50",
+    iconText: "text-rose-700",
+    valueText: "text-rose-700",
+  },
+  amber: {
+    border: "border-l-amber-500",
+    iconBg: "bg-amber-50",
+    iconText: "text-amber-700",
+    valueText: "text-amber-700",
+  },
+  slate: {
+    border: "border-l-slate-400",
+    iconBg: "bg-slate-100",
+    iconText: "text-slate-600",
+    valueText: "text-slate-700",
+  },
+  indigo: {
+    border: "border-l-indigo-600",
+    iconBg: "bg-indigo-50",
+    iconText: "text-indigo-700",
+    valueText: "text-indigo-700",
+  },
+};
+
+const METRIC_ICONS = {
+  received: Package,
+  loaded: CheckCircle2,
+  loading: Truck,
+  adjustment: Gauge,
+  demurrage: Clock,
+  hours: Timer,
+  pending: ClipboardList,
+  dispatch: Scale,
+};
 
 const baseMetricCards = [
   {
     title: "Received",
     value: "12",
-    accent: "bg-[#0f2f67]",
-    icon: "offer",
+    tone: "navy",
+    icon: "received",
   },
   {
     title: "Loaded",
     value: "8",
-    accent: "bg-[#166534]",
-    icon: "completed",
+    tone: "green",
+    icon: "loaded",
   },
   {
     title: "Under Loading",
     value: "4",
-    accent: "bg-[#1d6fb8]",
+    tone: "sky",
     icon: "loading",
   },
   {
     title: "Load adjustment",
     value: "2",
-    accent: "bg-[#dc2626]",
-    icon: "offer",
+    tone: "rose",
+    icon: "adjustment",
   },
   {
     title: "Demurraged Hours",
     value: "11",
-    accent: "bg-[#dc2626]",
-    icon: "offer",
+    tone: "rose",
+    icon: "demurrage",
   },
   {
     title: "Gross Loading Hours",
     value: "5.5",
-    accent: "bg-[#d97706]",
-    icon: "loading",
+    tone: "amber",
+    icon: "hours",
   },
   {
     title: "Pending Indents",
     value: "33",
-    accent: "bg-[#475569]",
-    icon: "completed",
+    tone: "slate",
+    icon: "pending",
   },
   {
     title: "Dispatch Qty",
     value: "32,845",
-    accent: "bg-[#1e40af]",
-    icon: "tonnage",
+    tone: "indigo",
+    icon: "dispatch",
   },
 ];
 
@@ -77,40 +147,46 @@ const dispatchGridHours = Array.from({ length: 24 }, (_, index) => index);
 
 const dispatchStatusMeta = {
   neutral: {
-    label: "",
+    label: "Vacant",
     summaryLabel: "",
-    cellClass: "bg-white",
-    textClass: "text-slate-900",
+    cellClass: "bg-slate-50/90 ring-1 ring-inset ring-slate-100",
+    dotClass: "bg-slate-300",
+    textClass: "text-slate-400",
   },
   idle: {
     label: "Siding Idle",
     summaryLabel: "Idle",
-    cellClass: "bg-[#6f6f6f]",
-    textClass: "text-white",
+    cellClass: "bg-slate-200/80 ring-1 ring-inset ring-slate-300/60",
+    dotClass: "bg-slate-500",
+    textClass: "text-slate-700",
   },
   shutdown: {
     label: "Under Shutdown",
     summaryLabel: "Shutdown",
-    cellClass: "bg-[#1f8dd8]",
-    textClass: "text-white",
+    cellClass: "bg-sky-100/90 ring-1 ring-inset ring-sky-200",
+    dotClass: "bg-sky-500",
+    textClass: "text-sky-800",
   },
   loading: {
     label: "Under Loading",
     summaryLabel: "loading",
-    cellClass: "bg-[#f5df10]",
-    textClass: "text-slate-900",
+    cellClass: "bg-amber-100/90 ring-1 ring-inset ring-amber-200",
+    dotClass: "bg-amber-500",
+    textClass: "text-amber-900",
   },
   completed: {
     label: "Completed",
     summaryLabel: "Completed",
-    cellClass: "bg-[#405f22]",
-    textClass: "text-white",
+    cellClass: "bg-emerald-100/90 ring-1 ring-inset ring-emerald-200",
+    dotClass: "bg-emerald-500",
+    textClass: "text-emerald-800",
   },
   demurrage: {
     label: "Demurraged Rake",
     summaryLabel: "Demurrage",
-    cellClass: "bg-[#b91c1c]",
-    textClass: "text-white",
+    cellClass: "bg-rose-100/90 ring-1 ring-inset ring-rose-200",
+    dotClass: "bg-rose-500",
+    textClass: "text-rose-800",
   },
 };
 
@@ -520,6 +596,70 @@ function formatDispatchHour(hour) {
   return String(hour).padStart(2, "0") + "h";
 }
 
+function formatDispatchHourRange(hour) {
+  const nextHour = (hour + 1) % 24;
+  return `${formatDispatchHour(hour)} – ${formatDispatchHour(nextHour)}`;
+}
+
+function buildDispatchHoverPayload(row, hour, eventDetail, status, meta) {
+  return {
+    siding: row.siding.name,
+    route: row.route.name,
+    routeCode: row.route.code,
+    time: formatDispatchHour(hour),
+    timeRange: formatDispatchHourRange(hour),
+    statusLabel: status ? meta.label : "Vacant",
+    rake: eventDetail?.label ?? null,
+    dotClass: meta.dotClass,
+    chipClass: status
+      ? meta.cellClass.replace("ring-1 ring-inset", "")
+      : "bg-slate-100 text-slate-600",
+  };
+}
+
+const DISPATCH_GRID_COLUMNS = "minmax(148px, 1.1fr) repeat(24, minmax(0, 1fr))";
+
+function DispatchGridTooltip({ tooltip }) {
+  if (!tooltip || typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      className="pointer-events-none fixed z-[300] w-56 -translate-x-1/2 -translate-y-[calc(100%+8px)] rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-xl"
+      style={{ top: tooltip.top, left: tooltip.left }}
+      role="tooltip"
+    >
+      <div className="absolute bottom-0 left-1/2 h-2 w-2 -translate-x-1/2 translate-y-1/2 rotate-45 border-b border-r border-slate-200 bg-white" />
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Cell details</p>
+      <p className="mt-1 text-[13px] font-bold text-slate-900">{tooltip.siding}</p>
+      <p className="text-[12px] text-slate-600">
+        {tooltip.route} <span className="text-slate-400">({tooltip.routeCode})</span>
+      </p>
+      <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-[11px]">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-slate-500">Hour</span>
+          <span className="font-mono font-semibold text-slate-800">{tooltip.timeRange}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-slate-500">Status</span>
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${tooltip.chipClass}`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${tooltip.dotClass}`} />
+            {tooltip.statusLabel}
+          </span>
+        </div>
+        {tooltip.rake ? (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-slate-500">Rake</span>
+            <span className="font-semibold text-blue-700">{tooltip.rake}</span>
+          </div>
+        ) : null}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function formatDispatchTime(date) {
   return date.toLocaleTimeString("en-IN", {
     hour: "2-digit",
@@ -762,86 +902,30 @@ function LiveWagonCountCard({ rows, seriesMeta }) {
   );
 }
 
-function CardIcon({ type }) {
-  if (type === "offer") {
-    return (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      >
-        <rect x="3" y="3" width="18" height="14" rx="2" />
-        <path d="M7 21h10" />
-        <path d="M12 17v4" />
-      </svg>
-    );
-  }
-  if (type === "completed") {
-    return (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      >
-        <circle cx="12" cy="12" r="8" />
-        <path d="m8.5 12 2.2 2.3 4.8-4.8" />
-      </svg>
-    );
-  }
-  if (type === "loading") {
-    return (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      >
-        <path d="M3 17h18" />
-        <path d="m6 17 2-7h8l2 7" />
-        <path d="M10 10V7h4v3" />
-      </svg>
-    );
-  }
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-    >
-      <path d="M6 7h12" />
-      <path d="M7 7h10l-1 12H8L7 7Z" />
-      <path d="M8 7V5h8v2" />
-    </svg>
-  );
-}
-
 const MetricCard = memo(function MetricCard({ card }) {
+  const tone = METRIC_TONE_STYLES[card.tone] || METRIC_TONE_STYLES.slate;
+  const Icon = METRIC_ICONS[card.icon] || Package;
+
   return (
-    <article className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 transition-all duration-300 hover:border-slate-300 hover:shadow-[0_20px_40px_-20px_rgba(0,0,0,0.1)]">
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500/80">{card.title}</p>
-          <div className="flex items-baseline gap-1">
-            <h4 className="text-3xl font-black tracking-tight text-slate-900">{card.value}</h4>
-            {card.unit && <span className="text-[13px] font-bold text-slate-400">{card.unit}</span>}
-          </div>
+    <article
+      className={`group flex items-center justify-between rounded-xl border border-slate-200 border-l-4 bg-white p-5 shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md ${tone.border}`}
+    >
+      <div className="min-w-0 flex-1 pr-3">
+        <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+          {card.title}
+        </p>
+        <div className="mt-1 flex items-baseline gap-1.5">
+          <p className={`text-2xl font-bold tracking-tight ${tone.valueText}`}>{card.value}</p>
+          {card.unit ? (
+            <span className="text-[12px] font-semibold text-slate-400">{card.unit}</span>
+          ) : null}
         </div>
-        <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${card.accent.replace('bg-', 'border-')}/20 transition-colors`}>
-          <div className={`${card.accent.replace('bg-', 'text-')} opacity-80`}>
-            <CardIcon type={card.icon} />
-          </div>
-        </div>
+      </div>
+
+      <div
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tone.iconBg} transition-transform duration-200 group-hover:scale-105`}
+      >
+        <Icon size={20} className={tone.iconText} strokeWidth={2} />
       </div>
     </article>
   );
@@ -849,6 +933,7 @@ const MetricCard = memo(function MetricCard({ card }) {
 
 const DispatchTimelineCard = memo(function DispatchTimelineCard({ sheetRows }) {
   const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [hoveredCell, setHoveredCell] = useState(null);
 
   useEffect(() => {
     const syncCurrentTime = () => {
@@ -862,144 +947,210 @@ const DispatchTimelineCard = memo(function DispatchTimelineCard({ sheetRows }) {
   }, []);
 
   const currentHour = currentTime.getHours();
+  const currentMinute = currentTime.getMinutes();
   const currentTimeLabel = formatDispatchTime(currentTime);
 
+  const gridStats = useMemo(() => {
+    return sheetRows.reduce(
+      (acc, row) => {
+        acc.routes += 1;
+        acc.loading += row.summary.loading;
+        acc.demurrage += row.summary.demurrage;
+        acc.completed += row.hourStatuses.filter((s) => s === "completed").length;
+        return acc;
+      },
+      { routes: 0, loading: 0, demurrage: 0, completed: 0 },
+    );
+  }, [sheetRows]);
 
+  const minuteOffsetPercent = (currentMinute / 60) * 100;
 
+  function handleCellHover(event, payload) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setHoveredCell({
+      ...payload,
+      top: rect.top,
+      left: rect.left + rect.width / 2,
+    });
+  }
 
   return (
-    <article className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white/95 shadow-[0_28px_70px_-45px_rgba(15,47,103,0.58)] backdrop-blur">
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200/70 bg-linear-to-r from-[#f8fbff] via-white to-[#edf3fb] px-5 py-5">
-        <div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#1565c0]">
-            Live dispatch
-          </span>
-          <h3 className="mt-3 text-[22px] font-extrabold leading-tight text-[#102a57]">REAL-TIME DISPATCH GRID</h3>
-          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-500">
-            24-HOUR SIDING & ROUTE ALLOCATION
-          </p>
-          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-600">
-            CURRENT TIME: <span className="text-[#1565c0]">{currentTimeLabel}</span>
-          </p>
-        </div>
+    <article className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+      <div className="border-b border-slate-100 bg-linear-to-br from-slate-50 via-white to-blue-50/40 px-6 py-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+                Live
+              </span>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                {gridStats.routes} routes tracked
+              </span>
+            </div>
+            <h3 className="mt-3 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+              Real-Time Dispatch Grid
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              24-hour siding & route allocation timeline
+            </p>
+          </div>
 
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Current time
+              </p>
+              <p className="mt-0.5 font-mono text-lg font-bold tabular-nums text-slate-900">
+                {currentTimeLabel}
+              </p>
+            </div>
+            <div className="hidden gap-2 sm:flex">
+              <div className="rounded-xl border border-amber-100 bg-amber-50/60 px-3 py-2 text-center">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700/70">Loading</p>
+                <p className="text-lg font-bold text-amber-800">{gridStats.loading}h</p>
+              </div>
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-center">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700/70">Done</p>
+                <p className="text-lg font-bold text-emerald-800">{gridStats.completed}h</p>
+              </div>
+              <div className="rounded-xl border border-rose-100 bg-rose-50/60 px-3 py-2 text-center">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-700/70">Delay</p>
+                <p className="text-lg font-bold text-rose-800">{gridStats.demurrage}h</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-6 px-4 py-4 xl:px-5 xl:pb-5">
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-2xl border border-slate-200/80 bg-white px-6 py-4 shadow-sm">
-          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400 border-r border-slate-100 pr-8">
-            Operations Key
+      <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Status
           </span>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            {dispatchLegendOrder.map((statusKey) => {
-              const meta = dispatchStatusMeta[statusKey];
+          {dispatchLegendOrder.map((statusKey) => {
+            const meta = dispatchStatusMeta[statusKey];
+            return (
+              <span
+                key={statusKey}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 shadow-xs"
+              >
+                <span className={`h-2 w-2 rounded-full ${meta.dotClass}`} />
+                {meta.label}
+              </span>
+            );
+          })}
+        </div>
 
+        <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-slate-50/40 p-2">
+          <div
+            className="grid w-full min-w-[640px] gap-1"
+            style={{ gridTemplateColumns: DISPATCH_GRID_COLUMNS }}
+          >
+            <div className="sticky left-0 z-30 flex min-h-9 items-center rounded-lg bg-white px-3 text-[11px] font-semibold text-slate-500 shadow-sm ring-1 ring-slate-200/80">
+              Siding / Route
+            </div>
+
+            {dispatchGridHours.map((hour) => {
+              const isCurrentHour = hour === currentHour;
               return (
-                <div key={statusKey} className="flex items-center gap-2.5">
-                  <span className={`h-3 w-3 rounded-full shadow-sm ${meta.cellClass}`} />
-                  <span className="text-[12px] font-bold text-slate-700 uppercase tracking-tight">{meta.label}</span>
+                <div
+                  key={`head-${hour}`}
+                  className={`relative flex min-h-9 min-w-0 items-center justify-center rounded-md text-[10px] font-semibold tabular-nums ${
+                    isCurrentHour
+                      ? "bg-blue-100 text-blue-700 ring-1 ring-blue-200"
+                      : "bg-white text-slate-500 ring-1 ring-slate-200/60"
+                  }`}
+                >
+                  {formatDispatchHour(hour)}
+                  {isCurrentHour ? (
+                    <span
+                      className="pointer-events-none absolute bottom-0 top-0 z-10 w-0.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.55)]"
+                      style={{ left: `${minuteOffsetPercent}%` }}
+                    />
+                  ) : null}
                 </div>
               );
+            })}
+
+            {sheetRows.flatMap((row) => {
+              const labelCell = (
+                <div
+                  key={`label-${row.route.id}`}
+                  className="sticky left-0 z-20 flex min-h-9 min-w-0 items-center rounded-lg bg-white px-3 shadow-sm ring-1 ring-slate-200/80"
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-[12px] font-semibold text-slate-800">
+                        {row.siding.name}
+                      </p>
+                      <p className="truncate text-[11px] text-slate-500">{row.route.name}</p>
+                    </div>
+                    <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-600">
+                      {row.route.code}
+                    </span>
+                    {row.siding.alert ? (
+                      <span className="shrink-0 rounded-md bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold text-rose-600 ring-1 ring-rose-100">
+                        !
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              );
+
+              const hourCells = dispatchGridHours.map((hour) => {
+                const eventDetail = resolveDispatchHourDetail(row.routeEvents, hour);
+                const status = eventDetail ? resolveDispatchVisualStatus(eventDetail.status) : null;
+                const meta = dispatchStatusMeta[status] || dispatchStatusMeta.neutral;
+                const isCurrentHour = hour === currentHour;
+                const rakeLabel = eventDetail?.label
+                  ? String(eventDetail.label).replace(/^RK-/i, "")
+                  : "";
+                const hoverPayload = buildDispatchHoverPayload(
+                  row,
+                  hour,
+                  eventDetail,
+                  status,
+                  meta,
+                );
+
+                return (
+                  <button
+                    key={`${row.route.id}-${hour}`}
+                    type="button"
+                    className={`relative flex min-h-9 min-w-0 w-full items-center justify-center rounded-md transition-colors duration-150 ${meta.cellClass} ${meta.textClass} ${
+                      isCurrentHour ? "ring-2 ring-blue-400/40" : ""
+                    } hover:brightness-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
+                    onMouseEnter={(event) => handleCellHover(event, hoverPayload)}
+                    onMouseLeave={() => setHoveredCell(null)}
+                    onFocus={(event) => handleCellHover(event, hoverPayload)}
+                    onBlur={() => setHoveredCell(null)}
+                    aria-label={`${row.siding.name} ${row.route.name} ${formatDispatchHour(hour)} ${status ? meta.label : "Vacant"}`}
+                  >
+                    {rakeLabel ? (
+                      <span className="truncate px-0.5 text-[8px] font-bold leading-none opacity-80">
+                        {rakeLabel}
+                      </span>
+                    ) : null}
+                    {isCurrentHour ? (
+                      <span
+                        className="pointer-events-none absolute bottom-0 top-0 z-10 w-0.5 rounded-full bg-blue-500/80"
+                        style={{ left: `${minuteOffsetPercent}%` }}
+                      />
+                    ) : null}
+                  </button>
+                );
+              });
+
+              return [labelCell, ...hourCells];
             })}
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-3xl border border-slate-200/70 bg-white shadow-sm">
-          <table className="w-full border-separate border-spacing-0">
-            <thead>
-              <tr>
-                <th
-                  rowSpan={2}
-                  className="sticky left-0 z-30 border-r border-b border-slate-200/70 bg-surface px-3 py-2 text-left text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-700 w-px whitespace-nowrap"
-                >
-                  Siding / Route
-                </th>
-                {dispatchGridHours.map((hour) => (
-                  <th
-                    key={hour}
-                    className={`border-r border-b border-slate-200/70 p-0 text-center text-[11px] font-bold leading-none text-slate-800 relative w-8 h-8 ${
-                      hour === currentHour ? "bg-[#dfeafb] text-[#1565c0]" : "bg-surface"
-                    }`}
-                  >
-                    <div className="flex h-full w-full items-center justify-center">
-                      {formatDispatchHour(hour)}
-                    </div>
-                    {hour === currentHour && (
-                      <div 
-                        className="absolute top-0 bottom-0 w-[3px] bg-[#1565c0] z-10 shadow-[0_0_8px_rgba(21,101,192,0.4)]" 
-                        style={{ left: `${(new Date().getMinutes() / 60) * 100}%` }}
-                      />
-                    )}
-                  </th>
-                ))}
-              </tr>
-              <tr>
-
-              </tr>
-            </thead>
-
-            <tbody>
-              {sheetRows.map((row, rowIndex) => {
-                const rowBackground = rowIndex % 2 === 0 ? "bg-white" : "bg-[#fcfcfd]";
-
-                return (
-                  <tr key={`${row.siding.id}-${row.route.id}`}>
-                    <td className={`sticky left-0 z-20 border-r border-b border-slate-200/70 px-3 py-2 align-middle ${rowBackground}`}>
-                      <div className="flex items-center gap-2">
-                        <p className="min-w-[140px] text-[11px] font-bold text-[#0f2f67] whitespace-nowrap uppercase">
-                          {row.siding.name} / {row.route.name}
-                        </p>
-                        <div className="flex items-center">
-                          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[8px] font-black text-slate-700 border border-slate-200">
-                            {row.route.code}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {dispatchGridHours.map((hour) => {
-                      const eventDetail = resolveDispatchHourDetail(row.routeEvents, hour);
-                      const status = eventDetail ? resolveDispatchVisualStatus(eventDetail.status) : null;
-                      const meta = dispatchStatusMeta[status] || dispatchStatusMeta.neutral;
-                      const isCurrentHour = hour === currentHour;
-
-                      const tooltipLines = [
-                        `Siding: ${row.siding.name}`,
-                        `Route: ${row.route.name} (${row.route.code})`,
-                        `Time: ${formatDispatchHour(hour)}`,
-                        status ? `Status: ${meta.label}` : "Status: Vacant"
-                      ];
-                      
-                      if (eventDetail?.label) {
-                        tooltipLines.push(`Rake: ${eventDetail.label}`);
-                      }
-
-                      return (
-                        <td
-                          key={`${row.route.id}-${hour}`}
-                          className={`w-8 h-8 border-r border-b border-slate-200/70 p-0 relative cursor-help transition-all ${meta.cellClass} ${meta.textClass} ${
-                            isCurrentHour ? "ring-2 ring-inset ring-[#1565c0]/30" : ""
-                          } hover:brightness-95 hover:z-10`}
-                          title={tooltipLines.join("\n")}
-                        >
-                          {isCurrentHour && (
-                            <div 
-                              className="absolute top-0 bottom-0 w-[3px] bg-[#1565c0] z-10 shadow-[0_0_8px_rgba(21,101,192,0.4)]" 
-                              style={{ left: `${(new Date().getMinutes() / 60) * 100}%` }}
-                            />
-                          )}
-                        </td>
-                      );
-                    })}
-
-
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
+        <DispatchGridTooltip tooltip={hoveredCell} />
       </div>
     </article>
   );
@@ -1032,7 +1183,7 @@ const DispatchSummaryCard = memo(function DispatchSummaryCard({ sheetRows }) {
               {dispatchSummaryOrder.map((statusKey) => (
                 <th key={statusKey} className="border-b border-slate-200/70 px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                   <div className="flex items-center justify-center gap-1.5">
-                    <span className={`h-2 w-2 rounded-full ${dispatchStatusMeta[statusKey].cellClass}`} />
+                    <span className={`h-2 w-2 rounded-full ${dispatchStatusMeta[statusKey].dotClass}`} />
                     {dispatchStatusMeta[statusKey].summaryLabel}
                   </div>
                 </th>
@@ -1087,6 +1238,8 @@ const DispatchSummaryCard = memo(function DispatchSummaryCard({ sheetRows }) {
 });
 
 export default function Dashboard() {
+  const dispatch = useDispatch();
+  const approvalItems = useSelector((state) => state.approvals.items);
   const [sortBy, setSortBy] = useState("rakeId");
   const [sortOrder, setSortOrder] = useState("asc");
   const [tablePage, setTablePage] = useState(1);
@@ -1098,10 +1251,27 @@ export default function Dashboard() {
     }, {})
   );
 
+  useEffect(() => {
+    dispatch(fetchApprovalRequests());
+  }, [dispatch]);
+
   const hourlySeries = baseHourlySeries;
   const hourlySeriesMeta = baseHourlySeriesMeta;
 
-  const metricCards = baseMetricCards;
+  const pendingApprovalCount = useMemo(
+    () => countPendingApprovals(approvalItems),
+    [approvalItems],
+  );
+
+  const metricCards = useMemo(
+    () =>
+      baseMetricCards.map((card) =>
+        card.title === "Pending Indents"
+          ? { ...card, title: "Awaiting Railway Approval", value: String(pendingApprovalCount) }
+          : card,
+      ),
+    [pendingApprovalCount],
+  );
 
   const handleSort = (field) => {
     if (sortBy === field) {
@@ -1197,18 +1367,22 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 lg:p-8">
       <div className="mx-auto max-w-[1600px] space-y-8">
-        {/* Modern Header */}
-        <header className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">Operations Cockpit</h1>
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-[24px] font-bold tracking-tight text-slate-800 sm:text-[28px]">
+              Operations Cockpit
+            </h1>
+            <p className="mt-1 text-[14px] text-slate-500">
+              Daily operational overview and dispatch monitoring.
+            </p>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <input
               type="date"
               value={dashboardDate}
               onChange={(event) => setDashboardDate(event.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-900 outline-none shadow-sm focus:ring-2 focus:ring-slate-100 transition-all"
+              className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
           </div>
         </header>

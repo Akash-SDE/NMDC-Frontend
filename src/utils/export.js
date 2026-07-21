@@ -42,6 +42,8 @@ export function printTable(title) {
   const tableEl = document.querySelector("[data-print-table]");
   if (!tableEl || !printWindow) return;
 
+  const tableHtml = tableEl.outerHTML.replace(/\shidden\s/g, " ");
+
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
@@ -58,7 +60,7 @@ export function printTable(title) {
     </head>
     <body>
       <h1>${title}</h1>
-      ${tableEl.outerHTML}
+      ${tableHtml}
       <script>window.onload = function() { window.print(); }</script>
     </body>
     </html>

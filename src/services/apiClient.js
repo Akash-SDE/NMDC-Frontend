@@ -1,37 +1,23 @@
-const API_BASE = "https://iron-ore-rdms.onrender.com/api";
-const TOKEN_KEY = "nmdc_auth_tokens";
+import { apiClient } from "../api/axiosClient";
+import { isMockSession } from "../utils/mockSession";
+import { handleDevMasterDataRequest } from "./masterData/devMasterDataMock";
 
-function getAccessToken() {
-  try {
-    const raw = localStorage.getItem(TOKEN_KEY);
-    return raw ? JSON.parse(raw)?.access : null;
-  } catch {
-    return null;
-  }
-}
-
+/** Backward-compatible fetch-style API wrapper for master-data services. */
 export async function apiRequest(path, options = {}) {
-  const token = getAccessToken();
-  const headers = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
-  };
-
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    const message =
-      err?.detail ||
-      err?.non_field_errors?.[0] ||
-      Object.values(err)?.[0]?.[0] ||
-      `Request failed (${res.status})`;
-    throw new Error(message);
+  if (isMockSession() && path.startsWith("/master-data/")) {
+    return handleDevMasterDataRequest(path, options);
   }
 
-  // 204 No Content
-  if (res.status === 204) return null;
+  const method = options.method || "GET";
+  const response = await apiClient({
+    url: path,
+    method,
+    data: options.body ? JSON.parse(options.body) : undefined,
+    headers: options.headers,
+  });
 
-  return res.json();
+  if (response.status === 204) return null;
+  return response.data;
 }
+
+export default apiRequest;

@@ -1,3 +1,10 @@
+import {
+  createReportConfig,
+  DEFAULT_TABLE_MIN_WIDTH,
+  WIDE_TABLE_MIN_WIDTH,
+  SELECT_PLACEHOLDER,
+} from "./reportDefaults";
+
 function toDateStamp(value) {
   if (!value) return null;
   const parsed = Date.parse(String(value).slice(0, 10));
@@ -378,7 +385,7 @@ const rakeIncentiveRows = [
 
 const dateFromFilter = {
   id: "fromDate",
-  label: "From",
+  label: "From Date",
   type: "date",
   matcher: (row, value, allFilters) => {
     const fromStamp = toDateStamp(value);
@@ -395,7 +402,7 @@ const dateFromFilter = {
 
 const dateToFilter = {
   id: "toDate",
-  label: "To",
+  label: "To Date",
   type: "date",
   matcher: (row, value, allFilters) => {
     const toStamp = toDateStamp(value);
@@ -410,18 +417,19 @@ const dateToFilter = {
   },
 };
 
-export const transactionReportConfig = {
+export const standardDateRangeFilters = [dateFromFilter, dateToFilter];
+
+export const transactionReportConfig = createReportConfig({
   title: "Transaction Report",
   subtitle: "Track rake-wise movement with route, customer, stockpile and completion details.",
   filters: [
-    dateFromFilter,
-    dateToFilter,
+    ...standardDateRangeFilters,
     {
       id: "siding",
       label: "Siding",
       type: "select",
       filterKey: "siding",
-      placeholder: "Select siding",
+      placeholder: SELECT_PLACEHOLDER,
       options: commonSidingOptions,
     },
     {
@@ -429,13 +437,9 @@ export const transactionReportConfig = {
       label: "Customer",
       type: "select",
       filterKey: "customer",
-      placeholder: "Select customer",
+      placeholder: SELECT_PLACEHOLDER,
       options: commonCustomerOptions,
     },
-  ],
-  actionButtons: [
-    { id: "save-pdf", label: "Save PDF", variant: "info" },
-    { id: "save-excel", label: "Save Excel", variant: "muted" },
   ],
   columns: [
     { label: "Sl No", field: "id" },
@@ -452,15 +456,14 @@ export const transactionReportConfig = {
     { label: "Status", field: "status" },
   ],
   rows: transactionRows,
-  tableMinWidth: "min-w-[1400px]",
-};
+  tableMinWidth: WIDE_TABLE_MIN_WIDTH,
+});
 
-export const demurrageReportConfig = {
+export const demurrageReportConfig = createReportConfig({
   title: "Demurrage Report",
   subtitle: "Monitor rakes that exceed configured demurrage thresholds.",
   filters: [
-    { ...dateFromFilter, id: "fromDate" },
-    { ...dateToFilter, id: "toDate" },
+    ...standardDateRangeFilters,
     {
       id: "threshold",
       label: "Demurrage More Than (Hrs)",
@@ -473,7 +476,6 @@ export const demurrageReportConfig = {
       },
     },
   ],
-  actionButtons: [{ id: "demurrage-save-pdf", label: "Save PDF", variant: "info" }],
   columns: [
     { label: "Sl No", field: "id" },
     { label: "Rake Number", field: "rakeNumber" },
@@ -484,30 +486,19 @@ export const demurrageReportConfig = {
     { label: "Reason", field: "reason" },
   ],
   rows: demurrageRows,
-  tableMinWidth: "min-w-[980px]",
-};
+});
 
-export const dailyReportConfig = {
+export const dailyReportConfig = createReportConfig({
   title: "Daily Report",
   subtitle: "Daily operational snapshot with rakes, tonnage and demurrage coverage.",
   filters: [
-    {
-      id: "date",
-      label: "Date",
-      type: "date",
-      filterKey: "date",
-    },
+    ...standardDateRangeFilters,
     {
       id: "includeReason",
       label: "Remarks",
       type: "checkbox",
-      checkboxLabel: "Include Reason",
+      checkboxLabel: "Include remarks column",
     },
-  ],
-  actionButtons: [
-    { id: "daily-road", label: "Road Performance", variant: "info" },
-    { id: "daily-shift", label: "Shift Performance", variant: "muted" },
-    { id: "daily-save-pdf", label: "Save PDF", variant: "muted" },
   ],
   columns: [
     { label: "Date", field: "date", render: (value) => formatDate(value) },
@@ -518,14 +509,12 @@ export const dailyReportConfig = {
     { label: "Remarks", field: "remarks" },
   ],
   rows: dailyRows,
-  tableMinWidth: "min-w-[900px]",
-};
+});
 
-export const sidingPerformanceReportConfig = {
+export const sidingPerformanceReportConfig = createReportConfig({
   title: "Siding Performance Report",
   subtitle: "Analyze siding utilization, demurrage impact and GLH trend.",
-  filters: [dateFromFilter, dateToFilter],
-  actionButtons: [{ id: "siding-save-pdf", label: "Save PDF", variant: "info" }],
+  filters: [...standardDateRangeFilters],
   columns: [
     { label: "Sl No", field: "id" },
     { label: "Siding", field: "siding" },
@@ -536,17 +525,12 @@ export const sidingPerformanceReportConfig = {
     { label: "Avg GLH", field: "avgGlh", className: "hidden xl:table-cell" },
   ],
   rows: sidingPerformanceRows,
-  tableMinWidth: "min-w-[980px]",
-};
+});
 
-export const loadAdjustmentReportConfig = {
+export const loadAdjustmentReportConfig = createReportConfig({
   title: "Load Adjustment Report",
   subtitle: "Track permit and RTP alignment for completed racks.",
-  filters: [dateFromFilter, dateToFilter],
-  actionButtons: [
-    { id: "load-adjustment-save-pdf", label: "Save PDF", variant: "info" },
-    { id: "load-adjustment-save-excel", label: "Save Excel", variant: "muted" },
-  ],
+  filters: [...standardDateRangeFilters],
   columns: [
     { label: "Sl No", field: "id" },
     { label: "Rack Number", field: "rackNumber" },
@@ -557,14 +541,12 @@ export const loadAdjustmentReportConfig = {
     { label: "Updated By", field: "updatedBy", className: "hidden xl:table-cell" },
   ],
   rows: loadAdjustmentRows,
-  tableMinWidth: "min-w-[980px]",
-};
+});
 
-export const sickWagonReportConfig = {
+export const sickWagonReportConfig = createReportConfig({
   title: "Sick Wagon Report",
   subtitle: "Monitor sick wagons and repair completion by rake.",
-  filters: [dateFromFilter, dateToFilter],
-  actionButtons: [{ id: "sick-save-pdf", label: "Save PDF", variant: "info" }],
+  filters: [...standardDateRangeFilters],
   columns: [
     { label: "Sl No", field: "id" },
     { label: "Rake Number", field: "rakeNumber" },
@@ -575,21 +557,19 @@ export const sickWagonReportConfig = {
     { label: "No of Wagons Repaired", field: "noOfWagonsRepaired", className: "hidden lg:table-cell" },
   ],
   rows: sickWagonRows,
-  tableMinWidth: "min-w-[980px]",
-};
+});
 
-export const rtReportConfig = {
+export const rtReportConfig = createReportConfig({
   title: "RT Report",
   subtitle: "Cross-filter route transaction movement with customer, siding and ore type.",
   filters: [
-    dateFromFilter,
-    dateToFilter,
+    ...standardDateRangeFilters,
     {
       id: "customer",
       label: "Customer",
       type: "select",
       filterKey: "customer",
-      placeholder: "Select customer",
+      placeholder: SELECT_PLACEHOLDER,
       options: commonCustomerOptions,
     },
     {
@@ -597,29 +577,30 @@ export const rtReportConfig = {
       label: "Destination",
       type: "text",
       filterKey: "destination",
-      placeholder: "Select destination",
+      placeholder: "Search destination",
     },
     {
       id: "siding",
       label: "Siding",
       type: "select",
       filterKey: "siding",
-      placeholder: "Select siding",
+      placeholder: SELECT_PLACEHOLDER,
       options: commonSidingOptions,
     },
     {
       id: "oreType",
-      label: "Ore",
+      label: "Ore Type",
       type: "select",
       filterKey: "oreType",
-      placeholder: "Select ore",
+      placeholder: SELECT_PLACEHOLDER,
       options: [
         { value: "FINES", label: "FINES" },
         { value: "CLO", label: "CLO" },
+        { value: "LUMP", label: "LUMP" },
+        { value: "PELLET", label: "PELLET" },
       ],
     },
   ],
-  actionButtons: [{ id: "rt-save-pdf", label: "Save PDF", variant: "muted" }],
   columns: [
     { label: "Sl No", field: "id" },
     { label: "Rake Number", field: "rakeNumber" },
@@ -635,14 +616,13 @@ export const rtReportConfig = {
     { label: "GLH", field: "glh" },
   ],
   rows: rtRows,
-  tableMinWidth: "min-w-[1320px]",
-};
+  tableMinWidth: WIDE_TABLE_MIN_WIDTH,
+});
 
-export const rakeIncentiveReportConfig = {
+export const rakeIncentiveReportConfig = createReportConfig({
   title: "Rake Incentive Report",
   subtitle: "Review loading-time bracket performance for incentive tracking.",
-  filters: [dateFromFilter, dateToFilter],
-  actionButtons: [{ id: "rake-incentive-save-pdf", label: "Save PDF", variant: "info" }],
+  filters: [...standardDateRangeFilters],
   columns: [
     { label: "Sl No", field: "id" },
     { label: "Date", field: "date", render: (value) => formatDate(value) },
@@ -658,5 +638,68 @@ export const rakeIncentiveReportConfig = {
     { label: "Manual R4", field: "manualR4Loading", className: "hidden 2xl:table-cell" },
   ],
   rows: rakeIncentiveRows,
-  tableMinWidth: "min-w-[1500px]",
-};
+  tableMinWidth: WIDE_TABLE_MIN_WIDTH,
+});
+
+export const delayAnalysisReportConfig = createReportConfig({
+  title: "Delay Analysis Report",
+  subtitle: "Review delay events by rake, category, duration, and responsible operator.",
+  filters: [...standardDateRangeFilters],
+  columns: [
+    { label: "Sl No", field: "id" },
+    { label: "Rake Number", field: "rakeNumber" },
+    { label: "Category", field: "category" },
+    { label: "Start Time", field: "startTime", render: (value) => formatDate(value) },
+    { label: "End Time", field: "endTime", render: (value) => formatDate(value) },
+    { label: "Duration (Hrs)", field: "durationHours" },
+    { label: "Reason", field: "reason" },
+    { label: "Reported By", field: "reportedBy", className: "hidden lg:table-cell" },
+  ],
+  rows: [],
+});
+
+export const railwayApprovalAuditReportConfig = createReportConfig({
+  title: "Railway Approval Audit",
+  subtitle: "Track approval progress across Operations, Commercial, and C&W departments.",
+  filters: [...standardDateRangeFilters],
+  columns: [
+    { label: "Sl No", field: "id" },
+    { label: "Rake Number", field: "rakeNumber" },
+    { label: "Customer", field: "customer" },
+    { label: "Siding", field: "siding" },
+    { label: "Completion", field: "completion", render: (value) => formatDate(value) },
+    { label: "Current Step", field: "currentStep" },
+    { label: "Operations", field: "operationsStatus", className: "hidden lg:table-cell" },
+    { label: "Commercial", field: "commercialStatus", className: "hidden lg:table-cell" },
+    { label: "C&W", field: "cwStatus", className: "hidden lg:table-cell" },
+    { label: "Updated", field: "updatedAt", render: (value) => formatDate(value), className: "hidden xl:table-cell" },
+  ],
+  rows: [],
+  tableMinWidth: WIDE_TABLE_MIN_WIDTH,
+});
+
+export const eDemandSummaryReportConfig = createReportConfig({
+  title: "E-Demand Summary",
+  subtitle: "Commercial demand pipeline with customer, destination, and ore classification.",
+  filters: [
+    ...standardDateRangeFilters,
+    {
+      id: "customer",
+      label: "Customer",
+      type: "select",
+      filterKey: "customer",
+      placeholder: SELECT_PLACEHOLDER,
+      options: commonCustomerOptions,
+    },
+  ],
+  columns: [
+    { label: "Sl No", field: "id" },
+    { label: "F/Note", field: "fNote" },
+    { label: "Date", field: "date", render: (value) => formatDate(value) },
+    { label: "Customer", field: "customer" },
+    { label: "Destination", field: "destination" },
+    { label: "Ore Type", field: "oreType" },
+    { label: "Sales Type", field: "salesType", className: "hidden lg:table-cell" },
+  ],
+  rows: [],
+});

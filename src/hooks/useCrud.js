@@ -1,65 +1,79 @@
-import { useState, useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useToast } from "./useToast";
+import { usePagination } from "./usePagination";
+import { useSorting } from "./useSorting";
+import { useSearch } from "./useFilters";
 
-export default function useCrud(initialData = [], keyField = "code") {
-  const [data, setData] = useState([...initialData]);
-  const [search, setSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+/**
+ * Generic local CRUD hook for list views.
+ * Works with in-memory arrays or Redux-backed selectors passed via `items` + setters.
+ */
+export function useCrud({
+  items,
+  setItems,
+  keyField = "id",
+  pageSize = 10,
+  initialSortField = null,
+}) {
+  const { toast, showToast } = useToast();
+  const { search, setSearch, filterBySearch } = useSearch();
+  const { sortBy, sortOrder, handleSort, sortItems } = useSorting(initialSortField);
   const [editingItem, setEditingItem] = useState(null);
+  const [deletingItem, setDeletingItem] = useState(null);
+  const [statusToggleItem, setStatusToggleItem] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [deletingItem, setDeletingItem] = useState(null);
   const [isStatusToggleOpen, setIsStatusToggleOpen] = useState(false);
-  const [statusToggleItem, setStatusToggleItem] = useState(null);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [activeFilters, setActiveFilters] = useState({});
-  const [toast, setToast] = useState(null);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
 
-  const showToast = useCallback((message, type = "success") => {
-    setToast({ message, type, id: Date.now() });
-    setTimeout(() => setToast(null), 3000);
-  }, []);
+  const searched = useMemo(
+    () =>
+      filterBySearch(items, (item) =>
+        Object.values(item).map((v) => String(v ?? "")),
+      ),
+    [items, filterBySearch],
+  );
 
-  const openAddForm = useCallback(() => {
-    setEditingItem(null);
-    setIsFormOpen(true);
-  }, []);
+  const sorted = useMemo(
+    () =>
+      sortItems(searched, (row, field) => {
+        const value = row[field];
+        return typeof value === "string" ? value.toLowerCase() : value ?? "";
+      }),
+    [searched, sortItems],
+  );
 
-  const openEditForm = useCallback((item) => {
-    setEditingItem({ ...item });
-    setIsFormOpen(true);
-  }, []);
+  const { currentPage, totalPages, paginate, setCurrentPage, range } =
+    usePagination({ totalCount: sorted.length, pageSize });
 
-  const closeForm = useCallback(() => {
-    setEditingItem(null);
-    setIsFormOpen(false);
-  }, []);
+  const pageItems = useMemo(
+    () => paginate(sorted),
+    [paginate, sorted],
+  );
 
   const addItem = useCallback(
     (newItem) => {
-      const exists = data.find(
-        (d) => d[keyField].toLowerCase() === newItem[keyField].toLowerCase(),
+      const exists = items.find(
+        (d) =>
+          String(d[keyField]).toLowerCase() ===
+          String(newItem[keyField]).toLowerCase(),
       );
       if (exists) {
-        showToast(
-          `Item with code "${newItem[keyField]}" already exists.`,
-          "error",
-        );
+        showToast(`Item with key "${newItem[keyField]}" already exists.`, "error");
         return false;
       }
-      setData((prev) => [newItem, ...prev]);
+      setItems([newItem, ...items]);
       setIsFormOpen(false);
       setEditingItem(null);
       showToast(`"${newItem[keyField]}" added successfully.`);
       return true;
     },
-    [data, keyField, showToast],
+    [items, keyField, setItems, showToast],
   );
 
   const updateItem = useCallback(
     (updatedItem) => {
-      setData((prev) =>
-        prev.map((item) =>
+      setItems(
+        items.map((item) =>
           item[keyField] === updatedItem[keyField] ? { ...updatedItem } : item,
         ),
       );
@@ -67,181 +81,81 @@ export default function useCrud(initialData = [], keyField = "code") {
       setEditingItem(null);
       showToast(`"${updatedItem[keyField]}" updated successfully.`);
     },
-    [keyField, showToast],
+    [items, keyField, setItems, showToast],
   );
-
-  const saveItem = useCallback(
-    (item) => {
-      if (editingItem) {
-        updateItem(item);
-      } else {
-        return addItem(item);
-      }
-      return true;
-    },
-    [editingItem, addItem, updateItem],
-  );
-
-  const openDeleteConfirm = useCallback((item) => {
-    setDeletingItem(item);
-    setIsDeleteOpen(true);
-  }, []);
-
-  const closeDeleteConfirm = useCallback(() => {
-    setDeletingItem(null);
-    setIsDeleteOpen(false);
-  }, []);
 
   const deleteItem = useCallback(() => {
     if (!deletingItem) return;
-    setData((prev) =>
-      prev.filter((item) => item[keyField] !== deletingItem[keyField]),
-    );
+    const next = items.filter((item) => item[keyField] !== deletingItem[keyField]);
+    setItems(next);
     showToast(`"${deletingItem[keyField]}" deleted successfully.`);
     setDeletingItem(null);
     setIsDeleteOpen(false);
-    // Reset page if needed
-    setCurrentPage((prev) => Math.max(1, prev));
-  }, [deletingItem, keyField, showToast]);
-
-  const applyStatusToggle = useCallback(
-    (targetItem) => {
-      if (!targetItem) return;
-
-      let nextStatus = "inactive";
-      setData((prev) =>
-        prev.map((item) => {
-          if (item[keyField] !== targetItem[keyField]) return item;
-          nextStatus = item.status === "inactive" ? "active" : "inactive";
-          return { ...item, status: nextStatus };
-        }),
-      );
-
-      if (nextStatus === "inactive") {
-        showToast(`"${targetItem[keyField]}" disabled successfully.`);
-      } else {
-        showToast(`"${targetItem[keyField]}" enabled successfully.`);
-      }
-    },
-    [keyField, showToast],
-  );
+    const nextTotalPages = Math.max(1, Math.ceil(next.length / pageSize));
+    if (currentPage > nextTotalPages) setCurrentPage(nextTotalPages);
+  }, [
+    deletingItem,
+    items,
+    keyField,
+    setItems,
+    showToast,
+    currentPage,
+    pageSize,
+    setCurrentPage,
+  ]);
 
   const toggleItemStatus = useCallback(
-    (targetItem) => {
-      applyStatusToggle(targetItem);
+    (targetItem, statusField = "status") => {
+      if (!targetItem) return;
+      setItems(
+        items.map((item) => {
+          if (item[keyField] !== targetItem[keyField]) return item;
+          const isInactive =
+            item[statusField] === "inactive" || item.isDisabled === true;
+          if (statusField === "status") {
+            return {
+              ...item,
+              status: isInactive ? "active" : "inactive",
+            };
+          }
+          return { ...item, isDisabled: !item.isDisabled };
+        }),
+      );
+      showToast(`"${targetItem[keyField]}" status updated.`);
     },
-    [applyStatusToggle],
+    [items, keyField, setItems, showToast],
   );
 
-  const openStatusToggleConfirm = useCallback((targetItem) => {
-    if (!targetItem) return;
-    setStatusToggleItem(targetItem);
-    setIsStatusToggleOpen(true);
-  }, []);
-
-  const closeStatusToggleConfirm = useCallback(() => {
-    setStatusToggleItem(null);
-    setIsStatusToggleOpen(false);
-  }, []);
-
-  const confirmStatusToggle = useCallback(() => {
-    if (!statusToggleItem) return;
-    applyStatusToggle(statusToggleItem);
-    setStatusToggleItem(null);
-    setIsStatusToggleOpen(false);
-  }, [applyStatusToggle, statusToggleItem]);
-
-  const toggleFilter = useCallback(() => {
-    setIsFilterOpen((prev) => !prev);
-  }, []);
-
-  const applyFilter = useCallback((filters) => {
-    setActiveFilters(filters);
-    setCurrentPage(1);
-  }, []);
-
-  const clearFilters = useCallback(() => {
-    setActiveFilters({});
-    setCurrentPage(1);
-  }, []);
-
-  const handleSort = useCallback((key) => {
-    setSortConfig((prev) => ({
-      key,
-      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
-    }));
-  }, []);
-
-  // Filtered data based on search and active filters
-  const filteredData = useMemo(() => {
-    let result = [...data];
-
-    // Apply search
-    if (search.trim()) {
-      const query = search.toLowerCase();
-      result = result.filter((item) =>
-        Object.values(item).some(
-          (val) => typeof val === "string" && val.toLowerCase().includes(query),
-        ),
-      );
-    }
-
-    // Apply status filter
-    if (activeFilters.status && activeFilters.status !== "all") {
-      result = result.filter((item) => item.status === activeFilters.status);
-    }
-
-    // Apply custom filter function
-    if (activeFilters.customFilter) {
-      result = result.filter(activeFilters.customFilter);
-    }
-
-    // Apply sort
-    if (sortConfig.key) {
-      result.sort((a, b) => {
-        const aVal = a[sortConfig.key] || "";
-        const bVal = b[sortConfig.key] || "";
-        const comparison = String(aVal).localeCompare(String(bVal), undefined, {
-          numeric: true,
-        });
-        return sortConfig.direction === "asc" ? comparison : -comparison;
-      });
-    }
-
-    return result;
-  }, [data, search, activeFilters, sortConfig]);
-
   return {
-    data: filteredData,
-    allData: data,
+    items: pageItems,
+    allItems: sorted,
+    totalCount: sorted.length,
     search,
     setSearch,
+    sortBy,
+    sortOrder,
+    handleSort,
     currentPage,
+    totalPages,
     setCurrentPage,
+    range,
+    toast,
+    showToast,
     editingItem,
+    setEditingItem,
     isFormOpen,
-    openAddForm,
-    openEditForm,
-    closeForm,
-    saveItem,
-    isDeleteOpen,
+    setIsFormOpen,
     deletingItem,
-    openDeleteConfirm,
-    closeDeleteConfirm,
+    setDeletingItem,
+    isDeleteOpen,
+    setIsDeleteOpen,
+    statusToggleItem,
+    setStatusToggleItem,
+    isStatusToggleOpen,
+    setIsStatusToggleOpen,
+    addItem,
+    updateItem,
     deleteItem,
     toggleItemStatus,
-    isStatusToggleOpen,
-    statusToggleItem,
-    openStatusToggleConfirm,
-    closeStatusToggleConfirm,
-    confirmStatusToggle,
-    isFilterOpen,
-    toggleFilter,
-    activeFilters,
-    applyFilter,
-    clearFilters,
-    toast,
-    sortConfig,
-    handleSort,
   };
 }

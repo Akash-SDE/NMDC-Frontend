@@ -39,6 +39,11 @@ const adminSidebarSections = [
         icon: "delay",
       },
       {
+        id: "railway-approvals",
+        label: "Railway Approvals",
+        icon: "rake",
+      },
+      {
         id: "master-data",
         label: "Master Data",
         icon: "masterData",
@@ -114,6 +119,18 @@ const adminSidebarSections = [
             id: "reports-rake-incentive",
             label: "Rake Incentive Report",
           },
+          {
+            id: "reports-delay-analysis",
+            label: "Delay Analysis",
+          },
+          {
+            id: "reports-railway-approval-audit",
+            label: "Railway Approval Audit",
+          },
+          {
+            id: "reports-e-demand-summary",
+            label: "E-Demand Summary",
+          },
         ],
       },
     ],
@@ -121,6 +138,22 @@ const adminSidebarSections = [
 ];
 
 export function getSidebarSections(userRole) {
+  if (userRole === "station_master" || userRole === "commercial" || userRole === "cw_inspector") {
+    return [
+      {
+        id: "main",
+        items: [
+          {
+            id: "railway-approvals",
+            label: "Railway Approvals",
+            icon: "rake",
+            active: true,
+          },
+        ],
+      },
+    ];
+  }
+
   return adminSidebarSections;
 }
 

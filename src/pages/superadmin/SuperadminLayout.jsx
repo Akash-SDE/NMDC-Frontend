@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Outlet } from "react-router-dom";
 import SuperadminSidebar from "./shared/SuperadminSidebar";
 import { useRouter } from "./../../context/RouterContext";
 import Breadcrumb from "./shared/Breadcrumb";
@@ -104,7 +105,7 @@ function SuperadminLayout({ children }) {
         </header>
         <main className="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6 text-slate-900">
           <Breadcrumb />
-          {children}
+          {children ?? <Outlet />}
         </main>
       </div>
     </div>
