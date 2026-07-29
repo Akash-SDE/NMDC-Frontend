@@ -34,11 +34,14 @@ export function useAppNavigation() {
     [navigate],
   );
 
-  return {
-    navigate: appNavigate,
-    currentRoute,
-    routeParams,
-    pathname: location.pathname,
-    location,
-  };
+  return useMemo(
+    () => ({
+      navigate: appNavigate,
+      currentRoute,
+      routeParams,
+      pathname: location.pathname,
+      location,
+    }),
+    [appNavigate, currentRoute, routeParams, location.pathname, location],
+  );
 }

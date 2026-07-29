@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateTimeForTable } from "../../../utils/dateUtils";
 import { upcomingService } from "../../../services/operational";
 import {
@@ -13,14 +13,18 @@ export function useUpcomingRakes({ uiRows, upsertUiRow }) {
   const [upcomingRows, setUpcomingRows] = useState(createInitialUpcomingRows);
   const [message, setMessage] = useState("");
   const [messageTone, setMessageTone] = useState("info");
+  const persistDraftsRef = useRef(false);
 
   useEffect(() => {
     upcomingService.list().then((drafts) => {
       if (drafts?.length) setUpcomingRows(drafts);
+      persistDraftsRef.current = true;
     });
   }, []);
 
   useEffect(() => {
+    if (!persistDraftsRef.current) return;
+
     const timeoutId = window.setTimeout(() => {
       upcomingService.save(upcomingRows);
     }, 400);

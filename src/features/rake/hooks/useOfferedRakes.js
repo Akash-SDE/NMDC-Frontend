@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { parseDateTimeToTimestamp } from "../../../utils/dateUtils";
 import { useSearch } from "../../../hooks/useFilters";
@@ -17,6 +17,8 @@ export function useOfferedRakes() {
   }, [dispatch]);
 
   const uiRows = useMemo(() => uiRowsFromCanonicalList(items), [items]);
+  const uiRowsRef = useRef(uiRows);
+  uiRowsRef.current = uiRows;
 
   const filteredRows = useMemo(
     () =>
@@ -55,10 +57,11 @@ export function useOfferedRakes() {
 
   const updateUiRows = useCallback(
     (updater) => {
-      const next = typeof updater === "function" ? updater(uiRows) : updater;
+      const next =
+        typeof updater === "function" ? updater(uiRowsRef.current) : updater;
       return persistRows(next);
     },
-    [persistRows, uiRows],
+    [persistRows],
   );
 
   const getByRakeId = useCallback(

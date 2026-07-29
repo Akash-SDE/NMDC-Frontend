@@ -137,21 +137,23 @@ const adminSidebarSections = [
   },
 ];
 
+const railwaySidebarSections = [
+  {
+    id: "main",
+    items: [
+      {
+        id: "railway-approvals",
+        label: "Railway Approvals",
+        icon: "rake",
+        active: true,
+      },
+    ],
+  },
+];
+
 export function getSidebarSections(userRole) {
   if (userRole === "station_master" || userRole === "commercial" || userRole === "cw_inspector") {
-    return [
-      {
-        id: "main",
-        items: [
-          {
-            id: "railway-approvals",
-            label: "Railway Approvals",
-            icon: "rake",
-            active: true,
-          },
-        ],
-      },
-    ];
+    return railwaySidebarSections;
   }
 
   return adminSidebarSections;

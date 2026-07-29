@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import AppBreadcrumb from "./AppBreadcrumb";
@@ -7,13 +7,20 @@ export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  const handleCloseSidebar = useCallback(() => setSidebarOpen(false), []);
+  const handleOpenSidebar = useCallback(() => setSidebarOpen(true), []);
+  const handleToggleCollapse = useCallback(
+    () => setSidebarCollapsed((prev) => !prev),
+    [],
+  );
+
   return (
     <div className="flex min-h-screen w-full overflow-x-hidden bg-[#f3f5f8]">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={handleCloseSidebar}
           aria-hidden="true"
         />
       )}
@@ -21,9 +28,9 @@ export default function Layout({ children }) {
       {/* Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
+        onClose={handleCloseSidebar}
         isCollapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+        onToggleCollapse={handleToggleCollapse}
       />
 
       {/* Main content area */}
@@ -32,7 +39,7 @@ export default function Layout({ children }) {
           sidebarCollapsed ? "lg:pl-20" : "lg:pl-61.5"
         }`}
       >
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <Header onMenuClick={handleOpenSidebar} />
         <div className="px-3 pt-3 sm:px-5 lg:px-6">
           <AppBreadcrumb />
         </div>

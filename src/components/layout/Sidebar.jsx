@@ -63,15 +63,21 @@ function CollapseRightIcon() {
 
 /* ── Reusable collapsed-tooltip ──────────────────────────────────── */
 
-function CollapsedTooltip({ label, groupClass = "group-hover/item" }) {
+function CollapsedTooltip({ label, variant = "item" }) {
+  const visibilityClass =
+    variant === "signout"
+      ? "lg:group-hover/signout:visible lg:group-hover/signout:opacity-100"
+      : "lg:group-hover/item:visible lg:group-hover/item:opacity-100";
+
   return (
     <div
+      role="tooltip"
       className={`
         pointer-events-none invisible absolute left-[calc(100%+12px)] top-1/2
         z-[70] -translate-y-1/2 whitespace-nowrap rounded-lg border
         border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold
         text-slate-700 opacity-0 shadow-lg transition-all duration-150 ease-out
-        lg:${groupClass}:visible lg:${groupClass}:opacity-100
+        ${visibilityClass}
       `}
     >
       {label}
@@ -273,6 +279,7 @@ export default function Sidebar({
 
         {/* ────────────────── Navigation ────────────────── */}
         <nav
+          aria-label="Main navigation"
           className={`
             flex-1 overflow-x-visible overflow-y-auto
             [&::-webkit-scrollbar]:w-[3px]
@@ -318,7 +325,11 @@ export default function Sidebar({
                   >
                     {/* ── Item button ── */}
                     <button
+                      type="button"
                       onClick={() => handleItemClick(item)}
+                      aria-label={isCollapsed ? item.label : undefined}
+                      aria-current={active ? "page" : undefined}
+                      aria-expanded={hasKids && !isCollapsed ? submenuOpen : undefined}
                       className={`
                         relative flex w-full items-center text-[13px] font-medium
                         transition-all duration-200 ease-out
@@ -383,7 +394,9 @@ export default function Sidebar({
                             return (
                               <button
                                 key={child.id}
+                                type="button"
                                 onClick={() => handleItemClick(child, true)}
+                                aria-current={childActive ? "page" : undefined}
                                 className={`
                                   w-full rounded-md px-3 py-2 text-left text-[12px]
                                   font-medium transition-colors duration-150
@@ -404,7 +417,7 @@ export default function Sidebar({
 
                     {/* ── Collapsed tooltip (leaf items) ── */}
                     {isCollapsed && !hasKids && (
-                      <CollapsedTooltip label={item.label} groupClass="group-hover/item" />
+                      <CollapsedTooltip label={item.label} />
                     )}
                   </div>
                 );
@@ -448,10 +461,7 @@ export default function Sidebar({
               </span>
             </button>
             {isCollapsed && (
-              <CollapsedTooltip
-                label={signOutItem.label}
-                groupClass="group-hover/signout"
-              />
+              <CollapsedTooltip label={signOutItem.label} variant="signout" />
             )}
           </div>
         </div>

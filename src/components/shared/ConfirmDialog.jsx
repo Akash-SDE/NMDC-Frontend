@@ -1,3 +1,4 @@
+import { useId } from "react";
 import Modal from "./Modal";
 import { uniformSecondaryButtonClass } from "./UniformUi";
 
@@ -26,13 +27,15 @@ export default function ConfirmDialog({
   };
 
   const v = variants[variant] || variants.danger;
+  const titleId = useId();
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="" size="sm">
+    <Modal isOpen={isOpen} onClose={onClose} title="" labelledBy={titleId} size="sm">
       <div className="text-center">
         {/* Warning icon */}
         <div
           className={`mx-auto flex h-14 w-14 3xl:h-18 3xl:w-18 items-center justify-center rounded-full ${v.iconBg} mb-4 3xl:mb-6`}
+          aria-hidden="true"
         >
           <svg
             width="28"
@@ -52,7 +55,10 @@ export default function ConfirmDialog({
         </div>
 
         {/* Title */}
-        <h3 className="mb-2 text-[18px] font-bold text-slate-800 3xl:text-[22px] 5xl:text-[28px]">
+        <h3
+          id={titleId}
+          className="mb-2 text-[18px] font-bold text-slate-800 3xl:text-[22px] 5xl:text-[28px]"
+        >
           {title}
         </h3>
 
@@ -71,12 +77,14 @@ export default function ConfirmDialog({
         {/* Actions */}
         <div className="flex items-center gap-3 3xl:gap-4 justify-center mt-6 3xl:mt-8">
           <button
+            type="button"
             onClick={onClose}
             className={`${uniformSecondaryButtonClass} flex-1 px-5 py-2.5 text-[14px] 3xl:px-6 3xl:py-3 3xl:text-[16px] 5xl:px-8 5xl:py-4 5xl:text-[20px]`}
           >
             {cancelLabel}
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             className={`flex-1 rounded-lg px-5 py-2.5 text-[14px] font-semibold text-white shadow-sm transition-all active:scale-[0.98] 3xl:px-6 3xl:py-3 3xl:text-[16px] 5xl:px-8 5xl:py-4 5xl:text-[20px] ${v.btnBg}`}
           >

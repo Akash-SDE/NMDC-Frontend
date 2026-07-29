@@ -50,6 +50,16 @@ export default function RakeManagementPage() {
 
   const [statusConfirmRakeId, setStatusConfirmRakeId] = useState("");
 
+  const handleNavigateToRakeManagement = useCallback(
+    () => navigate("rake-management"),
+    [navigate],
+  );
+  const handleNavigateToUpcoming = useCallback(
+    () => navigate("rake-upcoming"),
+    [navigate],
+  );
+  const handleCloseStatusConfirm = useCallback(() => setStatusConfirmRakeId(""), []);
+
   const inputClass = uniformInputClass;
   const isUpcomingPage = currentRoute === "rake-upcoming";
   const isOfferingPage =
@@ -210,7 +220,7 @@ export default function RakeManagementPage() {
   if (isUpcomingPage) {
     return (
       <RakeUpcomingView
-        onNavigateBack={() => navigate("rake-management")}
+        onNavigateBack={handleNavigateToRakeManagement}
         upcomingRows={upcoming.upcomingRows}
         upcomingMessage={upcoming.message}
         upcomingMessageTone={upcoming.messageTone}
@@ -248,13 +258,13 @@ export default function RakeManagementPage() {
           onOpenAdjustment={handleOpenAdjustment}
           onLoadRedirect={handleLoadRedirect}
           onRequestStatusToggle={setStatusConfirmRakeId}
-          onNavigateUpcoming={() => navigate("rake-upcoming")}
+          onNavigateUpcoming={handleNavigateToUpcoming}
           upcomingDraftCount={upcoming.stats.total}
           upcomingReadyCount={upcoming.stats.readyCount}
         />
         <ConfirmDialog
           isOpen={Boolean(statusConfirmRake)}
-          onClose={() => setStatusConfirmRakeId("")}
+          onClose={handleCloseStatusConfirm}
           onConfirm={confirmOfferedStatusToggle}
           title={statusConfirmRake?.isDisabled ? "Enable Rake" : "Disable Rake"}
           message={
@@ -277,7 +287,7 @@ export default function RakeManagementPage() {
       offeringForm={offeringForm}
       adjustOfferFor={adjustOfferFor}
       adjustOfferTime={adjustOfferTime}
-      onNavigateBack={() => navigate("rake-management")}
+      onNavigateBack={handleNavigateToRakeManagement}
       onOfferingSubmit={handleOfferingSubmit}
       updateOffering={updateOffering}
       setAdjustOfferFor={setAdjustOfferFor}

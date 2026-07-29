@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, USER_ROLES } from "../../context/RouterContext";
 import { Logo } from "../icons";
-// import { loginWithCredentials } from "../../services/authService";
+import { loginWithCredentials } from "../../services/authService";
 
 function EyeIcon() {
   return (
@@ -39,16 +39,8 @@ function EyeOffIcon() {
 }
 
 const DEMO_ACCOUNTS = {
-  admin: {
-    username: "itsbikash.nishank1@gmail.com",
-    password: "max@123",
-    name: "Harish Kumar",
-  },
-  superadmin: {
-    username: "itsbikash.nishank1@gmail.com",
-    password: "max@123",
-    name: "System Admin",
-  },
+  admin: { username: "admin@nmdc.com", password: "admin123", name: "Harish Kumar" },
+  superadmin: { username: "superadmin@nmdc.com", password: "super123", name: "System Admin" },
 };
 
 const LOGIN_HERO_IMAGE =
@@ -125,12 +117,7 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      // Bypassing API call for direct login
-      // Generate dummy tokens
-      const tokens = {
-        access: "dummy_access_token",
-        refresh: "dummy_refresh_token",
-      };
+      const tokens = await loginWithCredentials(username.trim(), password);
 
       if (remember) {
         writeRememberedCredentials(username.trim(), password);
@@ -138,21 +125,17 @@ export default function LoginPage() {
         clearRememberedCredentials();
       }
 
-      // Determine role: if it matches superadmin demo username/password and name is System Admin (set via buttons)
-      // Or just a simple check for "superadmin" in username for convenience
+      // Determine role from token payload (if backend encodes it), else default to admin
       let role = USER_ROLES.ADMIN;
-      if (username.toLowerCase().includes("superadmin")) {
-        role = USER_ROLES.SUPERADMIN;
-      } else if (username.toLowerCase().includes("operator")) {
-        role = USER_ROLES.OPERATOR;
+      try {
+        const payload = JSON.parse(atob(tokens.access.split(".")[1]));
+        if (payload?.role === "superadmin") role = USER_ROLES.SUPERADMIN;
+        else if (payload?.role === "operator") role = USER_ROLES.OPERATOR;
+      } catch {
+        // Payload decode failed — keep default role
       }
 
-      login(
-        role,
-        { username: username.trim(), name: username.trim() },
-        remember,
-        tokens,
-      );
+      login(role, { username: username.trim(), name: username.trim() }, remember, tokens);
     } catch (err) {
       setError(err.message || "Login failed. Please try again.");
     } finally {
@@ -162,11 +145,10 @@ export default function LoginPage() {
 
   function quickLogin(role) {
     const creds = DEMO_ACCOUNTS[role];
-    const targetRole =
-      role === "superadmin" ? USER_ROLES.SUPERADMIN : USER_ROLES.ADMIN;
-    login(targetRole, { username: creds.username, name: creds.name }, false, {
-      access: "dummy_access_token",
-      refresh: "dummy_refresh_token",
+    setFormData({
+      username: creds.username,
+      password: creds.password,
+      remember: false,
     });
   }
 
@@ -300,7 +282,7 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -312,6 +294,12 @@ export default function LoginPage() {
                   Remember me
                 </span>
               </label>
+              <button
+                type="button"
+                className="text-[13px] 3xl:text-[16px] font-semibold text-brand-600 hover:text-brand-700 transition-colors"
+              >
+                Forgot password?
+              </button>
             </div>
             <button
               type="submit"

@@ -17,7 +17,10 @@ export class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-6 text-center">
+        <div
+          className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-6 text-center"
+          role="alert"
+        >
           <h2 className="text-xl font-bold text-slate-800">Something went wrong</h2>
           <p className="max-w-lg text-sm text-slate-500">
             {this.state.error?.message || "An unexpected error occurred."}
