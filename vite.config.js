@@ -25,6 +25,7 @@ export default defineConfig({
   preview: {
     port: 5184,
     strictPort: true,
+    allowedHosts: ['nmdc-frontend.onrender.com'],
     headers: {
       "Cache-Control": "no-store",
     },
