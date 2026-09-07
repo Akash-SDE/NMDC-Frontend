@@ -489,6 +489,45 @@ export function DelayStatIcon({ className = "" }) {
   );
 }
 
+export function RolesIcon({ className = "", size = 20 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M12 2L3 7v6c0 5.25 3.75 10.17 9 11.38C17.25 23.17 21 18.25 21 13V7l-9-5z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+export function ExtractionIcon({ className = "", size = 20 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+      <path d="M2 17l10 5 10-5" />
+      <path d="M2 12l10 5 10-5" />
+    </svg>
+  );
+}
+
 /* Icon map for dynamic rendering */
 export const iconMap = {
   dashboard: DashboardIcon,
@@ -503,6 +542,8 @@ export const iconMap = {
   reports: ReportsIcon,
   config: ConfigIcon,
   signOut: SignOutIcon,
+  extraction: ExtractionIcon,
+  roles: RolesIcon,
 };
 
 /* === COMMON ACTION ICONS === */

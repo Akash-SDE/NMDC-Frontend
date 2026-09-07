@@ -20,6 +20,7 @@ export function useRouter() {
     () => ({
       ...navigation,
       user: auth.user,
+      profile: auth.profile,
       userRole: auth.userRole,
       isAuthenticated: auth.isAuthenticated,
       login: auth.login,
@@ -30,6 +31,7 @@ export function useRouter() {
     [
       navigation,
       auth.user,
+      auth.profile,
       auth.userRole,
       auth.isAuthenticated,
       auth.login,

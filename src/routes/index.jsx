@@ -20,6 +20,9 @@ const OperatorHub = lazy(() => import("../features/operator/pages/OperatorHub"))
 const SuperadminRoutes = lazy(() => import("../features/superadmin/routes/SuperadminRoutes"));
 const AdminToolsRoutes = lazy(() => import("../features/admin-tools/routes/AdminToolsRoutes"));
 const RailwayRoutes = lazy(() => import("../features/railway/routes/RailwayRoutes"));
+const ExtractionPage = lazy(() => import("../features/extraction/pages/ExtractionPage"));
+const UserManagementPage = lazy(() => import("../features/user-management/pages/UserManagementPage"));
+const RoleManagementPage = lazy(() => import("../features/role-management/pages/RoleManagementPage"));
 
 function Lazy({ children }) {
   return <Suspense fallback={<LoadingState />}>{children}</Suspense>;
@@ -169,6 +172,30 @@ export function AppRoutes() {
             element={
               <Lazy>
                 <RailwayRoutes />
+              </Lazy>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN.EXTRACTION}
+            element={
+              <Lazy>
+                <ExtractionPage />
+              </Lazy>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN.USER_MANAGEMENT}
+            element={
+              <Lazy>
+                <UserManagementPage />
+              </Lazy>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN.ROLE_MANAGEMENT}
+            element={
+              <Lazy>
+                <RoleManagementPage />
               </Lazy>
             }
           />

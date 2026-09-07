@@ -3,8 +3,15 @@ import { TOKEN_STORAGE_KEY } from "../constants/storageKeys";
 import { isMockSession, isMockToken } from "../utils/mockSession";
 import { parseApiError } from "./apiError";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "https://iron-ore-rdms.onrender.com/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!API_BASE_URL) {
+  throw new Error(
+    "[axiosClient] VITE_API_BASE_URL is not set.\n" +
+    "  • Local dev: set it in .env\n" +
+    "  • Production: set it in .env.production or as an env var on Render"
+  );
+}
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

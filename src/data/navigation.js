@@ -44,6 +44,21 @@ const adminSidebarSections = [
         icon: "rake",
       },
       {
+        id: "extraction",
+        label: "Extraction",
+        icon: "extraction",
+      },
+      {
+        id: "user-management",
+        label: "User Management",
+        icon: "users",
+      },
+      {
+        id: "role-management",
+        label: "Role Management",
+        icon: "roles",
+      },
+      {
         id: "master-data",
         label: "Master Data",
         icon: "masterData",
@@ -156,6 +171,7 @@ export function getSidebarSections(userRole) {
     return railwaySidebarSections;
   }
 
+  // admin and superadmin both get the full admin sidebar
   return adminSidebarSections;
 }
 

@@ -58,6 +58,9 @@ export const ROUTES = {
     TOOLS_DELETE_RAKES: "/admin/tools/delete-offered-rakes",
     TOOLS_EDIT_TIMING: "/admin/tools/edit-rake-timing",
     RAILWAY_APPROVALS: "/admin/railway/approvals",
+    EXTRACTION: "/admin/extraction",
+    USER_MANAGEMENT: "/admin/user-management",
+    ROLE_MANAGEMENT: "/admin/role-management",
   },
   SUPERADMIN: {
     ROOT: "/superadmin",
@@ -138,6 +141,9 @@ export const LEGACY_ROUTE_TO_PATH = {
   "sa-edit-user": ROUTES.SUPERADMIN.USERS_EDIT,
   "admin-edit-rake-timing": ROUTES.ADMIN.TOOLS_EDIT_TIMING,
   "railway-approvals": ROUTES.ADMIN.RAILWAY_APPROVALS,
+  extraction: ROUTES.ADMIN.EXTRACTION,
+  "user-management": ROUTES.ADMIN.USER_MANAGEMENT,
+  "role-management": ROUTES.ADMIN.ROLE_MANAGEMENT,
 };
 
 export function legacyRouteToPath(legacyId) {
@@ -186,6 +192,9 @@ export function pathToLegacyRoute(pathname) {
   if (pathname.startsWith("/admin/railway")) return "railway-approvals";
   if (pathname.startsWith("/railway/approvals")) return "railway-approvals";
   if (pathname.startsWith("/railway")) return "railway-approvals";
+  if (pathname.startsWith("/admin/extraction")) return "extraction";
+  if (pathname.startsWith("/admin/user-management")) return "user-management";
+  if (pathname.startsWith("/admin/role-management")) return "role-management";
   if (pathname.startsWith("/admin/e-demand/manage/add")) return "manage-e-demand-add";
   if (pathname.startsWith("/admin/e-demand/manage")) return "manage-e-demand";
   if (pathname.startsWith("/admin/e-demand")) return "e-demand";

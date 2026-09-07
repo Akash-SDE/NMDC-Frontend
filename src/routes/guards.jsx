@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ROUTES } from "../constants/routes";
-import { DEFAULT_ROUTE_BY_ROLE } from "../constants/roles";
+import { DEFAULT_ROUTE_BY_ROLE, USER_ROLES } from "../constants/roles";
 
 export function ProtectedRoute({ allowedRoles }) {
   const { isAuthenticated, isLoading, userRole } = useAuth();
@@ -17,6 +17,11 @@ export function ProtectedRoute({ allowedRoles }) {
 
   if (!isAuthenticated) {
     return <Navigate to={ROUTES.LOGIN} replace state={{ from: location }} />;
+  }
+
+  // Superadmin has unrestricted access to every route
+  if (userRole === USER_ROLES.SUPERADMIN) {
+    return <Outlet />;
   }
 
   if (allowedRoles && !allowedRoles.includes(userRole)) {

@@ -14,7 +14,7 @@ export const RAILWAY_ROLES = [
 ];
 
 export const DEFAULT_ROUTE_BY_ROLE = {
-  [USER_ROLES.SUPERADMIN]: "/superadmin/roles",
+  [USER_ROLES.SUPERADMIN]: "/admin/dashboard",
   [USER_ROLES.OPERATOR]: "/operator",
   [USER_ROLES.ADMIN]: "/admin/dashboard",
   [USER_ROLES.STATION_MASTER]: "/railway/approvals?dept=operations",
