@@ -16,7 +16,7 @@ if (!API_BASE_URL) {
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
-  timeout: 30000,
+  timeout: 30000, // default for all requests; overridden per-request where needed
 });
 
 function readAccessToken() {
