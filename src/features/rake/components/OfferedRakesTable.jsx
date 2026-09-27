@@ -1,6 +1,5 @@
 import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
-import ThemedSelect from "../../../components/shared/ThemedSelect";
 import {
   PlusIcon,
   EditIcon,
@@ -14,15 +13,8 @@ import {
   uniformInputClass,
   uniformSecondaryButtonClass,
 } from "../../../components/shared/UniformUi";
-import {
-  wagonTypeOptions,
-  sidingOptions,
-  routeOptions,
-  oreTypeOptions,
-  customerOptions,
-  destinationOptions,
-  adjustmentReasonOptions,
-} from "../constants/rakeConstants";
+import { formatDateTimeForTable } from "../../../utils/dateUtils";
+import { adjustmentReasonOptions } from "../constants/rakeConstants";
 
 export default function OfferedRakesTable({
   sortedRows,
@@ -48,26 +40,23 @@ export default function OfferedRakesTable({
   onNavigateUpcoming,
   upcomingDraftCount = 0,
   upcomingReadyCount = 0,
+  lookupOptions = {
+    sidings: [],
+    routes: [],
+    oreTypes: [],
+    customers: [],
+    destinations: [],
+    wagonTypes: [],
+  },
+  formError = "",
+  formNotice = "",
+  saving = false,
 }) {
   const inputClass = uniformInputClass;
   const compactInputClass = `${inputClass} h-8 px-2 text-[11px]`;
   const headerButtonClass =
     "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[12px] font-semibold self-end sm:self-start";
-  const requiredFieldsMissing =
-    !offeringForm.rakeId ||
-    !offeringForm.rakeNumber ||
-    !offeringForm.noOfWagons ||
-    !offeringForm.wagonType ||
-    !offeringForm.siding ||
-    !offeringForm.route ||
-    !offeringForm.oreType ||
-    !offeringForm.customer ||
-    !offeringForm.destination ||
-    !offeringForm.offerTime;
-  const inlineAddDisabled =
-    inlineActionMode === "adjust"
-      ? !activeInlineRakeId || !adjustOfferFor || !adjustOfferTime
-      : requiredFieldsMissing;
+  const inlineAddDisabled = saving;
   const inlineActionLabel =
     inlineActionMode === "edit"
       ? "Save Edit"
@@ -120,6 +109,17 @@ export default function OfferedRakesTable({
         onChange={setSearch}
         showFilter={false}
       />
+
+      {formError ? (
+        <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
+          {formError}
+        </p>
+      ) : null}
+      {formNotice ? (
+        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+          {formNotice}
+        </p>
+      ) : null}
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -219,11 +219,11 @@ export default function OfferedRakesTable({
                 <td className="px-5 py-3">
                   <input
                     type="text"
-                    value={offeringForm.rakeId}
+                    value={inlineActionMode === "add" ? "" : offeringForm.rakeId}
                     onChange={(event) => updateOffering("rakeId", event.target.value)}
-                    placeholder="Rake ID"
+                    placeholder={inlineActionMode === "add" ? "Assigned on save" : "Rake ID"}
                     className={compactInputClass}
-                    disabled={!areMainFieldsEditable}
+                    disabled={inlineActionMode === "add" || !areMainFieldsEditable}
                   />
                 </td>
                 <td className="px-5 py-3">
@@ -237,94 +237,94 @@ export default function OfferedRakesTable({
                   />
                 </td>
                 <td className="px-5 py-3">
-                  <ThemedSelect
+                  <select
                     value={offeringForm.siding}
                     onChange={(event) => updateOffering("siding", event.target.value)}
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
                   >
                     <option value="">Siding</option>
-                    {sidingOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {lookupOptions.sidings.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
                       </option>
                     ))}
-                  </ThemedSelect>
+                  </select>
                 </td>
                 <td className="px-5 py-3">
-                  <ThemedSelect
+                  <select
                     value={offeringForm.route}
                     onChange={(event) => updateOffering("route", event.target.value)}
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
                   >
                     <option value="">Route</option>
-                    {routeOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {lookupOptions.routes.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
                       </option>
                     ))}
-                  </ThemedSelect>
+                  </select>
                 </td>
                 <td className="px-5 py-3">
-                  <ThemedSelect
+                  <select
                     value={offeringForm.oreType}
                     onChange={(event) => updateOffering("oreType", event.target.value)}
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
                   >
                     <option value="">Ore Type</option>
-                    {oreTypeOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {lookupOptions.oreTypes.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
                       </option>
                     ))}
-                  </ThemedSelect>
+                  </select>
                 </td>
                 <td className="px-5 py-3">
-                  <ThemedSelect
+                  <select
                     value={offeringForm.customer}
                     onChange={(event) => updateOffering("customer", event.target.value)}
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
                   >
                     <option value="">Customer</option>
-                    {customerOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {lookupOptions.customers.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
                       </option>
                     ))}
-                  </ThemedSelect>
+                  </select>
                 </td>
                 <td className="px-5 py-3">
-                  <ThemedSelect
+                  <select
                     value={offeringForm.destination}
                     onChange={(event) => updateOffering("destination", event.target.value)}
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
                   >
                     <option value="">Destination</option>
-                    {destinationOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {lookupOptions.destinations.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
                       </option>
                     ))}
-                  </ThemedSelect>
+                  </select>
                 </td>
                 <td className="px-5 py-3">
-                  <ThemedSelect
+                  <select
                     value={offeringForm.wagonType}
                     onChange={(event) => updateOffering("wagonType", event.target.value)}
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
                   >
                     <option value="">Wagon Type</option>
-                    {wagonTypeOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {lookupOptions.wagonTypes.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
                       </option>
                     ))}
-                  </ThemedSelect>
+                  </select>
                 </td>
                 <td className="px-5 py-3">
                   <input
@@ -348,7 +348,7 @@ export default function OfferedRakesTable({
                 </td>
                 <td className="px-5 py-3">
                   {isOfferForEditable ? (
-                    <ThemedSelect
+                    <select
                       value={adjustOfferFor}
                       onChange={(event) => setAdjustOfferFor(event.target.value)}
                       className={compactInputClass}
@@ -359,7 +359,7 @@ export default function OfferedRakesTable({
                           {option}
                         </option>
                       ))}
-                    </ThemedSelect>
+                    </select>
                   ) : isInlineEditMode ? (
                     <input
                       type="text"
@@ -420,7 +420,9 @@ export default function OfferedRakesTable({
                 </tr>
               ) : (
                 sortedRows.map((row) => {
-                  const [offerDate = "-", offerClock = "-"] = String(row.offerTime || "-").split(" ");
+                  const formattedOfferTime =
+                    formatDateTimeForTable(row.offerTime) || String(row.offerTime || "-");
+                  const [offerDate = "-", offerClock = "-"] = formattedOfferTime.split(" ");
                   const oreType = row.oreType || "-";
                   const customer = row.customer || "-";
                   const offeredFor = row.adjustOfferFor && row.adjustOfferFor !== "-" ? row.adjustOfferFor : "";
@@ -552,7 +554,9 @@ export default function OfferedRakesTable({
                               row.isDisabled ? "bg-slate-400" : "bg-emerald-500"
                             }`}
                           />
-                          {row.isDisabled ? "Inactive" : "Active"}
+                          {row.isDisabled
+                            ? "Cancelled"
+                            : row.statusDescription || (row.status != null ? `Status ${row.status}` : "Draft")}
                         </span>
                       </td>
                     </tr>

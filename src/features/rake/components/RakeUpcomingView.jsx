@@ -4,28 +4,30 @@ import {
   uniformPrimaryButtonClass,
   uniformSecondaryButtonClass,
 } from "../../../components/shared/UniformUi";
-import ThemedSelect from "../../../components/shared/ThemedSelect";
-import {
-  customerOptions,
-  destinationOptions,
-  isUpcomingRowReady,
-  oreTypeOptions,
-  routeOptions,
-  sidingOptions,
-  wagonTypeOptions,
-} from "../constants/rakeConstants";
+import { formatDateTimeForTable } from "../../../utils/dateUtils";
+import { isUpcomingRowReady } from "../constants/rakeConstants";
 
 export default function RakeUpcomingView({
   onNavigateBack,
   upcomingRows,
+  upcomingOfferedRows = [],
   upcomingMessage,
   upcomingMessageTone = "info",
   upcomingStats,
+  moving = false,
   updateUpcomingRow,
   onAddUpcomingRow,
   onRemoveUpcomingRow,
   onSaveUpcomingRakes,
   onClearUpcomingRakes,
+  lookupOptions = {
+    sidings: [],
+    routes: [],
+    oreTypes: [],
+    customers: [],
+    destinations: [],
+    wagonTypes: [],
+  },
 }) {
   const inputClass = uniformInputClass;
   const compactInputClass = `${inputClass} h-9 px-2 text-[12px]`;
@@ -38,6 +40,22 @@ export default function RakeUpcomingView({
       : upcomingMessageTone === "error"
         ? "border-rose-200 bg-rose-50 text-rose-800"
         : "border-blue-200 bg-blue-50 text-blue-800";
+
+  const renderSelect = (row, field, placeholder, options) => (
+    <select
+      value={row[field]}
+      onChange={(event) => updateUpcomingRow(row.id, field, event.target.value)}
+      className={compactInputClass}
+      disabled={moving}
+    >
+      <option value="">{placeholder}</option>
+      {options.map((option) => (
+        <option key={option.id} value={option.id}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
 
   return (
     <div className="space-y-6 3xl:space-y-8 5xl:space-y-12 animate-fadeIn">
@@ -91,13 +109,14 @@ export default function RakeUpcomingView({
         <div className="border-b border-slate-100 bg-slate-50/40 px-4 py-4">
           <h3 className="text-[15px] font-bold text-slate-800">Upcoming rake planner</h3>
           <p className="mt-0.5 text-[12px] text-slate-600">
-            Drafts auto-save locally. Only rows marked ready will move to offered rakes.
+            Drafts stay editable here until you move a ready row into offered rakes.
           </p>
           <div className="mt-3 flex flex-nowrap items-center gap-2 overflow-x-auto pb-0.5">
             <button
               type="button"
               onClick={onAddUpcomingRow}
-              className={`${toolbarButtonClass} border border-slate-300 bg-white text-slate-700 transition-colors hover:bg-slate-100`}
+              disabled={moving}
+              className={`${toolbarButtonClass} border border-slate-300 bg-white text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50`}
             >
               <PlusIcon className="h-3.5 w-3.5" />
               Add row
@@ -105,7 +124,8 @@ export default function RakeUpcomingView({
             <button
               type="button"
               onClick={onClearUpcomingRakes}
-              className={`${toolbarButtonClass} border border-slate-300 bg-white text-slate-700 transition-colors hover:bg-slate-100`}
+              disabled={moving || upcomingRows.length === 0}
+              className={`${toolbarButtonClass} border border-slate-300 bg-white text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50`}
             >
               <ClearIcon />
               Clear all
@@ -113,10 +133,12 @@ export default function RakeUpcomingView({
             <button
               type="button"
               onClick={onSaveUpcomingRakes}
-              disabled={upcomingStats.readyCount === 0}
+              disabled={moving || upcomingStats.readyCount === 0}
               className={`${uniformPrimaryButtonClass} ${toolbarButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
             >
-              Move {upcomingStats.readyCount > 0 ? upcomingStats.readyCount : ""} to Offered List
+              {moving
+                ? "Moving…"
+                : `Move ${upcomingStats.readyCount > 0 ? upcomingStats.readyCount : ""} to Offered List`}
             </button>
           </div>
         </div>
@@ -161,6 +183,13 @@ export default function RakeUpcomingView({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
+              {upcomingRows.length === 0 ? (
+                <tr>
+                  <td colSpan={11} className="px-4 py-8 text-center text-[13px] text-slate-500">
+                    No draft rakes yet. Use Add row to plan one.
+                  </td>
+                </tr>
+              ) : null}
               {upcomingRows.map((row, index) => {
                 const ready = isUpcomingRowReady(row);
 
@@ -173,7 +202,8 @@ export default function RakeUpcomingView({
                       <button
                         type="button"
                         onClick={() => onRemoveUpcomingRow(row.id)}
-                        className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                        disabled={moving}
+                        className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
                         title="Remove row"
                         aria-label="Remove row"
                       >
@@ -195,64 +225,16 @@ export default function RakeUpcomingView({
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <ThemedSelect
-                        value={row.oreType}
-                        onChange={(event) => updateUpcomingRow(row.id, "oreType", event.target.value)}
-                        className={compactInputClass}
-                      >
-                        <option value="">Select ore</option>
-                        {oreTypeOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </ThemedSelect>
+                      {renderSelect(row, "oreType", "Select ore", lookupOptions.oreTypes)}
                     </td>
                     <td className="px-4 py-3">
-                      <ThemedSelect
-                        value={row.siding}
-                        onChange={(event) => updateUpcomingRow(row.id, "siding", event.target.value)}
-                        className={compactInputClass}
-                      >
-                        <option value="">Select siding</option>
-                        {sidingOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </ThemedSelect>
+                      {renderSelect(row, "siding", "Select siding", lookupOptions.sidings)}
                     </td>
                     <td className="px-4 py-3">
-                      <ThemedSelect
-                        value={row.destination}
-                        onChange={(event) =>
-                          updateUpcomingRow(row.id, "destination", event.target.value)
-                        }
-                        className={compactInputClass}
-                      >
-                        <option value="">Select destination</option>
-                        {destinationOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </ThemedSelect>
+                      {renderSelect(row, "destination", "Select destination", lookupOptions.destinations)}
                     </td>
                     <td className="px-4 py-3">
-                      <ThemedSelect
-                        value={row.wagonType}
-                        onChange={(event) =>
-                          updateUpcomingRow(row.id, "wagonType", event.target.value)
-                        }
-                        className={compactInputClass}
-                      >
-                        <option value="">Select type</option>
-                        {wagonTypeOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </ThemedSelect>
+                      {renderSelect(row, "wagonType", "Select type", lookupOptions.wagonTypes)}
                     </td>
                     <td className="px-4 py-3">
                       <input
@@ -263,37 +245,14 @@ export default function RakeUpcomingView({
                           updateUpcomingRow(row.id, "wagonCount", event.target.value)
                         }
                         className={`${compactInputClass} w-20`}
+                        disabled={moving}
                       />
                     </td>
                     <td className="px-4 py-3">
-                      <ThemedSelect
-                        value={row.route}
-                        onChange={(event) => updateUpcomingRow(row.id, "route", event.target.value)}
-                        className={compactInputClass}
-                      >
-                        <option value="">Select route</option>
-                        {routeOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </ThemedSelect>
+                      {renderSelect(row, "route", "Select route", lookupOptions.routes)}
                     </td>
                     <td className="px-4 py-3">
-                      <ThemedSelect
-                        value={row.customer}
-                        onChange={(event) =>
-                          updateUpcomingRow(row.id, "customer", event.target.value)
-                        }
-                        className={compactInputClass}
-                      >
-                        <option value="">Select customer</option>
-                        {customerOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </ThemedSelect>
+                      {renderSelect(row, "customer", "Select customer", lookupOptions.customers)}
                     </td>
                     <td className="px-4 py-3">
                       <input
@@ -303,6 +262,7 @@ export default function RakeUpcomingView({
                           updateUpcomingRow(row.id, "placementTime", event.target.value)
                         }
                         className={compactInputClass}
+                        disabled={moving}
                       />
                     </td>
                   </tr>
@@ -312,10 +272,92 @@ export default function RakeUpcomingView({
           </table>
         </div>
 
+        {upcomingOfferedRows.length > 0 ? (
+          <div className="border-t border-slate-200 bg-slate-50/40">
+            <div className="border-b border-slate-100 px-4 py-4">
+              <h3 className="text-[15px] font-bold text-slate-800">Upcoming Offered Rakes</h3>
+              <p className="mt-0.5 text-[12px] text-slate-600">
+                Rakes already offered with a future offer time.
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[960px]">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-white">
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                      SNo
+                    </th>
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                      Rake Number
+                    </th>
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                      Ore Type
+                    </th>
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                      Siding
+                    </th>
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                      Destination
+                    </th>
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                      Wagon Type
+                    </th>
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                      Wagons
+                    </th>
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                      Route
+                    </th>
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                      Customer
+                    </th>
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                      Offer Time
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {upcomingOfferedRows.map((row, index) => (
+                    <tr key={row.rakeId} className="bg-white">
+                      <td className="px-4 py-3 text-[12px] font-semibold text-slate-500">
+                        {index + 1}
+                      </td>
+                      <td className="px-4 py-3 text-[12px] font-semibold text-slate-700">
+                        {row.rakeNumber || "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-semibold text-blue-700">
+                          {row.statusDescription || row.status || "Offered"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-[12px] text-slate-700">{row.oreType || "-"}</td>
+                      <td className="px-4 py-3 text-[12px] text-slate-700">{row.siding || "-"}</td>
+                      <td className="px-4 py-3 text-[12px] text-slate-700">{row.destination || "-"}</td>
+                      <td className="px-4 py-3 text-[12px] text-slate-700">{row.wagonType || "-"}</td>
+                      <td className="px-4 py-3 text-[12px] font-semibold text-slate-700">
+                        {row.noOfWagons ?? row.wagonSupply ?? "-"}
+                      </td>
+                      <td className="px-4 py-3 text-[12px] text-slate-700">{row.route || "-"}</td>
+                      <td className="px-4 py-3 text-[12px] text-slate-700">{row.customer || "-"}</td>
+                      <td className="px-4 py-3 text-[12px] text-slate-700">
+                        {formatDateTimeForTable(row.offerTime)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+
         <div className="border-t border-slate-100 px-4 py-3 text-[12px] text-slate-500">
           Tip: complete all fields to mark a row as ready, then use{" "}
           <span className="font-semibold text-slate-700">Move to Offered List</span> to create
-          offered rakes with generated rake IDs.
+          offered rakes with generated rake numbers.
         </div>
       </div>
     </div>

@@ -1,9 +1,14 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { approvalService, loadingService } from "../../services/operational";
 import { getErrorMessage } from "../../api/apiError";
+import {
+  listRailwayApprovals,
+  submitRailwayDecision,
+  updateRailwayWagonManifest,
+} from "../../services/railwayApprovalService";
 
 export const fetchApprovalRequests = createAsyncThunk("approvals/fetchAll", async () =>
-  approvalService.list(),
+  listRailwayApprovals(),
 );
 
 export const fetchApprovalByLoadingId = createAsyncThunk(
@@ -23,16 +28,15 @@ export const completeLoadingAndRequestApproval = createAsyncThunk(
 
 export const submitApprovalDecision = createAsyncThunk(
   "approvals/submitDecision",
-  async ({ approvalId, department, decision }) => {
-    const approval = await approvalService.submitDecision(approvalId, department, decision);
-    const loading = await loadingService.getById(approval.loadingId);
-    return { approval, loading };
+  async ({ approval, department, decision }) => {
+    const updated = await submitRailwayDecision(approval, department, decision);
+    return { approval: updated, loading: null };
   },
 );
 
 export const saveApprovalWagonManifest = createAsyncThunk(
   "approvals/saveWagonManifest",
-  async ({ approvalId, manifest }) => approvalService.updateWagonManifest(approvalId, manifest),
+  async ({ approvalId, manifest }) => updateRailwayWagonManifest(approvalId, manifest),
 );
 
 const approvalSlice = createSlice({

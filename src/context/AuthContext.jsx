@@ -8,7 +8,7 @@ import {
 } from "react";
 import { AUTH_STORAGE_KEY, AUTH_TAB_SESSION_KEY, TOKEN_STORAGE_KEY } from "../constants/storageKeys";
 import { USER_ROLES, DEFAULT_ROUTE_BY_ROLE } from "../constants/roles";
-import { loginWithCredentials } from "../services/auth/authService";
+import { loginWithOtp, sendLoginOtp } from "../services/auth/authService";
 import { fetchProfile } from "../services/profileService";
 import { writeTokens } from "../api/axiosClient";
 
@@ -108,12 +108,16 @@ export function AuthProvider({ children }) {
     [],
   );
 
+  const requestOtp = useCallback(async (email) => {
+    return sendLoginOtp(email.trim());
+  }, []);
+
   const login = useCallback(
-    async ({ email, password, remember = false }) => {
+    async ({ email, otp, remember = false }) => {
       const trimmedEmail = email.trim();
 
-      /* 1. get tokens */
-      const authTokens = await loginWithCredentials(trimmedEmail, password);
+      /* 1. verify OTP → JWT tokens */
+      const authTokens = await loginWithOtp(trimmedEmail, otp);
 
       /* 2. store tokens first so the profile request is authenticated */
       writeTokens(authTokens);
@@ -163,11 +167,12 @@ export function AuthProvider({ children }) {
       isAuthenticated,
       isLoading,
       tokens,
+      requestOtp,
       login,
       logout,
       defaultRoute: userRole ? DEFAULT_ROUTE_BY_ROLE[userRole] : "/login",
     }),
-    [user, profile, userRole, isAuthenticated, isLoading, tokens, login, logout],
+    [user, profile, userRole, isAuthenticated, isLoading, tokens, requestOtp, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

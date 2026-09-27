@@ -28,20 +28,42 @@ export const DEMO_CREDENTIALS = {
   },
 };
 
-function mockLoginWithCredentials(email, password) {
-  const normalizedEmail = email.trim().toLowerCase();
-  const normalizedPassword = password.trim();
+/** Demo OTP accepted when mock auth is used (or API is unreachable in DEV). */
+export const DEMO_OTP = "123456";
 
-  if (!normalizedEmail || normalizedPassword.length < 3) {
-    throw new Error("Invalid email or password.");
+function isKnownDemoEmail(email) {
+  const normalized = email.trim().toLowerCase();
+  return Object.values(DEMO_CREDENTIALS).some(
+    (account) => account.email === normalized,
+  );
+}
+
+function mockSendOtp(email) {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) {
+    throw new Error("Please enter your email.");
+  }
+  if (!isKnownDemoEmail(normalizedEmail) && !import.meta.env.DEV) {
+    throw new Error("No account found for this email.");
+  }
+  return {
+    message: "OTP sent successfully.",
+    email: normalizedEmail,
+    expires_in: 300,
+    otp: DEMO_OTP,
+  };
+}
+
+function mockVerifyOtp(email, otp) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedOtp = String(otp).trim();
+
+  if (!normalizedEmail || normalizedOtp.length < 4) {
+    throw new Error("Invalid email or OTP.");
   }
 
-  const knownAccount = Object.values(DEMO_CREDENTIALS).find(
-    (account) => account.email === normalizedEmail,
-  );
-
-  if (knownAccount && knownAccount.password !== normalizedPassword) {
-    throw new Error("Invalid email or password.");
+  if (isKnownDemoEmail(normalizedEmail) && normalizedOtp !== DEMO_OTP) {
+    throw new Error("Invalid or expired OTP.");
   }
 
   return {
@@ -50,11 +72,54 @@ function mockLoginWithCredentials(email, password) {
   };
 }
 
+export async function sendLoginOtp(email) {
+  const preferMock = import.meta.env.VITE_USE_MOCK_AUTH === "true";
+
+  if (preferMock) {
+    return mockSendOtp(email);
+  }
+
+  try {
+    return await apiRequest({
+      url: "/user/v1/auth/send-otp",
+      method: "POST",
+      data: { email: email.trim() },
+    });
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      return mockSendOtp(email);
+    }
+    throw parseApiError(error);
+  }
+}
+
+export async function loginWithOtp(email, otp) {
+  const preferMock = import.meta.env.VITE_USE_MOCK_AUTH === "true";
+
+  if (preferMock) {
+    return mockVerifyOtp(email, otp);
+  }
+
+  try {
+    return await apiRequest({
+      url: "/user/v1/auth/verify-otp",
+      method: "POST",
+      data: { email: email.trim(), otp: String(otp).trim() },
+    });
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      return mockVerifyOtp(email, otp);
+    }
+    throw parseApiError(error);
+  }
+}
+
+/** @deprecated Prefer loginWithOtp — kept for any leftover password callers. */
 export async function loginWithCredentials(email, password) {
   const preferMock = import.meta.env.VITE_USE_MOCK_AUTH === "true";
 
   if (preferMock) {
-    return mockLoginWithCredentials(email, password);
+    return mockVerifyOtp(email, password);
   }
 
   try {
@@ -65,7 +130,7 @@ export async function loginWithCredentials(email, password) {
     });
   } catch (error) {
     if (import.meta.env.DEV) {
-      return mockLoginWithCredentials(email, password);
+      return mockVerifyOtp(email, password);
     }
     throw parseApiError(error);
   }

@@ -7,7 +7,6 @@ import {
 import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
-import ThemedSelect from "../../../components/shared/ThemedSelect";
 import {
   DelayIcon,
   AdjustIcon as AdjustmentIcon,
@@ -18,104 +17,42 @@ import {
   DisableIcon,
   EnableIcon,
 } from "../../../components/icons";
-import {
-  formatDateTimeForTable,
-  formatTableDateTimeForInput,
-  getLocalDateTimeValue,
-  parseDateTimeToTimestamp,
-} from "../../../utils/dateUtils";
+import { formatDateTimeForTable } from "../../../utils/dateUtils";
 import { useRouter } from "../../../context/RouterContext";
 import { delayPathForLoading, ROUTES } from "../../../constants/routes";
 import { LOADING_STATUS } from "../../../constants/approval";
-import { fetchLoadingRecords, fetchLoadingById, saveLoadingRecord } from "../../../store/slices/loadingSlice";
-import { fetchRakeById } from "../../../store/slices/rakeSlice";
+import { fetchApprovalRequests } from "../../../store/slices/approvalSlice";
+import { getErrorMessage } from "../../../api/apiError";
 import {
-  completeLoadingAndRequestApproval,
-  fetchApprovalRequests,
-} from "../../../store/slices/approvalSlice";
-import { toInputDateTime } from "../../../types/transforms";
+  createLoadingRecord,
+  listLoadingRecords,
+  updateLoadingRecord,
+} from "../../../services/loadingManagementService";
+import { createRailwayApproval } from "../../../services/railwayApprovalService";
+import { listRakes } from "../../../services/rakeManagementService";
+import { fetchStockpiles } from "../../../services/stockpileService";
 import {
   ApprovalStatusBadge,
   ApprovalTrackerModal,
   ViewTrackerButton,
 } from "../../../components/common/ApprovalTracker";
-import {
-  countPendingApprovals,
-  deriveLoadingStatus,
-} from "../../../constants/approval";
+import { countPendingApprovals } from "../../../constants/approval";
 import { getLoadingStatusMeta } from "../../../utils/approvalUtils";
 
-const wagonSickOptions = ["No", "Yes"];
+const LOADING_STATUS_CODE = {
+  PENDING: 5,
+  IN_PROGRESS: 10,
+  AWAITING_APPROVAL: 15,
+};
+
+const wagonSickOptions = [
+  { value: "0", label: "No" },
+  { value: "1", label: "Yes" },
+];
 const manualLoadingTrackOptions = [
   { value: "", label: "None" },
-  { value: "R3", label: "Manual R3" },
-  { value: "R4", label: "Manual R4" },
-];
-
-const initialRows = [
-  {
-    rakeId: "RK-7729",
-    rakeNumber: "R-2026-001",
-    wagonSupply: "NS/58",
-    siding: "Siding-A",
-    route: "R-14",
-    customer: "JSW Steel",
-    destination: "Visakhapatnam",
-    fNote: "FN-23011",
-    placementTime: "2026-03-19T09:20",
-    offerTime: "2026-03-19T09:59",
-    operatorFtp: "FTP-14",
-    wagonSick: "No",
-    tonnage: "3450",
-    stockpile: "SP-12",
-    completionTime: "2026-03-19T13:20",
-    clearanceTime: "2026-03-19T13:42",
-    overloadedWagons: 0,
-    weightRemoved: 0,
-    isDisabled: false,
-  },
-  {
-    rakeId: "RK-8812",
-    rakeNumber: "R-2026-002",
-    wagonSupply: "BCN/45",
-    siding: "Siding-C",
-    route: "R-09",
-    customer: "Tata Steel",
-    destination: "Bhilai",
-    fNote: "FN-23022",
-    placementTime: "2026-03-19T10:05",
-    offerTime: "2026-03-19T10:17",
-    operatorFtp: "FTP-22",
-    wagonSick: "Yes",
-    tonnage: "2880",
-    stockpile: "SP-04",
-    completionTime: "",
-    clearanceTime: "",
-    overloadedWagons: 0,
-    weightRemoved: 0,
-    isDisabled: false,
-  },
-  {
-    rakeId: "RK-9003",
-    rakeNumber: "R-2026-003",
-    wagonSupply: "BOBRN/59",
-    siding: "Siding-D",
-    route: "R-05",
-    customer: "SAIL",
-    destination: "Raipur",
-    fNote: "FN-23041",
-    placementTime: "2026-03-19T10:11",
-    offerTime: "2026-03-19T10:33",
-    operatorFtp: "FTP-07",
-    wagonSick: "No",
-    tonnage: "3520",
-    stockpile: "SP-18",
-    completionTime: "2026-03-19T14:08",
-    clearanceTime: "2026-03-19T14:24",
-    overloadedWagons: 0,
-    weightRemoved: 0,
-    isDisabled: false,
-  },
+  { value: "3", label: "Manual R3" },
+  { value: "4", label: "Manual R4" },
 ];
 
 const initialInlineForm = {
@@ -130,7 +67,7 @@ const initialInlineForm = {
   placementTime: "",
   offerTime: "",
   operatorFtp: "",
-  wagonSick: "No",
+  wagonSick: "0",
   manualLoadingTrack: "",
   tonnage: "",
   stockpile: "",
@@ -140,17 +77,120 @@ const initialInlineForm = {
   weightRemoved: "",
 };
 
-function mapStoreRow(item) {
+function asResults(response) {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.results)) return response.results;
+  return [];
+}
+
+function toDateTimeLocalValue(value) {
+  if (!value) return "";
+  const raw = String(value);
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw)) return raw;
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+function toIsoOrNull(value) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function wagonSupplyLabel(wagonType, wagonCount) {
+  const type = wagonType || "";
+  const count = wagonCount == null || wagonCount === "" ? "" : String(wagonCount);
+  if (type && count) return `${type}/${count}`;
+  return type || count;
+}
+
+function mapApiLoading(item) {
+  const track = manualLoadingTrackOptions.find(
+    (option) => option.value === String(item.manual_loading_track ?? ""),
+  );
+
   return {
-    ...item,
-    placementTime: item.placementTime ? toInputDateTime(item.placementTime) : "",
-    offerTime: item.offerTime ? toInputDateTime(item.offerTime) : "",
-    completionTime: item.completionTime ? toInputDateTime(item.completionTime) : "",
-    clearanceTime: item.clearanceTime ? toInputDateTime(item.clearanceTime) : "",
+    id: item.id,
+    rakeId: item.rake,
+    rakeNumber: item.rake_number || "",
+    wagonSupply: wagonSupplyLabel(item.wagontype_name, item.wagoncount),
+    siding: item.siding_name || "",
+    route: item.route_name || "",
+    customer: item.customer_name || "",
+    destination: item.destination_name || "",
+    fNote: item.fnote || "",
+    placementTime: toDateTimeLocalValue(item.placement_time),
+    offerTime: toDateTimeLocalValue(item.offertime),
+    operatorFtp: item.operator_ftp || "",
+    wagonSick: item.wagon_sick_name || (Number(item.wagon_sick) === 1 ? "Yes" : "No"),
+    wagonSickCode: item.wagon_sick == null ? "0" : String(item.wagon_sick),
+    manualLoadingTrack: track?.label && track.value ? track.label : "",
+    manualLoadingTrackCode: item.manual_loading_track == null ? "" : String(item.manual_loading_track),
+    tonnage: item.tonnage ?? "",
+    stockpile: item.stockpile_name || "",
+    stockpileId: item.stockpile == null ? "" : String(item.stockpile),
+    completionTime: toDateTimeLocalValue(item.completion_time),
+    clearanceTime: toDateTimeLocalValue(item.clearance_time),
+    overloadedWagons: item.overloaded_wagons ?? 0,
+    weightRemoved: item.weight_removed ?? 0,
+    status: item.status,
+    statusDescription: item.status_description || "",
+    isSubmitted: Boolean(item.is_submitted),
+    isDisabled: Boolean(item.is_disabled),
   };
 }
 
-function getRowStatusMeta(row, approval) {
+function mapRakeOption(item) {
+  return {
+    id: item.id,
+    rakeNumber: item.rake_number || "",
+    wagonSupply: wagonSupplyLabel(item.wagontype_name, item.wagoncount),
+    siding: item.siding_name || "",
+    route: item.route_name || "",
+    customer: item.customer_name || "",
+    destination: item.destination_name || "",
+    fNote: item.fnote || "",
+    offerTime: toDateTimeLocalValue(item.offertime),
+  };
+}
+
+function loadingFieldsFromForm(form) {
+  const stockpile = form.stockpile === "" ? null : Number(form.stockpile);
+  const track = form.manualLoadingTrack === "" ? null : Number(form.manualLoadingTrack);
+
+  return {
+    placement_time: toIsoOrNull(form.placementTime),
+    operator_ftp: String(form.operatorFtp || "").trim(),
+    wagon_sick: Number(form.wagonSick || 0),
+    manual_loading_track: Number.isFinite(track) ? track : null,
+    tonnage: form.tonnage === "" ? null : form.tonnage,
+    stockpile: Number.isFinite(stockpile) ? stockpile : null,
+    completion_time: toIsoOrNull(form.completionTime),
+    overloaded_wagons: form.overloadedWagons === "" ? 0 : Number(form.overloadedWagons),
+    weight_removed: form.weightRemoved === "" ? "0" : String(form.weightRemoved),
+  };
+}
+
+function statusKeyFromCode(code) {
+  switch (Number(code)) {
+    case LOADING_STATUS_CODE.IN_PROGRESS:
+      return LOADING_STATUS.IN_PROGRESS;
+    case LOADING_STATUS_CODE.AWAITING_APPROVAL:
+      return LOADING_STATUS.AWAITING_APPROVAL;
+    case 20:
+      return LOADING_STATUS.READY_FOR_DISPATCH;
+    case 25:
+      return LOADING_STATUS.DISPATCHED;
+    default:
+      return LOADING_STATUS.PENDING;
+  }
+}
+
+function getRowStatusMeta(row) {
   if (row.isDisabled) {
     return {
       label: "Inactive",
@@ -158,7 +198,8 @@ function getRowStatusMeta(row, approval) {
       dotClass: "bg-slate-400",
     };
   }
-  return getLoadingStatusMeta(deriveLoadingStatus(row, approval));
+  const meta = getLoadingStatusMeta(statusKeyFromCode(row.status));
+  return { ...meta, label: row.statusDescription || meta.label };
 }
 
 function compareValues(a, b, order) {
@@ -176,17 +217,17 @@ export default function LoadingManagementPage() {
   const [searchParams] = useSearchParams();
   const rakeIdParam = searchParams.get("rakeId");
   const loadingIdParam = searchParams.get("loadingId");
-  const storeItems = useSelector((state) => state.loading.items);
   const approvalItems = useSelector((state) => state.approvals.items);
-  const selectedRake = useSelector((state) => state.rakes.selected);
-  const selectedLoading = useSelector((state) => state.loading.selected);
-  const [rows, setRows] = useState(initialRows);
+  const [rows, setRows] = useState([]);
+  const [rakeOptions, setRakeOptions] = useState([]);
+  const [stockpileOptions, setStockpileOptions] = useState([]);
   const [tableSearch, setTableSearch] = useState("");
   const [sortBy, setSortBy] = useState("rakeNumber");
   const [sortOrder, setSortOrder] = useState("asc");
   const [inlineForm, setInlineForm] = useState(initialInlineForm);
   const [inlineActionMode, setInlineActionMode] = useState("add");
-  const [activeInlineRakeId, setActiveInlineRakeId] = useState("");
+  const [activeInlineId, setActiveInlineId] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [statusConfirmRakeId, setStatusConfirmRakeId] = useState("");
   const [message, setMessage] = useState("");
   const [approvalDetailId, setApprovalDetailId] = useState(null);
@@ -215,89 +256,98 @@ export default function LoadingManagementPage() {
   const stickyApprovalCellBase = `sticky right-[142px] z-20 ${pinnedApprovalWidthClass} border-l border-slate-200/70 px-4 align-middle shadow-[-4px_0_8px_-4px_rgba(15,23,42,0.08)]`;
 
   useEffect(() => {
-    dispatch(fetchLoadingRecords());
     dispatch(fetchApprovalRequests());
   }, [dispatch]);
 
   useEffect(() => {
-    if (storeItems.length > 0) {
-      setRows(storeItems.map(mapStoreRow));
+    let cancelled = false;
+
+    async function loadScreenData() {
+      try {
+        const [loadingResponse, rakeResponse, stockpileResponse] = await Promise.all([
+          listLoadingRecords({}),
+          listRakes({}).catch(() => ({ results: [] })),
+          fetchStockpiles({}).catch(() => ({ results: [] })),
+        ]);
+        if (cancelled) return;
+        const loadedRows = asResults(loadingResponse).map(mapApiLoading);
+        setRows(loadedRows);
+        setRakeOptions(asResults(rakeResponse).map(mapRakeOption));
+        setStockpileOptions(
+          asResults(stockpileResponse)
+            .filter((item) => item?.id != null)
+            .map((item) => ({
+              id: String(item.id),
+              label: item.stockpile_code || item.stockpile_desc || String(item.id),
+            })),
+        );
+        if (loadingIdParam) {
+          const linked = loadedRows.find((row) => String(row.id) === String(loadingIdParam));
+          if (linked?.rakeNumber) setTableSearch(linked.rakeNumber);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setMessage(getErrorMessage(error, "Unable to load loading records."));
+        }
+      }
     }
-  }, [storeItems]);
+
+    loadScreenData();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadingIdParam]);
+
+  function applyRakeSelection(rake) {
+    setInlineForm((prev) => ({
+      ...prev,
+      rakeId: rake ? String(rake.id) : "",
+      rakeNumber: rake?.rakeNumber || "",
+      wagonSupply: rake?.wagonSupply || "",
+      siding: rake?.siding || "",
+      route: rake?.route || "",
+      customer: rake?.customer || "",
+      destination: rake?.destination || "",
+      fNote: rake?.fNote || "",
+      offerTime: rake?.offerTime || "",
+    }));
+    setMessage("");
+  }
 
   useEffect(() => {
-    if (loadingIdParam) dispatch(fetchLoadingById(loadingIdParam));
-    else if (rakeIdParam) dispatch(fetchRakeById(rakeIdParam));
-  }, [dispatch, loadingIdParam, rakeIdParam]);
+    if (!rakeIdParam || inlineForm.rakeId) return;
+    const match = rakeOptions.find((item) => String(item.id) === String(rakeIdParam));
+    if (!match) return;
+    applyRakeSelection(match);
+    setTableSearch(match.rakeNumber);
+  }, [rakeIdParam, rakeOptions, inlineForm.rakeId]);
 
-  useEffect(() => {
-    if (selectedLoading) {
-      setInlineForm({
-        ...initialInlineForm,
-        rakeId: selectedLoading.rakeId,
-        rakeNumber: selectedLoading.rakeNumber,
-        wagonSupply: selectedLoading.wagonSupply,
-        siding: selectedLoading.siding,
-        route: selectedLoading.route,
-        customer: selectedLoading.customer,
-        destination: selectedLoading.destination,
-        fNote: selectedLoading.fNote,
-        offerTime: selectedLoading.offerTime ? toInputDateTime(selectedLoading.offerTime) : "",
-        placementTime: selectedLoading.placementTime
-          ? toInputDateTime(selectedLoading.placementTime)
-          : "",
-      });
-      setInlineActionMode("add");
-      setActiveInlineRakeId("");
-      setTableSearch(selectedLoading.rakeNumber);
-      return;
-    }
+  async function reloadRows() {
+    const response = await listLoadingRecords({});
+    setRows(asResults(response).map(mapApiLoading));
+  }
 
-    if (!selectedRake) return;
-    setInlineForm({
-      ...initialInlineForm,
-      rakeId: selectedRake.id,
-      rakeNumber: selectedRake.rakeNumber,
-      wagonSupply: selectedRake.wagonSupply,
-      siding: selectedRake.siding,
-      route: selectedRake.route,
-      customer: selectedRake.customer,
-      destination: selectedRake.destination,
-      fNote: selectedRake.fNote,
-      offerTime: selectedRake.offerTime ? toInputDateTime(selectedRake.offerTime) : "",
-    });
-    setInlineActionMode("add");
-    setActiveInlineRakeId("");
-    setTableSearch(selectedRake.rakeNumber);
-  }, [selectedLoading, selectedRake]);
+  async function handleInlineAdjustmentSave(loadingId) {
+    if (!loadingId) return;
 
-  async function handleInlineAdjustmentSave(rakeId) {
-    if (!rakeId) return;
-
-    const existingRow = rows.find((row) => row.rakeId === rakeId);
+    const existingRow = rows.find((row) => row.id === loadingId);
     if (!existingRow) return;
 
-    const overloadedWagons =
-      inlineForm.overloadedWagons !== "" ? Number(inlineForm.overloadedWagons) : undefined;
-    const weightRemoved =
-      inlineForm.weightRemoved !== "" ? Number(inlineForm.weightRemoved) : undefined;
-
+    setSaving(true);
     try {
-      const record = buildCanonicalRow(
-        {
-          ...existingRow,
-          overloadedWagons:
-            overloadedWagons !== undefined ? overloadedWagons : existingRow.overloadedWagons,
-          weightRemoved:
-            weightRemoved !== undefined ? weightRemoved : existingRow.weightRemoved,
-        },
-        existingRow,
-      );
-      await persistRow(record);
-      setMessage(`Updated wagons and weight for rake ${rakeId}`);
+      await updateLoadingRecord(loadingId, {
+        overloaded_wagons:
+          inlineForm.overloadedWagons === "" ? 0 : Number(inlineForm.overloadedWagons),
+        weight_removed:
+          inlineForm.weightRemoved === "" ? "0" : String(inlineForm.weightRemoved),
+      });
+      await reloadRows();
       clearInlineForm();
+      setMessage(`Updated wagons and weight for rake ${existingRow.rakeNumber || existingRow.rakeId}`);
     } catch (error) {
-      setMessage(error?.message || "Unable to save load adjustment.");
+      setMessage(getErrorMessage(error, "Unable to save load adjustment."));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -319,17 +369,17 @@ export default function LoadingManagementPage() {
       placementTime: row.placementTime,
       offerTime: row.offerTime,
       operatorFtp: row.operatorFtp || "",
-      wagonSick: row.wagonSick || "No",
-      manualLoadingTrack: row.manualLoadingTrack || "",
+      wagonSick: row.wagonSickCode || "0",
+      manualLoadingTrack: row.manualLoadingTrackCode || "",
       tonnage: row.tonnage || "",
-      stockpile: row.stockpile || "",
+      stockpile: row.stockpileId || "",
       completionTime: row.completionTime || "",
       clearanceTime: row.clearanceTime || "",
       overloadedWagons: row.overloadedWagons !== undefined ? row.overloadedWagons : "",
       weightRemoved: row.weightRemoved !== undefined ? row.weightRemoved : "",
     });
     setInlineActionMode("adjust");
-    setActiveInlineRakeId(row.rakeId);
+    setActiveInlineId(row.id);
     setMessage("");
   }
 
@@ -340,7 +390,7 @@ export default function LoadingManagementPage() {
   }
 
   const statusConfirmRake = useMemo(
-    () => rows.find((item) => item.rakeId === statusConfirmRakeId),
+    () => rows.find((item) => item.id === statusConfirmRakeId),
     [rows, statusConfirmRakeId],
   );
 
@@ -349,8 +399,7 @@ export default function LoadingManagementPage() {
 
     const q = tableSearch.toLowerCase();
     return rows.filter((row) => {
-      const approval = approvalByLoadingId[row.id];
-      const status = getRowStatusMeta(row, approval).label;
+      const status = getRowStatusMeta(row).label;
       return [
         row.rakeId,
         row.rakeNumber,
@@ -370,7 +419,7 @@ export default function LoadingManagementPage() {
         .toLowerCase()
         .includes(q);
     });
-  }, [rows, tableSearch, approvalByLoadingId]);
+  }, [rows, tableSearch]);
 
   const sortedRows = useMemo(() => {
     const getComparableValue = (row, field) => {
@@ -380,7 +429,8 @@ export default function LoadingManagementPage() {
         field === "completionTime" ||
         field === "clearanceTime"
       ) {
-        return parseDateTimeToTimestamp(row[field]);
+        const time = new Date(row[field]).getTime();
+        return Number.isNaN(time) ? 0 : time;
       }
 
       if (field === "tonnage" || field === "overloadedWagons" || field === "weightRemoved") {
@@ -389,8 +439,7 @@ export default function LoadingManagementPage() {
       }
 
       if (field === "status") {
-        const approval = approvalByLoadingId[row.id];
-        return getRowStatusMeta(row, approval).label.toLowerCase();
+        return getRowStatusMeta(row).label.toLowerCase();
       }
 
       return String(row[field] ?? "").toLowerCase();
@@ -403,7 +452,7 @@ export default function LoadingManagementPage() {
       const comparison = aValue > bValue ? 1 : -1;
       return sortOrder === "asc" ? comparison : -comparison;
     });
-  }, [filteredRows, sortBy, sortOrder, approvalByLoadingId]);
+  }, [filteredRows, sortBy, sortOrder]);
 
   function handleSort(field) {
     if (sortBy === field) {
@@ -422,7 +471,7 @@ export default function LoadingManagementPage() {
   function clearInlineForm() {
     setInlineForm(initialInlineForm);
     setInlineActionMode("add");
-    setActiveInlineRakeId("");
+    setActiveInlineId(null);
     setMessage("");
   }
 
@@ -439,46 +488,27 @@ export default function LoadingManagementPage() {
       }
     }
 
-    const requiredFields = [
-      inlineForm.rakeId,
-      inlineForm.rakeNumber,
-      inlineForm.wagonSupply,
-      inlineForm.siding,
-      inlineForm.route,
-      inlineForm.customer,
-      inlineForm.destination,
-      inlineForm.offerTime,
-      inlineForm.operatorFtp,
-      inlineForm.tonnage,
-      inlineForm.stockpile,
-    ];
-
-    if (!isAdjustmentMode && requiredFields.some((field) => !String(field || "").trim())) {
-      return "Please fill all required loading fields before saving.";
+    if (!isAdjustmentMode) {
+      const missing = [];
+      if (!String(inlineForm.rakeId || "").trim()) missing.push("rake");
+      if (!String(inlineForm.operatorFtp || "").trim()) missing.push("operator FTP");
+      if (!String(inlineForm.tonnage || "").trim()) missing.push("tonnage");
+      if (!String(inlineForm.stockpile || "").trim()) missing.push("stockpile");
+      if (missing.length) {
+        return `Fill ${missing.join(", ")} before saving.`;
+      }
+      if (Number(inlineForm.tonnage) <= 0) {
+        return "Tonnage must be greater than zero.";
+      }
     }
 
-    if (!isAdjustmentMode &&
-      (
+    if (
+      !isAdjustmentMode &&
       inlineForm.placementTime &&
       inlineForm.completionTime &&
-      parseDateTimeToTimestamp(inlineForm.completionTime) <
-        parseDateTimeToTimestamp(inlineForm.placementTime)
-      )
+      new Date(inlineForm.completionTime) < new Date(inlineForm.placementTime)
     ) {
       return "Completion time must be after placement time.";
-    }
-
-    if (!isAdjustmentMode) {
-      const normalizedRakeId = inlineForm.rakeId.trim();
-      const duplicateRake = rows.some(
-        (row) =>
-          row.rakeId.toLowerCase() === normalizedRakeId.toLowerCase() &&
-          row.rakeId !== activeInlineRakeId,
-      );
-
-      if (duplicateRake) {
-        return "Rake ID already exists. Use a different Rake ID.";
-      }
     }
 
     if (inlineForm.overloadedWagons && (Number.isNaN(Number(inlineForm.overloadedWagons)) || Number(inlineForm.overloadedWagons) < 0)) {
@@ -492,45 +522,6 @@ export default function LoadingManagementPage() {
     return "";
   }
 
-  function buildCanonicalRow(source = inlineForm, existingRow = null) {
-    const rakeId = source.rakeId.trim();
-    return {
-      id: existingRow?.id || `LD-${rakeId.replace("RK-", "")}`,
-      rakeId,
-      rakeNumber: source.rakeNumber.trim(),
-      wagonSupply: source.wagonSupply.trim(),
-      siding: source.siding.trim(),
-      route: source.route.trim(),
-      customer: source.customer.trim(),
-      destination: source.destination.trim(),
-      fNote: source.fNote.trim() || "-",
-      placementTime: source.placementTime,
-      offerTime: source.offerTime,
-      operatorFtp: source.operatorFtp.trim(),
-      wagonSick: source.wagonSick,
-      manualLoadingTrack: source.manualLoadingTrack || "",
-      tonnage: source.tonnage,
-      stockpile: source.stockpile.trim(),
-      completionTime: source.completionTime || null,
-      clearanceTime: existingRow?.clearanceTime ?? null,
-      overloadedWagons: source.overloadedWagons !== "" ? Number(source.overloadedWagons) : 0,
-      weightRemoved: source.weightRemoved !== "" ? Number(source.weightRemoved) : 0,
-      isDisabled: existingRow?.isDisabled ?? false,
-      status:
-        existingRow?.status ??
-        (source.operatorFtp || source.tonnage || source.stockpile
-          ? LOADING_STATUS.IN_PROGRESS
-          : LOADING_STATUS.PENDING),
-      isSubmitted: existingRow?.isSubmitted ?? false,
-    };
-  }
-
-  async function persistRow(record) {
-    await dispatch(saveLoadingRecord(record)).unwrap();
-    await dispatch(fetchLoadingRecords());
-    await dispatch(fetchApprovalRequests());
-  }
-
   async function handleInlineSave() {
     const validationMessage = validateInlineForm();
     if (validationMessage) {
@@ -539,13 +530,13 @@ export default function LoadingManagementPage() {
     }
 
     if (inlineActionMode === "adjust") {
-      handleInlineAdjustmentSave(activeInlineRakeId);
+      handleInlineAdjustmentSave(activeInlineId);
       return;
     }
 
     const existingRow =
       inlineActionMode === "edit"
-        ? rows.find((item) => item.rakeId === activeInlineRakeId)
+        ? rows.find((item) => item.id === activeInlineId)
         : null;
 
     if (existingRow?.isSubmitted) {
@@ -553,30 +544,56 @@ export default function LoadingManagementPage() {
       return;
     }
 
+    setSaving(true);
     try {
-      const record = buildCanonicalRow(inlineForm, existingRow);
-      await persistRow(record);
+      const fields = loadingFieldsFromForm(inlineForm);
+      if (inlineActionMode === "edit") {
+        await updateLoadingRecord(activeInlineId, fields);
+      } else {
+        await createLoadingRecord({
+          ...fields,
+          rake: Number(inlineForm.rakeId),
+          status: LOADING_STATUS_CODE.IN_PROGRESS,
+          is_submitted: false,
+          is_disabled: false,
+        });
+      }
+      await reloadRows();
+      clearInlineForm();
       setMessage(
         inlineActionMode === "edit"
           ? "Loading row updated successfully."
           : "Loading row added successfully.",
       );
-      clearInlineForm();
     } catch (error) {
-      setMessage(error?.message || "Unable to save loading row.");
+      setMessage(getErrorMessage(error, "Unable to save loading row."));
+    } finally {
+      setSaving(false);
     }
   }
 
   async function handleFinalSubmit(loadingId) {
     if (!loadingId) return;
+    setSaving(true);
     try {
-      await dispatch(completeLoadingAndRequestApproval(loadingId)).unwrap();
-      await dispatch(fetchLoadingRecords());
+      await updateLoadingRecord(loadingId, {
+        is_submitted: true,
+        status: LOADING_STATUS_CODE.AWAITING_APPROVAL,
+      });
+      try {
+        await createRailwayApproval({ loading: Number(loadingId) });
+      } catch (error) {
+        const alreadyExists = /already exists/i.test(getErrorMessage(error, ""));
+        if (!alreadyExists) throw error;
+      }
+      await reloadRows();
       await dispatch(fetchApprovalRequests());
-      setMessage("Loading submitted. Railway approval request created.");
+      setMessage("Loading submitted for railway approval.");
       setFinalSubmitTarget(null);
     } catch (error) {
-      setMessage(error?.message || "Unable to submit loading for railway approval.");
+      setMessage(getErrorMessage(error, "Unable to submit loading for railway approval."));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -603,17 +620,17 @@ export default function LoadingManagementPage() {
       placementTime: row.placementTime,
       offerTime: row.offerTime,
       operatorFtp: row.operatorFtp || "",
-      wagonSick: row.wagonSick || "No",
-      manualLoadingTrack: row.manualLoadingTrack || "",
+      wagonSick: row.wagonSickCode || "0",
+      manualLoadingTrack: row.manualLoadingTrackCode || "",
       tonnage: row.tonnage || "",
-      stockpile: row.stockpile || "",
+      stockpile: row.stockpileId || "",
       completionTime: row.completionTime || "",
       clearanceTime: row.clearanceTime || "",
       overloadedWagons: row.overloadedWagons !== undefined ? row.overloadedWagons : "",
       weightRemoved: row.weightRemoved !== undefined ? row.weightRemoved : "",
     });
     setInlineActionMode("edit");
-    setActiveInlineRakeId(row.rakeId);
+    setActiveInlineId(row.id);
     setMessage("");
   }
 
@@ -628,17 +645,20 @@ export default function LoadingManagementPage() {
   async function confirmRakeStatusToggle() {
     if (!statusConfirmRakeId) return;
 
-    const existingRow = rows.find((item) => item.rakeId === statusConfirmRakeId);
+    const existingRow = rows.find((item) => item.id === statusConfirmRakeId);
     if (!existingRow) return;
 
+    setSaving(true);
     try {
-      await persistRow({
-        ...buildCanonicalRow(existingRow, existingRow),
-        isDisabled: !existingRow.isDisabled,
+      await updateLoadingRecord(existingRow.id, {
+        is_disabled: !existingRow.isDisabled,
       });
+      await reloadRows();
       setStatusConfirmRakeId("");
     } catch (error) {
-      setMessage(error?.message || "Unable to update row status.");
+      setMessage(getErrorMessage(error, "Unable to update row status."));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -648,13 +668,6 @@ export default function LoadingManagementPage() {
 
   const requiredInlineMissing = [
     inlineForm.rakeId,
-    inlineForm.rakeNumber,
-    inlineForm.wagonSupply,
-    inlineForm.siding,
-    inlineForm.route,
-    inlineForm.customer,
-    inlineForm.destination,
-    inlineForm.offerTime,
     inlineForm.operatorFtp,
     inlineForm.tonnage,
     inlineForm.stockpile,
@@ -670,9 +683,9 @@ export default function LoadingManagementPage() {
     !String(inlineForm.overloadedWagons || "").trim() &&
     !String(inlineForm.weightRemoved || "").trim();
 
-  const inlineSaveDisabled = isInlineAdjustmentMode
-    ? adjustmentMissing || !activeInlineRakeId
-    : requiredInlineMissing || (isInlineEditMode && !activeInlineRakeId);
+  const inlineSaveDisabled = saving || (isInlineAdjustmentMode
+    ? adjustmentMissing || !activeInlineId
+    : requiredInlineMissing || (isInlineEditMode && !activeInlineId));
 
   const inlineSaveLabel = isInlineAdjustmentMode
     ? "Save Adjustment"
@@ -856,8 +869,8 @@ export default function LoadingManagementPage() {
                       {inlineActionMode !== "add" ? (
                         <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500">
                           {inlineActionMode === "edit"
-                            ? `Editing ${activeInlineRakeId}`
-                            : `Adjusting ${activeInlineRakeId}`}
+                            ? `Editing ${rows.find((item) => item.id === activeInlineId)?.rakeNumber || ""}`
+                            : `Adjusting ${rows.find((item) => item.id === activeInlineId)?.rakeNumber || ""}`}
                         </span>
                       ) : null}
                       <div className="flex items-center justify-center gap-2">
@@ -888,83 +901,86 @@ export default function LoadingManagementPage() {
                     </div>
                   </td>
                   <td className="px-5 py-3">
-                    <input
-                      type="text"
+                    <select
                       value={inlineForm.rakeId}
-                      onChange={(event) => updateInline("rakeId", event.target.value)}
-                      placeholder="Rake ID"
+                      onChange={(event) => {
+                        const match = rakeOptions.find(
+                          (item) => String(item.id) === String(event.target.value),
+                        );
+                        applyRakeSelection(match || null);
+                      }}
                       className={compactInputClass}
-                      disabled={!areMainFieldsEditable}
-                    />
+                      disabled={!isInlineAddMode}
+                    >
+                      <option value="">Select rake</option>
+                      {rakeOptions.map((option) => (
+                        <option key={option.id} value={String(option.id)}>
+                          {option.rakeNumber || `Rake ${option.id}`}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-5 py-3">
                     <input
                       type="text"
                       value={inlineForm.rakeNumber}
-                      onChange={(event) => updateInline("rakeNumber", event.target.value)}
                       placeholder="Rake Number"
-                      className={compactInputClass}
-                      disabled={!areMainFieldsEditable}
+                      className={`${compactInputClass} cursor-not-allowed bg-slate-100 text-slate-500`}
+                      readOnly
                     />
                   </td>
                   <td className="px-5 py-3">
                     <input
                       type="text"
                       value={inlineForm.wagonSupply}
-                      onChange={(event) => updateInline("wagonSupply", event.target.value)}
                       placeholder="Type/Count"
-                      className={compactInputClass}
-                      disabled={!areMainFieldsEditable}
+                      className={`${compactInputClass} cursor-not-allowed bg-slate-100 text-slate-500`}
+                      readOnly
                     />
                   </td>
                   <td className="px-5 py-3">
                     <input
                       type="text"
                       value={inlineForm.siding}
-                      onChange={(event) => updateInline("siding", event.target.value)}
                       placeholder="Siding"
-                      className={compactInputClass}
-                      disabled={!areMainFieldsEditable}
+                      className={`${compactInputClass} cursor-not-allowed bg-slate-100 text-slate-500`}
+                      readOnly
                     />
                   </td>
                   <td className="px-5 py-3">
                     <input
                       type="text"
                       value={inlineForm.route}
-                      onChange={(event) => updateInline("route", event.target.value)}
                       placeholder="Route"
-                      className={compactInputClass}
-                      disabled={!areMainFieldsEditable}
+                      className={`${compactInputClass} cursor-not-allowed bg-slate-100 text-slate-500`}
+                      readOnly
                     />
                   </td>
                   <td className="px-5 py-3">
                     <input
                       type="text"
                       value={inlineForm.customer}
-                      onChange={(event) => updateInline("customer", event.target.value)}
                       placeholder="Customer"
-                      className={compactInputClass}
-                      disabled={!areMainFieldsEditable}
+                      className={`${compactInputClass} cursor-not-allowed bg-slate-100 text-slate-500`}
+                      readOnly
                     />
                   </td>
                   <td className="px-5 py-3">
                     <input
                       type="text"
                       value={inlineForm.destination}
-                      onChange={(event) => updateInline("destination", event.target.value)}
                       placeholder="Destination"
-                      className={compactInputClass}
-                      disabled={!areMainFieldsEditable}
+                      className={`${compactInputClass} cursor-not-allowed bg-slate-100 text-slate-500`}
+                      readOnly
                     />
                   </td>
                   <td className="px-5 py-3">
                     <input
                       type="text"
                       value={inlineForm.fNote}
-                      onChange={(event) => updateInline("fNote", event.target.value)}
                       placeholder="F-Note"
-                      className={compactInputClass}
-                      disabled={!areMainFieldsEditable}
+                      className={`${compactInputClass} cursor-not-allowed bg-slate-100 text-slate-500`}
+                      readOnly
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -980,9 +996,9 @@ export default function LoadingManagementPage() {
                     <input
                       type="datetime-local"
                       value={inlineForm.offerTime}
-                      onChange={(event) => updateInline("offerTime", event.target.value)}
-                      className={compactInputClass}
-                      disabled={!areMainFieldsEditable}
+                      placeholder="Offer Time"
+                      className={`${compactInputClass} cursor-not-allowed bg-slate-100 text-slate-500`}
+                      readOnly
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -996,21 +1012,21 @@ export default function LoadingManagementPage() {
                     />
                   </td>
                   <td className="px-5 py-3">
-                    <ThemedSelect
+                    <select
                       value={inlineForm.wagonSick}
                       onChange={(event) => updateInline("wagonSick", event.target.value)}
                       className={compactInputClass}
                       disabled={!areMainFieldsEditable}
                     >
                       {wagonSickOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
+                        <option key={option.value} value={option.value}>
+                          {option.label}
                         </option>
                       ))}
-                    </ThemedSelect>
+                    </select>
                   </td>
                   <td className="px-5 py-3 hidden xl:table-cell">
-                    <ThemedSelect
+                    <select
                       value={inlineForm.manualLoadingTrack}
                       onChange={(event) => updateInline("manualLoadingTrack", event.target.value)}
                       className={compactInputClass}
@@ -1022,7 +1038,7 @@ export default function LoadingManagementPage() {
                           {option.label}
                         </option>
                       ))}
-                    </ThemedSelect>
+                    </select>
                   </td>
                   <td className="px-5 py-3">
                     <input
@@ -1035,14 +1051,19 @@ export default function LoadingManagementPage() {
                     />
                   </td>
                   <td className="px-5 py-3">
-                    <input
-                      type="text"
+                    <select
                       value={inlineForm.stockpile}
                       onChange={(event) => updateInline("stockpile", event.target.value)}
-                      placeholder="Stockpile"
                       className={compactInputClass}
                       disabled={!areMainFieldsEditable}
-                    />
+                    >
+                      <option value="">Select stockpile</option>
+                      {stockpileOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-5 py-3">
                     <input
@@ -1127,27 +1148,27 @@ export default function LoadingManagementPage() {
                   sortedRows.map((row) => {
                     const loadingId = resolveLoadingId(row);
                     const approval = approvalByLoadingId[loadingId];
-                    const statusMeta = getRowStatusMeta(row, approval);
+                    const statusMeta = getRowStatusMeta(row);
                     const isAdjusting =
-                      inlineActionMode === "adjust" && activeInlineRakeId === row.rakeId;
+                      inlineActionMode === "adjust" && activeInlineId === row.id;
                     const canFinalSubmit =
                       Boolean(row.completionTime) &&
                       !row.isSubmitted &&
                       !row.isDisabled;
                     const actionCellClass =
-                      row.rakeId === activeInlineRakeId
+                      row.id === activeInlineId
                         ? "bg-amber-50"
                         : "bg-white group-hover:bg-slate-50";
                     const pinnedCellClass =
-                      row.rakeId === activeInlineRakeId
+                      row.id === activeInlineId
                         ? "bg-amber-50"
                         : "bg-white group-hover:bg-slate-50";
 
                     return (
                       <tr
-                        key={row.rakeId}
+                        key={row.id}
                         className={`hover:bg-slate-50/60 transition-colors group ${
-                          row.rakeId === activeInlineRakeId ? "bg-amber-50/60" : ""
+                          row.id === activeInlineId ? "bg-amber-50/60" : ""
                         } ${row.isDisabled ? "opacity-70" : ""}`}
                       >
                         <td
@@ -1207,7 +1228,7 @@ export default function LoadingManagementPage() {
 
                             <button
                               type="button"
-                              onClick={() => requestRakeStatusToggle(row.rakeId)}
+                              onClick={() => requestRakeStatusToggle(row.id)}
                               className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
                                 row.isDisabled
                                   ? "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"

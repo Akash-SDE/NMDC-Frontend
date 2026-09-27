@@ -27,29 +27,56 @@ import { fetchDelayRecords, saveDelayRecord } from "../../../store/slices/delayS
 import { fetchLoadingById, fetchLoadingRecords } from "../../../store/slices/loadingSlice";
 import { fetchRakeById } from "../../../store/slices/rakeSlice";
 import { fetchApprovalRequests } from "../../../store/slices/approvalSlice";
-import { toInputDateTime, toIsoDateTime } from "../../../types/transforms";
+import { getErrorMessage } from "../../../api/apiError";
+import { createDelayRecord, listDelayRecords } from "../../../services/delayManagementService";
+import { toIsoDateTime } from "../../../types/transforms";
 import {
   buildAllProcessDelayRows,
   buildRakeProcessDelayInsights,
   DELAY_SOURCE,
 } from "../../../utils/delayProcessTimeline";
 
-const categories = [
-  "Mechanical",
-  "Railway Delay",
-  "Power Failure",
-  "Labor Delay",
-  "Weather",
-  "Operational Issue",
+const delayCategoryOptions = [
+  { code: 5, label: "Operational" },
+  { code: 10, label: "Technical" },
+  { code: 15, label: "Wagon Supply" },
+  { code: 20, label: "Loading" },
 ];
 
+const delayProcessStageOptions = [
+  { code: 5, label: "Railway" },
+  { code: 10, label: "Customer" },
+  { code: 15, label: "Loading" },
+];
+
+const delayStatusOptions = [
+  { code: 5, label: "Draft" },
+  { code: 10, label: "Logged" },
+  { code: 15, label: "Resolved" },
+  { code: 20, label: "Closed" },
+];
+
+function enumLabel(options, code) {
+  return options.find((option) => String(option.code) === String(code))?.label || "";
+}
+
+function asResults(response) {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.results)) return response.results;
+  return [];
+}
+
 const initialInlineForm = {
+  logId: "",
   rakeNumber: "",
+  source: "Manual",
+  processStage: "",
   category: "",
   startTime: "",
   endTime: "",
   reason: "",
   reportedBy: "",
+  status: "",
 };
 
 const sourceBadgeStyles = {
@@ -101,6 +128,18 @@ function formatDateTimeForTable(value) {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
+function toDateTimeLocalValue(value) {
+  if (!value) return "";
+  const raw = String(value);
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw)) return raw;
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
 function getDurationMinutes(startTime, endTime) {
   if (!startTime || !endTime) return null;
   const start = parseDateTimeToTimestamp(startTime);
@@ -149,6 +188,35 @@ function getStatusMeta(row) {
   };
 }
 
+function mapApiDelay(item) {
+  const processStage =
+    item.process_stage_name || enumLabel(delayProcessStageOptions, item.process_stage);
+  const category = item.category_name || enumLabel(delayCategoryOptions, item.category);
+  const statusLabel =
+    item.status_description || enumLabel(delayStatusOptions, item.status);
+
+  return {
+    id: item.id,
+    logId: item.log_id || "",
+    rakeNumber: item.rake || "",
+    source: DELAY_SOURCE.MANUAL,
+    sourceLabel: item.source || "Manual",
+    processStage,
+    processStageCode: item.process_stage ?? "",
+    category,
+    categoryCode: item.category ?? "",
+    startTime: item.delay_start_time || "",
+    endTime: item.delay_end_time || "",
+    durationMinutes: item.duration,
+    reason: item.reason || "",
+    reportedBy: item.reported_by ?? "",
+    statusCode: item.status,
+    statusLabel,
+    isDisabled: false,
+    isReadOnly: false,
+  };
+}
+
 function inferManualStageFromCategory(category) {
   const value = String(category || "").toLowerCase();
   if (value.includes("wagon")) return "Wagon Supply";
@@ -166,7 +234,7 @@ function resolveLoadingForRakeNumber(rakeNumber, loadingItems, selectedLoading, 
 
 export default function DelayManagementPage() {
   const dispatch = useDispatch();
-  const { navigate } = useRouter();
+  const { navigate, profile } = useRouter();
   const [searchParams] = useSearchParams();
   const loadingIdParam = searchParams.get("loadingId");
   const rakeIdParam = searchParams.get("rakeId");
@@ -187,6 +255,8 @@ export default function DelayManagementPage() {
   const [activeInlineLogId, setActiveInlineLogId] = useState(null);
   const [statusConfirmLogId, setStatusConfirmLogId] = useState(null);
   const [message, setMessage] = useState("");
+  const [apiRows, setApiRows] = useState([]);
+  const [saving, setSaving] = useState(false);
 
   const compactInputClass = `${uniformInputClass} h-8 px-2 text-[11px]`;
 
@@ -196,18 +266,18 @@ export default function DelayManagementPage() {
     dispatch(fetchApprovalRequests());
   }, [dispatch]);
 
-  const manualRows = useMemo(
-    () =>
-      storeItems.map((item) => ({
-        ...item,
-        source: DELAY_SOURCE.MANUAL,
-        processStage: item.processStage || inferManualStageFromCategory(item.category),
-        isReadOnly: false,
-        startTime: item.startTime ? toInputDateTime(item.startTime) : "",
-        endTime: item.endTime ? toInputDateTime(item.endTime) : "",
-      })),
-    [storeItems],
-  );
+  const loadApiDelays = async () => {
+    const response = await listDelayRecords({});
+    setApiRows(asResults(response).map(mapApiDelay));
+  };
+
+  useEffect(() => {
+    loadApiDelays().catch((error) => {
+      setMessage(getErrorMessage(error, "Failed to load delay records."));
+    });
+  }, []);
+
+  const manualRows = useMemo(() => apiRows, [apiRows]);
 
   const processDelayRows = useMemo(
     () =>
@@ -417,17 +487,26 @@ export default function DelayManagementPage() {
       return "";
     }
 
-    const requiredFields = [
-      inlineForm.rakeNumber,
-      inlineForm.category,
-      inlineForm.startTime,
-      inlineForm.endTime,
-      inlineForm.reason,
-      inlineForm.reportedBy,
-    ];
+    const missingFields = [
+      ["log id", inlineForm.logId],
+      ["rake number", inlineForm.rakeNumber],
+      ["process stage", inlineForm.processStage],
+      ["category", inlineForm.category],
+      ["start time", inlineForm.startTime],
+      ["end time", inlineForm.endTime],
+      ["reason", inlineForm.reason],
+      ["reported by", inlineForm.reportedBy],
+      ["status", inlineForm.status],
+    ]
+      .filter(([, value]) => !String(value ?? "").trim())
+      .map(([label]) => label);
 
-    if (requiredFields.some((field) => !String(field || "").trim())) {
-      return "Please fill all delay fields before saving.";
+    if (missingFields.length > 0) {
+      return `Fill ${missingFields.join(", ")} before adding the delay.`;
+    }
+
+    if (!Number.isFinite(Number(inlineForm.reportedBy))) {
+      return "Reported by must be a user id.";
     }
 
     const duration = getDurationMinutes(inlineForm.startTime, inlineForm.endTime);
@@ -506,17 +585,33 @@ export default function DelayManagementPage() {
       return;
     }
 
+    const reportedBy = Number(inlineForm.reportedBy);
+    const payload = {
+      log_id: inlineForm.logId.trim(),
+      rake: inlineForm.rakeNumber.trim(),
+      source: inlineForm.source.trim() || "Manual",
+      process_stage: Number(inlineForm.processStage),
+      category: Number(inlineForm.category),
+      delay_start_time: toIsoDateTime(inlineForm.startTime),
+      delay_end_time: toIsoDateTime(inlineForm.endTime),
+      duration: getDurationMinutes(inlineForm.startTime, inlineForm.endTime),
+      reason: inlineForm.reason.trim(),
+      reported_by: reportedBy,
+      status: Number(inlineForm.status),
+    };
+    const createdBy = Number(profile?.id);
+    if (Number.isFinite(createdBy)) payload.created_by = createdBy;
+
+    setSaving(true);
     try {
-      await dispatch(
-        saveDelayRecord({
-          id: `DL-${Date.now()}`,
-          ...normalized,
-        }),
-      ).unwrap();
-      setMessage("Delay log added successfully.");
+      await createDelayRecord(payload);
+      await loadApiDelays();
       clearInlineForm();
+      setMessage("Delay log added successfully.");
     } catch (error) {
-      setMessage(error?.message || "Unable to add delay log.");
+      setMessage(getErrorMessage(error, "Unable to add delay log."));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -532,12 +627,16 @@ export default function DelayManagementPage() {
     }
 
     setInlineForm({
+      logId: row.logId || "",
       rakeNumber: row.rakeNumber,
-      category: row.category,
-      startTime: row.startTime,
-      endTime: row.endTime,
+      source: row.sourceLabel || "Manual",
+      processStage: row.processStageCode != null ? String(row.processStageCode) : "",
+      category: row.categoryCode != null ? String(row.categoryCode) : row.category,
+      startTime: toDateTimeLocalValue(row.startTime),
+      endTime: toDateTimeLocalValue(row.endTime),
       reason: row.reason,
-      reportedBy: row.reportedBy,
+      reportedBy: row.reportedBy != null ? String(row.reportedBy) : "",
+      status: row.statusCode != null ? String(row.statusCode) : "",
     });
     setInlineActionMode("edit");
     setActiveInlineLogId(row.id);
@@ -556,12 +655,16 @@ export default function DelayManagementPage() {
     }
 
     setInlineForm({
+      logId: row.logId || "",
       rakeNumber: row.rakeNumber,
-      category: row.category,
-      startTime: row.startTime,
-      endTime: row.endTime,
+      source: row.sourceLabel || "Manual",
+      processStage: row.processStageCode != null ? String(row.processStageCode) : "",
+      category: row.categoryCode != null ? String(row.categoryCode) : row.category,
+      startTime: toDateTimeLocalValue(row.startTime),
+      endTime: toDateTimeLocalValue(row.endTime),
       reason: row.reason,
-      reportedBy: row.reportedBy,
+      reportedBy: row.reportedBy != null ? String(row.reportedBy) : "",
+      status: row.statusCode != null ? String(row.statusCode) : "",
     });
     setInlineActionMode("adjust");
     setActiveInlineLogId(row.id);
@@ -615,17 +718,7 @@ export default function DelayManagementPage() {
     navigate(`${ROUTES.ADMIN.RAILWAY_APPROVALS}?loadingId=${encodeURIComponent(loadingId)}`);
   }
 
-  const inlineSaveDisabled =
-    inlineActionMode === "adjust"
-      ? !inlineForm.category ||
-        !inlineForm.endTime ||
-        !inlineForm.reason.trim()
-      : !inlineForm.rakeNumber.trim() ||
-        !inlineForm.category ||
-        !inlineForm.startTime ||
-        !inlineForm.endTime ||
-        !inlineForm.reason.trim() ||
-        !inlineForm.reportedBy.trim();
+  const inlineSaveDisabled = saving;
 
   const inlineSaveLabel =
     inlineActionMode === "edit"
@@ -633,12 +726,6 @@ export default function DelayManagementPage() {
       : inlineActionMode === "adjust"
         ? "Save Adjustment"
         : "Add Delay";
-  const inlineStatusLabel =
-    inlineActionMode === "edit"
-      ? "Editing"
-      : inlineActionMode === "adjust"
-        ? "Adjusting"
-        : "Draft";
   const isInlineAdjustmentMode = inlineActionMode === "adjust";
   const areMainFieldsEditable = !isInlineAdjustmentMode;
 
@@ -854,10 +941,11 @@ export default function DelayManagementPage() {
                   <td className="px-5 py-3">
                     <input
                       type="text"
-                      value={activeInlineLogId ?? "New"}
+                      value={inlineActionMode === "add" ? inlineForm.logId : inlineForm.logId || activeInlineLogId || ""}
+                      onChange={(event) => updateInline("logId", event.target.value)}
+                      placeholder="Log ID"
                       className={compactInputClass}
-                      readOnly
-                      disabled
+                      disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -876,13 +964,19 @@ export default function DelayManagementPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3">
-                    <input
-                      type="text"
-                      value={inferManualStageFromCategory(inlineForm.category) || "Auto"}
+                    <ThemedSelect
+                      value={inlineForm.processStage}
+                      onChange={(event) => updateInline("processStage", event.target.value)}
                       className={compactInputClass}
-                      readOnly
-                      disabled
-                    />
+                      disabled={!areMainFieldsEditable}
+                    >
+                      <option value="">Process stage</option>
+                      {delayProcessStageOptions.map((option) => (
+                        <option key={option.code} value={String(option.code)}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </ThemedSelect>
                   </td>
                   <td className="px-5 py-3">
                     <ThemedSelect
@@ -891,9 +985,9 @@ export default function DelayManagementPage() {
                       className={compactInputClass}
                     >
                       <option value="">Category</option>
-                      {categories.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
+                      {delayCategoryOptions.map((option) => (
+                        <option key={option.code} value={String(option.code)}>
+                          {option.label}
                         </option>
                       ))}
                     </ThemedSelect>
@@ -935,18 +1029,29 @@ export default function DelayManagementPage() {
                   </td>
                   <td className="px-5 py-3">
                     <input
-                      type="text"
+                      type="number"
+                      min="0"
                       value={inlineForm.reportedBy}
                       onChange={(event) => updateInline("reportedBy", event.target.value)}
-                      placeholder="Reported By"
+                      placeholder="User ID"
                       className={compactInputClass}
                       disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
-                    <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
-                      {inlineStatusLabel}
-                    </span>
+                    <ThemedSelect
+                      value={inlineForm.status}
+                      onChange={(event) => updateInline("status", event.target.value)}
+                      className={compactInputClass}
+                      disabled={!areMainFieldsEditable}
+                    >
+                      <option value="">Status</option>
+                      {delayStatusOptions.map((option) => (
+                        <option key={option.code} value={String(option.code)}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </ThemedSelect>
                   </td>
                 </tr>
 
@@ -978,9 +1083,17 @@ export default function DelayManagementPage() {
                 ) : (
                   sortedRows.map((row) => {
                     const duration = formatDuration(
-                      getDurationMinutes(row.startTime, row.endTime),
+                      row.durationMinutes != null
+                        ? Number(row.durationMinutes)
+                        : getDurationMinutes(row.startTime, row.endTime),
                     );
-                    const statusMeta = getStatusMeta(row);
+                    const statusMeta = row.statusLabel
+                      ? {
+                          label: row.statusLabel,
+                          badgeClass: "border-blue-200 bg-blue-50 text-blue-700",
+                          dotClass: "bg-blue-500",
+                        }
+                      : getStatusMeta(row);
                     const isAdjusting =
                       inlineActionMode === "adjust" && activeInlineLogId === row.id;
                     const actionCellClass =
@@ -1097,7 +1210,9 @@ export default function DelayManagementPage() {
                             ) : null}
                           </div>
                         </td>
-                        <td className="px-5 py-4 text-[13px] font-semibold text-blue-600">#{row.id}</td>
+                        <td className="px-5 py-4 text-[13px] font-semibold text-blue-600">
+                          {row.logId || row.id}
+                        </td>
                         <td className="px-5 py-4 text-[13px] text-slate-700">{row.rakeNumber}</td>
                         <td className="px-5 py-4">
                           <span
@@ -1105,7 +1220,7 @@ export default function DelayManagementPage() {
                               sourceBadgeStyles[row.source] ?? sourceBadgeStyles[DELAY_SOURCE.MANUAL]
                             }`}
                           >
-                            {sourceBadgeLabels[row.source] ?? "Manual"}
+                            {row.sourceLabel || sourceBadgeLabels[row.source] || "Manual"}
                           </span>
                         </td>
                         <td className="px-5 py-4 text-[13px] text-slate-700">{row.processStage || "-"}</td>

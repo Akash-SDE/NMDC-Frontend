@@ -85,6 +85,8 @@ export default function RailwayApprovalsPage() {
   const { user, userRole } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const approvals = useSelector((state) => state.approvals.items);
+  const approvalStatus = useSelector((state) => state.approvals.status);
+  const approvalError = useSelector((state) => state.approvals.error);
   const loadingItems = useSelector((state) => state.loading.items);
 
   const isAdminProxy = userRole === USER_ROLES.ADMIN;
@@ -94,6 +96,7 @@ export default function RailwayApprovalsPage() {
 
   const activeDepartment =
     searchParams.get("dept") || resolveDefaultDepartment(userRole);
+  const focusedLoadingId = searchParams.get("loadingId");
   const [search, setSearch] = useState("");
   const [selectedApproval, setSelectedApproval] = useState(null);
   const [reviewDepartment, setReviewDepartment] = useState(null);
@@ -127,14 +130,17 @@ export default function RailwayApprovalsPage() {
         .includes(q);
     };
 
-    if (isAdminProxy && activeDepartment === ADMIN_ALL_TAB) {
-      return approvals.filter(isApprovalAwaitingAction).filter(matchesSearch);
-    }
+    const departmentItems =
+      isAdminProxy && activeDepartment === ADMIN_ALL_TAB
+        ? approvals.filter(isApprovalAwaitingAction)
+        : approvals.filter((approval) => canDepartmentAct(approval, activeDepartment));
 
-    return approvals
-      .filter((approval) => canDepartmentAct(approval, activeDepartment))
-      .filter(matchesSearch);
-  }, [approvals, activeDepartment, search, isAdminProxy]);
+    const visibleItems = focusedLoadingId
+      ? approvals.filter((approval) => String(approval.loadingId) === String(focusedLoadingId))
+      : departmentItems;
+
+    return visibleItems.filter(matchesSearch);
+  }, [approvals, activeDepartment, search, isAdminProxy, focusedLoadingId]);
 
   async function openApproval(approval) {
     const pendingDepartment = getPendingDepartmentForApproval(approval);
@@ -242,7 +248,7 @@ export default function RailwayApprovalsPage() {
 
       await dispatch(
         submitApprovalDecision({
-          approvalId: selectedApproval.id,
+          approval: selectedApproval,
           department: reviewDepartment,
           decision: {
             action: confirmAction,
@@ -304,6 +310,12 @@ export default function RailwayApprovalsPage() {
           </div>
         ) : null}
 
+        {approvalError ? (
+          <p className="rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+            {approvalError}
+          </p>
+        ) : null}
+
         {message ? (
           <p className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
             {message}
@@ -353,17 +365,26 @@ export default function RailwayApprovalsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {queueItems.length === 0 ? (
+                {approvalStatus === "loading" && queueItems.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
-                      {isAdminProxy && activeDepartment === ADMIN_ALL_TAB
-                        ? "No loading records are awaiting railway approval."
-                        : "No pending approvals for this department."}
+                      Loading railway approvals...
+                    </td>
+                  </tr>
+                ) : queueItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
+                      {focusedLoadingId
+                        ? "No railway approval was found for this loading record."
+                        : isAdminProxy && activeDepartment === ADMIN_ALL_TAB
+                          ? "No loading records are awaiting railway approval."
+                          : "No pending approvals for this department."}
                     </td>
                   </tr>
                 ) : (
                   queueItems.map((approval) => {
                     const loading = loadingById[approval.loadingId];
+                    const completionTime = loading?.completionTime || approval.completionTime;
                     const pendingDepartment = getPendingDepartmentForApproval(approval);
                     return (
                       <tr key={approval.id} className="hover:bg-slate-50/60">
@@ -373,7 +394,7 @@ export default function RailwayApprovalsPage() {
                         <td className="px-4 py-3 text-[13px] text-slate-700">{approval.customer}</td>
                         <td className="px-4 py-3 text-[13px] text-slate-700">{approval.siding}</td>
                         <td className="px-4 py-3 text-[13px] text-slate-700">
-                          {formatDateTimeForTable(loading?.completionTime)}
+                          {formatDateTimeForTable(completionTime)}
                         </td>
                         <td className="px-4 py-3 text-[13px] text-slate-700">
                           {APPROVAL_STEP_LABELS[pendingDepartment] || approval.status}
@@ -428,13 +449,19 @@ export default function RailwayApprovalsPage() {
                   <input readOnly className={uniformInputClass} value={selectedApproval.rakeNumber} />
                 </UniformFormField>
                 <UniformFormField label="Tonnage">
-                  <input readOnly className={uniformInputClass} value={selectedLoading?.tonnage || "-"} />
+                  <input
+                    readOnly
+                    className={uniformInputClass}
+                    value={selectedLoading?.tonnage || selectedApproval.tonnage || "-"}
+                  />
                 </UniformFormField>
                 <UniformFormField label="Completion Time">
                   <input
                     readOnly
                     className={uniformInputClass}
-                    value={formatDateTimeForTable(selectedLoading?.completionTime)}
+                    value={formatDateTimeForTable(
+                      selectedLoading?.completionTime || selectedApproval.completionTime,
+                    )}
                   />
                 </UniformFormField>
               </div>

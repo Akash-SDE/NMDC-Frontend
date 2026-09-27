@@ -94,17 +94,32 @@ export function buildOfferingFormFromUiRow(row) {
   return {
     rakeId: row.rakeId || "",
     rakeNumber: row.rakeNumber || "",
-    wagonType: row.wagonType || parsedWagonType,
+    wagonType:
+      row.wagonTypeId != null && row.wagonTypeId !== ""
+        ? String(row.wagonTypeId)
+        : row.wagonType || parsedWagonType,
     noOfWagons:
-      row.wagonSupply !== undefined && row.wagonSupply !== null
-        ? String(row.wagonSupply)
-        : parsedNoOfWagons,
-    siding: row.siding || "",
-    route: row.route || "",
-    oreType: row.oreType || legacyOreType,
-    fNote: row.fNote || "",
-    customer: row.customer || legacyCustomer,
-    destination: row.destination || "",
+      row.noOfWagons !== undefined && row.noOfWagons !== null && row.noOfWagons !== ""
+        ? String(row.noOfWagons)
+        : row.wagonSupply !== undefined && row.wagonSupply !== null
+          ? String(row.wagonSupply)
+          : parsedNoOfWagons,
+    siding:
+      row.sidingId != null && row.sidingId !== "" ? String(row.sidingId) : row.siding || "",
+    route: row.routeId != null && row.routeId !== "" ? String(row.routeId) : row.route || "",
+    oreType:
+      row.oreTypeId != null && row.oreTypeId !== ""
+        ? String(row.oreTypeId)
+        : row.oreType || legacyOreType,
+    fNote: row.fNote && row.fNote !== "-" ? row.fNote : "",
+    customer:
+      row.customerId != null && row.customerId !== ""
+        ? String(row.customerId)
+        : row.customer || legacyCustomer,
+    destination:
+      row.destinationId != null && row.destinationId !== ""
+        ? String(row.destinationId)
+        : row.destination || "",
     placementTime: row.placementTime ? toInputDateTime(row.placementTime) : "",
     offerTime: row.offerTime ? toInputDateTime(row.offerTime) : "",
   };

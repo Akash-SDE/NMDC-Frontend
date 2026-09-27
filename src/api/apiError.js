@@ -13,10 +13,13 @@ export function parseApiError(error) {
   const response = error?.response;
   if (response) {
     const data = response.data ?? {};
+    const firstValue = data && typeof data === "object" ? Object.values(data)[0] : null;
+    const fieldMessage = Array.isArray(firstValue) ? firstValue[0] : firstValue;
     const message =
+      (typeof data === "string" && data.trim()) ||
       data?.detail ||
       data?.non_field_errors?.[0] ||
-      Object.values(data)?.[0]?.[0] ||
+      (typeof fieldMessage === "string" ? fieldMessage : null) ||
       error.message ||
       `Request failed (${response.status})`;
     return new ApiError(message, response.status, data);

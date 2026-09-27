@@ -1,1 +1,8 @@
-export { loginWithCredentials, refreshAccessToken } from "./auth/authService";
+export {
+  loginWithCredentials,
+  loginWithOtp,
+  sendLoginOtp,
+  refreshAccessToken,
+  DEMO_OTP,
+  DEMO_CREDENTIALS,
+} from "./auth/authService";

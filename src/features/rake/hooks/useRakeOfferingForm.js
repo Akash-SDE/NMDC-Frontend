@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
 import { formatDateTimeForTable } from "../../../utils/dateUtils";
-import { initialOfferingForm } from "../constants/rakeConstants";
+import { createEmptyOfferingForm } from "../constants/rakeConstants";
 import { buildOfferingFormFromUiRow, toInputDateTime } from "../utils/rakeMappers";
 
 export function useRakeOfferingForm() {
-  const [offeringForm, setOfferingForm] = useState(initialOfferingForm);
+  const [offeringForm, setOfferingForm] = useState(createEmptyOfferingForm);
   const [inlineActionMode, setInlineActionMode] = useState("add");
   const [activeInlineRakeId, setActiveInlineRakeId] = useState("");
   const [adjustOfferFor, setAdjustOfferFor] = useState("");
@@ -15,7 +15,7 @@ export function useRakeOfferingForm() {
   }, []);
 
   const resetOfferingForm = useCallback(() => {
-    setOfferingForm(initialOfferingForm);
+    setOfferingForm(createEmptyOfferingForm());
     setAdjustOfferFor("");
     setAdjustOfferTime("");
     setInlineActionMode("add");

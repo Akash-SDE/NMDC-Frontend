@@ -12,7 +12,7 @@ export const adjustmentReasonOptions = [
   "Route Congestion",
   "Loading Delay",
 ];
-export const upcomingDraftRowCount = 1;
+export const upcomingDraftRowCount = 0;
 
 export const upcomingRequiredFields = [
   "oreType",
@@ -33,20 +33,24 @@ export function countReadyUpcomingRows(rows = []) {
   return rows.filter(isUpcomingRowReady).length;
 }
 
-export const initialOfferingForm = {
-  rakeId: "",
-  rakeNumber: "",
-  wagonType: "",
-  noOfWagons: "",
-  siding: "",
-  route: "",
-  oreType: "",
-  fNote: "",
-  customer: "",
-  destination: "",
-  placementTime: "",
-  offerTime: "",
-};
+export function createEmptyOfferingForm() {
+  return {
+    rakeId: "",
+    rakeNumber: "",
+    wagonType: "",
+    noOfWagons: "",
+    siding: "",
+    route: "",
+    oreType: "",
+    fNote: "",
+    customer: "",
+    destination: "",
+    placementTime: "",
+    offerTime: getLocalDateTimeValue(),
+  };
+}
+
+export const initialOfferingForm = createEmptyOfferingForm();
 
 export function createUpcomingRow(index = 0) {
   return {
@@ -55,10 +59,10 @@ export function createUpcomingRow(index = 0) {
     siding: "",
     destination: "",
     placementTime: getLocalDateTimeValue(),
-    wagonType: wagonTypeOptions[0] ?? "",
-    route: routeOptions[0] ?? "",
-    customer: customerOptions[0] ?? "",
-    wagonCount: "58",
+    wagonType: "",
+    route: "",
+    customer: "",
+    wagonCount: "",
   };
 }
 

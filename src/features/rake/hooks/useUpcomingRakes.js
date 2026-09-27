@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { formatDateTimeForTable } from "../../../utils/dateUtils";
 import { upcomingService } from "../../../services/operational";
 import {
   countReadyUpcomingRows,
@@ -7,17 +6,61 @@ import {
   createUpcomingRow,
   isUpcomingRowReady,
 } from "../constants/rakeConstants";
-import { canonicalToUiRow, uiToCanonicalRake } from "../utils/rakeMappers";
 
-export function useUpcomingRakes({ uiRows, upsertUiRow }) {
+function takeNextRakeNumber(used) {
+  const year = new Date().getFullYear();
+  const prefix = `R-${year}-`;
+  let maxSeq = 0;
+
+  for (const number of used) {
+    const value = String(number || "");
+    if (!value.startsWith(prefix)) continue;
+    const seq = Number(value.slice(prefix.length));
+    if (Number.isFinite(seq) && seq > maxSeq) maxSeq = seq;
+  }
+
+  let sequence = maxSeq + 1;
+  let rakeNumber = `${prefix}${String(sequence).padStart(3, "0")}`;
+  while (used.has(rakeNumber)) {
+    sequence += 1;
+    rakeNumber = `${prefix}${String(sequence).padStart(3, "0")}`;
+  }
+  used.add(rakeNumber);
+  return rakeNumber;
+}
+
+function hasMasterDataId(value) {
+  return String(value ?? "").trim() !== "" && Number.isFinite(Number(value));
+}
+
+function normalizeDraftRow(row, index = 0) {
+  return {
+    ...createUpcomingRow(index),
+    ...row,
+    id: row?.id || `upcoming-${Date.now()}-${index}`,
+    oreType: row?.oreType ?? "",
+    siding: row?.siding ?? "",
+    destination: row?.destination ?? "",
+    placementTime: row?.placementTime ?? "",
+    wagonType: row?.wagonType ?? "",
+    route: row?.route ?? "",
+    customer: row?.customer ?? "",
+    wagonCount: row?.wagonCount ?? "",
+  };
+}
+
+export function useUpcomingRakes({ uiRows, createOfferedRake, reloadOfferedRakes }) {
   const [upcomingRows, setUpcomingRows] = useState(createInitialUpcomingRows);
   const [message, setMessage] = useState("");
   const [messageTone, setMessageTone] = useState("info");
+  const [moving, setMoving] = useState(false);
   const persistDraftsRef = useRef(false);
 
   useEffect(() => {
     upcomingService.list().then((drafts) => {
-      if (drafts?.length) setUpcomingRows(drafts);
+      if (drafts?.length) {
+        setUpcomingRows(drafts.map((row, index) => normalizeDraftRow(row, index)));
+      }
       persistDraftsRef.current = true;
     });
   }, []);
@@ -26,7 +69,19 @@ export function useUpcomingRakes({ uiRows, upsertUiRow }) {
     if (!persistDraftsRef.current) return;
 
     const timeoutId = window.setTimeout(() => {
-      upcomingService.save(upcomingRows);
+      upcomingService.save(
+        upcomingRows.map(({ id, oreType, siding, destination, placementTime, wagonType, route, customer, wagonCount }) => ({
+          id,
+          oreType,
+          siding,
+          destination,
+          placementTime,
+          wagonType,
+          route,
+          customer,
+          wagonCount,
+        })),
+      );
     }, 400);
 
     return () => window.clearTimeout(timeoutId);
@@ -54,10 +109,7 @@ export function useUpcomingRakes({ uiRows, upsertUiRow }) {
   }, []);
 
   const removeUpcomingRow = useCallback((rowId) => {
-    setUpcomingRows((prev) => {
-      const next = prev.filter((row) => row.id !== rowId);
-      return next.length > 0 ? next : [createUpcomingRow(0)];
-    });
+    setUpcomingRows((prev) => prev.filter((row) => row.id !== rowId));
     setMessage("");
   }, []);
 
@@ -80,56 +132,76 @@ export function useUpcomingRakes({ uiRows, upsertUiRow }) {
       return;
     }
 
-    const nextSno =
-      uiRows.length > 0
-        ? Math.max(...uiRows.map((row) => Number(row.sno) || 0)) + 1
-        : 1;
-    const maxRakeIdNumber = uiRows.reduce((max, row) => {
-      const matchedDigits = String(row.rakeId || "").match(/(\d+)$/);
-      const parsed = matchedDigits ? Number(matchedDigits[1]) : 0;
-      return Math.max(max, Number.isNaN(parsed) ? 0 : parsed);
-    }, 0);
-    const year = new Date().getFullYear();
-
-    for (let index = 0; index < readyRows.length; index += 1) {
-      const row = readyRows[index];
-      const sequence = nextSno + index;
-      const rakeIdNumber = maxRakeIdNumber + index + 1;
-      const offeredTime = formatDateTimeForTable(row.placementTime);
-      const wagonCount = Number(row.wagonCount) || 58;
-
-      const canonical = uiToCanonicalRake({
-        sno: sequence,
-        rakeId: `RK-${String(rakeIdNumber).padStart(4, "0")}`,
-        rakeNumber: `R-${year}-${String(sequence).padStart(3, "0")}`,
-        wagonSupply: wagonCount,
-        wagonType: row.wagonType,
-        siding: row.siding,
-        route: row.route,
-        oreType: row.oreType,
-        customer: row.customer,
-        destination: row.destination,
-        fNote: "-",
-        placementTime: offeredTime,
-        offerTime: offeredTime,
-        adjustOfferFor: "-",
-        adjustedOfferTime: "-",
-        isDisabled: false,
-      });
-      await upsertUiRow(canonicalToUiRow(canonical));
+    const invalidRow = readyRows.find(
+      (row) =>
+        !hasMasterDataId(row.siding) ||
+        !hasMasterDataId(row.route) ||
+        !hasMasterDataId(row.oreType) ||
+        !hasMasterDataId(row.customer) ||
+        !hasMasterDataId(row.destination) ||
+        !hasMasterDataId(row.wagonType) ||
+        !hasMasterDataId(row.wagonCount),
+    );
+    if (invalidRow) {
+      setMessage("Choose each value from the lists before moving a row to offered rakes.");
+      setMessageTone("error");
+      return;
     }
 
-    const cleared = createInitialUpcomingRows();
-    setUpcomingRows(cleared);
-    await upcomingService.save(cleared);
-    setMessage(`${readyRows.length} upcoming rake(s) moved to the offered list.`);
-    setMessageTone("success");
-  }, [upcomingRows, uiRows, upsertUiRow]);
+    const movedIds = [];
+    const usedRakeNumbers = new Set(uiRows.map((row) => String(row.rakeNumber || "")));
+    setMoving(true);
+    setMessage("");
+
+    try {
+      for (const row of readyRows) {
+        await createOfferedRake(
+          {
+            rakeNumber: takeNextRakeNumber(usedRakeNumbers),
+            siding: row.siding,
+            route: row.route,
+            oreType: row.oreType,
+            customer: row.customer,
+            destination: row.destination,
+            wagonType: row.wagonType,
+            noOfWagons: row.wagonCount,
+            fNote: "",
+            offerTime: row.placementTime,
+          },
+          { reload: false },
+        );
+        movedIds.push(row.id);
+      }
+
+      setUpcomingRows((prev) => prev.filter((row) => !movedIds.includes(row.id)));
+      if (typeof reloadOfferedRakes === "function") {
+        await reloadOfferedRakes({ silent: true });
+      }
+      setMessage(`${movedIds.length} upcoming rake(s) moved to the offered list.`);
+      setMessageTone("success");
+    } catch (error) {
+      if (movedIds.length > 0) {
+        setUpcomingRows((prev) => prev.filter((row) => !movedIds.includes(row.id)));
+        if (typeof reloadOfferedRakes === "function") {
+          await reloadOfferedRakes({ silent: true });
+        }
+      }
+      setMessage(
+        movedIds.length > 0
+          ? `${movedIds.length} rake(s) moved, then an error stopped the rest: ${error?.message || "request failed"}`
+          : error?.message || "Unable to move the upcoming rake to the offered list.",
+      );
+      setMessageTone("error");
+    } finally {
+      setMoving(false);
+    }
+  }, [upcomingRows, uiRows, createOfferedRake, reloadOfferedRakes]);
 
   return {
     upcomingRows,
     message,
     messageTone,
+    moving,
     stats,
     updateUpcomingRow,
     addUpcomingRow,
