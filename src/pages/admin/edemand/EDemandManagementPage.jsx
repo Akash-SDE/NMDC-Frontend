@@ -10,22 +10,41 @@ import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
+import Pagination from "../../../components/shared/Pagination";
+import { useClientPagination } from "../../../hooks/useClientPagination";
+import { useColumnFilters } from "../../../hooks/useColumnFilters";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 import { uniformInputClass } from "../../../components/shared/UniformUi";
 import { useRouter } from "../../../context/RouterContext";
-import { useAuth } from "../../../context/AuthContext";
-import { edemandService } from "../../../services/operational";
+import { getErrorMessage } from "../../../api/apiError";
+import {
+  cancelEDemand,
+  createEDemand,
+  listEDemands,
+  listEPermits,
+  updateEDemand,
+  updateEPermitNumber,
+} from "../../../services/edemandService";
+import { fetchCustomers } from "../../../services/customerService";
+import { fetchDestinations } from "../../../services/destinationService";
+import { fetchOreTypes } from "../../../services/oreTypeService";
+import {
+  SALES_TYPE_OPTIONS,
+  eDemandFormToApi,
+  eDemandToForm,
+} from "../../../features/edemand/utils/edemandMappers";
 
-const customerOptions = [
-  "Vaswani Industries",
-  "Rashtriya Ispat Nigam Ltd",
-  "ArcelorMittal Nippon Steel India Ltd",
-  "JSW Steel Ltd",
-  "Gauri Ganesh Ispat Pvt Ltd",
-];
+function asResults(response) {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.results)) return response.results;
+  return [];
+}
 
-const destinationOptions = ["JCB", "VSPS", "VPTG", "BDXK", "RPR"];
-const oreTypeOptions = ["CLO", "F", "L"];
-const salesTypeOptions = ["LTA", "AUCTION"];
+function toOptions(items, getLabel) {
+  return items
+    .filter((item) => item.status !== false)
+    .map((item) => ({ id: item.id, label: getLabel(item) || `#${item.id}` }));
+}
 
 const initialDemandForm = {
   fNote: "",
@@ -55,11 +74,54 @@ function compareValues(a, b, order) {
   return order === "asc" ? -1 : 1;
 }
 
+const DEMAND_FILTER_COLUMNS = [
+  { key: "actions", type: "none", className: "sticky left-0 z-30 border-r border-slate-200/70 bg-white" },
+  { key: "id", label: "Sl No", type: "none" },
+  { key: "fNote", label: "F-Note" },
+  { key: "date", label: "Date", getValue: (row) => formatDate(row.date) },
+  { key: "customer", label: "Customer", type: "select" },
+  { key: "destination", label: "Destination", type: "select" },
+  { key: "oreType", label: "Ore Type", type: "select", className: "hidden lg:table-cell" },
+  { key: "salesType", label: "Sales Type", type: "select", className: "hidden xl:table-cell" },
+];
+
+const PERMIT_FILTER_COLUMNS = [
+  { key: "id", label: "Sl No", type: "none" },
+  { key: "rakeNumber", label: "Rack Number" },
+  { key: "customer", label: "Customer", type: "select" },
+  { key: "stockpile", label: "Stockpile", type: "select", className: "hidden xl:table-cell" },
+  {
+    key: "quantity",
+    label: "Quantity",
+    className: "hidden lg:table-cell",
+    getValue: (row) => Number(row.quantity ?? 0).toFixed(2),
+  },
+  {
+    key: "completedOn",
+    label: "Completed On",
+    className: "hidden 2xl:table-cell",
+    getValue: (row) => formatDate(row.completedOn),
+  },
+  { key: "ePermitNumber", label: "E-Permit Number" },
+  {
+    key: "railwayTransitPass",
+    label: "Railway Transit Pass",
+    className: "hidden 2xl:table-cell",
+    getValue: (row) => row.railwayTransitPass || "-",
+  },
+];
+
 export default function EDemandManagementPage() {
   const { currentRoute } = useRouter();
-  const { user } = useAuth();
   const isPermitRoute = currentRoute === "manage-e-permit";
 
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [lookupOptions, setLookupOptions] = useState({
+    customers: [],
+    destinations: [],
+    oreTypes: [],
+  });
   const [demands, setDemands] = useState([]);
   const [demandsLoading, setDemandsLoading] = useState(true);
   const [demandSearch, setDemandSearch] = useState("");
@@ -78,13 +140,28 @@ export default function EDemandManagementPage() {
   const [permitSortOrder, setPermitSortOrder] = useState("asc");
 
   useEffect(() => {
+    if (isPermitRoute) return undefined;
+
     let active = true;
 
     async function loadDemands() {
       setDemandsLoading(true);
       try {
-        const rows = await edemandService.listDemands();
-        if (active) setDemands(rows);
+        const [rows, customers, destinations, oreTypes] = await Promise.all([
+          listEDemands(),
+          fetchCustomers({ page_size: 1000 }),
+          fetchDestinations({ page_size: 1000 }),
+          fetchOreTypes({ page_size: 1000 }),
+        ]);
+        if (!active) return;
+        setDemands(rows);
+        setLookupOptions({
+          customers: toOptions(asResults(customers), (item) => item.customer_name),
+          destinations: toOptions(asResults(destinations), (item) => item.destination_name),
+          oreTypes: toOptions(asResults(oreTypes), (item) => item.ore_type),
+        });
+      } catch (error) {
+        if (active) setMessage(getErrorMessage(error, "Failed to load E-Demand records."));
       } finally {
         if (active) setDemandsLoading(false);
       }
@@ -94,7 +171,7 @@ export default function EDemandManagementPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isPermitRoute]);
 
   useEffect(() => {
     if (!isPermitRoute) return undefined;
@@ -104,7 +181,7 @@ export default function EDemandManagementPage() {
     async function loadPermits() {
       setPermitsLoading(true);
       try {
-        const rows = await edemandService.listPermits();
+        const rows = await listEPermits();
         if (!active) return;
         setPermitData(rows);
         setSavedPermitNumbers(
@@ -113,6 +190,8 @@ export default function EDemandManagementPage() {
             return accumulator;
           }, {}),
         );
+      } catch (error) {
+        if (active) setMessage(getErrorMessage(error, "Failed to load E-Permit register."));
       } finally {
         if (active) setPermitsLoading(false);
       }
@@ -124,50 +203,78 @@ export default function EDemandManagementPage() {
     };
   }, [isPermitRoute]);
 
-  const demandRows = useMemo(() => {
+  const demandSearchRows = useMemo(() => {
     const query = demandSearch.trim().toLowerCase();
+    if (!query) return demands;
 
-    return demands
-      .filter((row) => {
-        if (!query) return true;
-        return [
-          row.id,
-          row.fNote,
-          row.date,
-          row.customer,
-          row.destination,
-          row.oreType,
-          row.salesType,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-      })
-      .sort((a, b) => compareValues(a[demandSortBy], b[demandSortBy], demandSortOrder));
-  }, [demands, demandSearch, demandSortBy, demandSortOrder]);
+    return demands.filter((row) =>
+      [
+        row.id,
+        row.fNote,
+        row.date,
+        row.customer,
+        row.destination,
+        row.oreType,
+        row.salesType,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [demands, demandSearch]);
 
-  const permitRows = useMemo(() => {
+  const demandColumnFilters = useColumnFilters(DEMAND_FILTER_COLUMNS);
+  const { applyFilters: applyDemandFilters } = demandColumnFilters;
+
+  const demandRows = useMemo(
+    () =>
+      [...applyDemandFilters(demandSearchRows)].sort((a, b) =>
+        compareValues(a[demandSortBy], b[demandSortBy], demandSortOrder),
+      ),
+    [applyDemandFilters, demandSearchRows, demandSortBy, demandSortOrder],
+  );
+
+  const permitSearchRows = useMemo(() => {
     const query = permitSearch.trim().toLowerCase();
+    if (!query) return permitData;
 
-    return permitData
-      .filter((row) => {
-        if (!query) return true;
-        return [
-          row.id,
-          row.rakeNumber,
-          row.customer,
-          row.stockpile,
-          row.quantity,
-          row.completedOn,
-          row.ePermitNumber,
-          row.railwayTransitPass,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-      })
-      .sort((a, b) => compareValues(a[permitSortBy], b[permitSortBy], permitSortOrder));
-  }, [permitData, permitSearch, permitSortBy, permitSortOrder]);
+    return permitData.filter((row) =>
+      [
+        row.id,
+        row.rakeNumber,
+        row.customer,
+        row.stockpile,
+        row.quantity,
+        row.completedOn,
+        row.ePermitNumber,
+        row.railwayTransitPass,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [permitData, permitSearch]);
+
+  const permitColumnFilters = useColumnFilters(PERMIT_FILTER_COLUMNS);
+  const { applyFilters: applyPermitFilters } = permitColumnFilters;
+
+  const permitRows = useMemo(
+    () =>
+      [...applyPermitFilters(permitSearchRows)].sort((a, b) =>
+        compareValues(a[permitSortBy], b[permitSortBy], permitSortOrder),
+      ),
+    [applyPermitFilters, permitSearchRows, permitSortBy, permitSortOrder],
+  );
+
+  const demandPaging = useClientPagination(demandRows, {
+    resetKey: `${demandSearch}|${demandSortBy}|${demandSortOrder}|${demandColumnFilters.filterKey}`,
+  });
+  const permitPaging = useClientPagination(permitRows, {
+    resetKey: `${permitSearch}|${permitSortBy}|${permitSortOrder}|${permitColumnFilters.filterKey}`,
+  });
+
+  const isDemandListNarrowed = Boolean(demandSearch.trim()) || demandColumnFilters.isFiltering;
+  const isPermitListNarrowed = Boolean(permitSearch.trim()) || permitColumnFilters.isFiltering;
 
   const compactInputClass = `${uniformInputClass} h-8 px-2 text-[11px]`;
 
@@ -179,6 +286,7 @@ export default function EDemandManagementPage() {
     !demandForm.salesType;
 
   const inlineSaveDisabled =
+    saving ||
     requiredInlineMissing ||
     (inlineActionMode === "edit" && activeInlineDemandId === null);
 
@@ -219,10 +327,8 @@ export default function EDemandManagementPage() {
     const currentRow = permitData.find((row) => row.id === rowId);
     if (!currentRow) return;
 
-    const updatedBy = user?.name || user?.username || "Admin";
-
-    edemandService
-      .updatePermit(rowId, { ePermitNumber: currentRow.ePermitNumber }, updatedBy)
+    setMessage("");
+    updateEPermitNumber(rowId, currentRow.ePermitNumber)
       .then((saved) => {
         setPermitData((prev) =>
           prev.map((row) => (row.id === rowId ? { ...row, ...saved } : row)),
@@ -231,6 +337,10 @@ export default function EDemandManagementPage() {
           ...prev,
           [rowId]: saved.ePermitNumber,
         }));
+        setMessage(`E-Permit number saved for rake ${saved.rakeNumber}.`);
+      })
+      .catch((error) => {
+        setMessage(getErrorMessage(error, "Unable to save E-Permit number."));
       });
   }
 
@@ -255,54 +365,34 @@ export default function EDemandManagementPage() {
       return;
     }
 
-    if (inlineActionMode === "edit" && activeInlineDemandId !== null) {
-      const currentRow = demands.find((row) => row.id === activeInlineDemandId);
-      const resolvedFNote =
-        demandForm.fNote.trim() || currentRow?.fNote || String(1000 + activeInlineDemandId);
+    setSaving(true);
+    setMessage("");
+    try {
+      const payload = eDemandFormToApi(demandForm);
 
-      const updated = {
-        ...currentRow,
-        fNote: resolvedFNote,
-        date: demandForm.date,
-        customer: demandForm.customer,
-        destination: demandForm.destination,
-        oreType: demandForm.oreType,
-        salesType: demandForm.salesType,
-      };
-
-      await edemandService.upsertDemand(updated);
-      setDemands((prev) =>
-        prev.map((row) => (row.id === activeInlineDemandId ? updated : row)),
-      );
+      if (inlineActionMode === "edit" && activeInlineDemandId !== null) {
+        const currentRow = demands.find((row) => row.id === activeInlineDemandId);
+        if (!payload.fnote) payload.fnote = currentRow?.fNote || null;
+        const updated = await updateEDemand(activeInlineDemandId, payload);
+        setDemands((prev) =>
+          prev.map((row) => (row.id === activeInlineDemandId ? updated : row)),
+        );
+        setMessage(`E-Demand ${updated.fNote} updated.`);
+      } else {
+        const created = await createEDemand(payload);
+        setDemands((prev) => [created, ...prev]);
+        setMessage(`E-Demand ${created.fNote} added.`);
+      }
       clearInlineDemand();
-      return;
+    } catch (error) {
+      setMessage(getErrorMessage(error, "Unable to save E-Demand."));
+    } finally {
+      setSaving(false);
     }
-
-    const nextId = demands.length > 0 ? Math.max(...demands.map((row) => row.id)) + 1 : 1;
-    const created = {
-      id: nextId,
-      fNote: demandForm.fNote.trim() || String(1000 + nextId),
-      date: demandForm.date,
-      customer: demandForm.customer,
-      destination: demandForm.destination,
-      oreType: demandForm.oreType,
-      salesType: demandForm.salesType,
-    };
-
-    await edemandService.upsertDemand(created);
-    setDemands((prev) => [created, ...prev]);
-    clearInlineDemand();
   }
 
   function handleEditDemand(row) {
-    setDemandForm({
-      fNote: row.fNote || "",
-      date: row.date || "",
-      customer: row.customer || "",
-      destination: row.destination || "",
-      oreType: row.oreType || "",
-      salesType: row.salesType || "",
-    });
+    setDemandForm(eDemandToForm(row));
     setInlineActionMode("edit");
     setActiveInlineDemandId(row.id);
   }
@@ -317,13 +407,26 @@ export default function EDemandManagementPage() {
 
   async function confirmDemandDelete() {
     if (!deleteTarget) return;
-    await edemandService.deleteDemand(deleteTarget.id);
-    setDemands((prev) => prev.filter((row) => row.id !== deleteTarget.id));
-    if (activeInlineDemandId === deleteTarget.id) {
-      clearInlineDemand();
+    setMessage("");
+    try {
+      await cancelEDemand(deleteTarget.id);
+      setDemands((prev) => prev.filter((row) => row.id !== deleteTarget.id));
+      if (activeInlineDemandId === deleteTarget.id) {
+        clearInlineDemand();
+      }
+      setMessage(`E-Demand ${deleteTarget.fNote} deleted.`);
+    } catch (error) {
+      setMessage(getErrorMessage(error, "Unable to delete E-Demand."));
+    } finally {
+      setDeleteTarget(null);
     }
-    setDeleteTarget(null);
   }
+
+  const messageBanner = message ? (
+    <p className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
+      {message}
+    </p>
+  ) : null;
 
   if (isPermitRoute) {
     return (
@@ -336,6 +439,8 @@ export default function EDemandManagementPage() {
             </p>
           </div>
         </div>
+
+        {messageBanner}
 
         <SearchBar
           placeholder="Search rack, customer, stockpile or permit number"
@@ -416,6 +521,7 @@ export default function EDemandManagementPage() {
                     />
                   </th>
                 </tr>
+                <ColumnFilterRow {...permitColumnFilters.filterRowProps} rows={permitData} />
               </thead>
               <tbody>
                 {permitsLoading ? (
@@ -428,7 +534,7 @@ export default function EDemandManagementPage() {
                     </td>
                   </tr>
                 ) : permitRows.length > 0 ? (
-                  permitRows.map((row) => {
+                  permitPaging.pageItems.map((row) => {
                     const isPermitNumberDirty = (savedPermitNumbers[row.id] ?? "") !== row.ePermitNumber;
 
                     return (
@@ -487,7 +593,7 @@ export default function EDemandManagementPage() {
                           </div>
                         </td>
                         <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700 hidden 2xl:table-cell">
-                          {row.railwayTransitPass}
+                          {row.railwayTransitPass || "-"}
                         </td>
                       </tr>
                     );
@@ -498,13 +604,20 @@ export default function EDemandManagementPage() {
                       colSpan={8}
                       className="px-5 py-12 text-center text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500"
                     >
-                      There is no E-Permit data to display.
+                      {isPermitListNarrowed
+                        ? "No E-Permit records match your search or column filters."
+                        : "There is no E-Permit data to display."}
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+          {permitRows.length > 0 ? (
+            <div className="px-5 pb-4">
+              <Pagination {...permitPaging.paginationProps} />
+            </div>
+          ) : null}
         </div>
       </div>
     );
@@ -520,6 +633,8 @@ export default function EDemandManagementPage() {
           </p>
         </div>
       </div>
+
+      {messageBanner}
 
       <SearchBar
         placeholder="Search by f-note, customer, destination, ore type or sales type"
@@ -600,6 +715,7 @@ export default function EDemandManagementPage() {
                   />
                 </th>
               </tr>
+              <ColumnFilterRow {...demandColumnFilters.filterRowProps} rows={demands} />
             </thead>
             <tbody className="divide-y divide-slate-100">
               {/* Inline Action Row */}
@@ -666,9 +782,9 @@ export default function EDemandManagementPage() {
                     className={compactInputClass}
                   >
                     <option value="">Select Customer</option>
-                    {customerOptions.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
+                    {lookupOptions.customers.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.label}
                       </option>
                     ))}
                   </ThemedSelect>
@@ -680,9 +796,9 @@ export default function EDemandManagementPage() {
                     className={compactInputClass}
                   >
                     <option value="">Select Destination</option>
-                    {destinationOptions.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
+                    {lookupOptions.destinations.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.label}
                       </option>
                     ))}
                   </ThemedSelect>
@@ -694,9 +810,9 @@ export default function EDemandManagementPage() {
                     className={compactInputClass}
                   >
                     <option value="">Select Ore Type</option>
-                    {oreTypeOptions.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
+                    {lookupOptions.oreTypes.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.label}
                       </option>
                     ))}
                   </ThemedSelect>
@@ -708,9 +824,9 @@ export default function EDemandManagementPage() {
                     className={compactInputClass}
                   >
                     <option value="">Select Sales Type</option>
-                    {salesTypeOptions.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
+                    {SALES_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.label}
                       </option>
                     ))}
                   </ThemedSelect>
@@ -727,7 +843,7 @@ export default function EDemandManagementPage() {
                   </td>
                 </tr>
               ) : demandRows.length > 0 ? (
-                demandRows.map((row) => (
+                demandPaging.pageItems.map((row) => (
                   <tr
                     key={row.id}
                     className={`border-b border-slate-100 last:border-b-0 transition-colors ${
@@ -785,14 +901,30 @@ export default function EDemandManagementPage() {
                     colSpan={8}
                     className="px-5 py-12 text-center text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500"
                   >
-                    There is no E-Demand data to display.
+                    {isDemandListNarrowed
+                      ? "No E-Demand records match your search or column filters."
+                      : "There is no E-Demand data to display."}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+        {demandRows.length > 0 ? (
+          <div className="px-5 pb-4">
+            <Pagination {...demandPaging.paginationProps} />
+          </div>
+        ) : null}
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        onClose={closeDemandDelete}
+        onConfirm={confirmDemandDelete}
+        title="Delete E-Demand"
+        message="Are you sure you want to delete this E-Demand?"
+        itemName={deleteTarget ? `F-Note ${deleteTarget.fNote} - ${deleteTarget.customer}` : ""}
+      />
     </div>
   );
 }

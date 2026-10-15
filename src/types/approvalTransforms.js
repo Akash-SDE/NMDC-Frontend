@@ -2,6 +2,9 @@ import {
   APPROVAL_DEPARTMENTS,
   APPROVAL_STATUS,
   LOADING_STATUS,
+  REVIEW_DEPARTMENTS,
+  STEP_NOT_REQUIRED,
+  deriveApprovalStatus,
 } from "../constants/approval";
 import { toIsoDateTime } from "./transforms";
 import {
@@ -80,19 +83,10 @@ export function createApprovalRequestFromLoading(loading) {
   });
 }
 
-export function nextApprovalStatusAfterApprove(department) {
-  if (department === APPROVAL_DEPARTMENTS.OPERATIONS) {
-    return APPROVAL_STATUS.AWAITING_COMMERCIAL;
-  }
-  if (department === APPROVAL_DEPARTMENTS.COMMERCIAL) {
-    return APPROVAL_STATUS.AWAITING_CW;
-  }
-  if (department === APPROVAL_DEPARTMENTS.CW) {
-    return APPROVAL_STATUS.APPROVED;
-  }
-  return APPROVAL_STATUS.AWAITING_OPERATIONS;
-}
-
+/**
+ * `decision.targets` (Operations approval only) lists the review departments that must approve next;
+ * unselected ones become not required. Without targets both Commercial and C&W review in parallel.
+ */
 export function applyApprovalDecision(approval, department, decision) {
   const now = new Date().toISOString();
   const stepKey = department;
@@ -155,7 +149,16 @@ export function applyApprovalDecision(approval, department, decision) {
     wagonObservations: decision.wagonObservations || wagonSummary,
     inspection: mergedInspection,
   };
-  next.status = nextApprovalStatusAfterApprove(department);
+  if (department === APPROVAL_DEPARTMENTS.OPERATIONS && decision.targets?.length) {
+    for (const reviewDepartment of REVIEW_DEPARTMENTS) {
+      if (["approved", "rejected"].includes(next[reviewDepartment].status)) continue;
+      next[reviewDepartment] = {
+        ...next[reviewDepartment],
+        status: decision.targets.includes(reviewDepartment) ? "pending" : STEP_NOT_REQUIRED,
+      };
+    }
+  }
+  next.status = deriveApprovalStatus(next);
   next.history = [
     ...next.history,
     {

@@ -1,9 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchRailwayReceipts, uploadRailwayReceiptPdf, fetchRailwayReceiptById } from "../../../services/extractionService";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  fetchRailwayReceipts,
+  uploadRailwayReceiptPdf,
+  fetchRailwayReceiptById,
+  reprocessRailwayReceipt,
+} from "../../../services/extractionService";
 import SearchBar from "../../../components/shared/SearchBar";
 import Pagination from "../../../components/shared/Pagination";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import { ExtractionIcon } from "../../../components/icons";
+import { Upload } from "lucide-react";
+import ColumnSettingsMenu, { ICON_BUTTON_CLASS } from "../../../components/shared/ColumnSettingsMenu";
+import { useColumnVisibility } from "../../../hooks/useColumnVisibility";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import { useColumnFilters, useServerColumnFilters } from "../../../hooks/useColumnFilters";
 
 const PAGE_SIZE = 10;
 
@@ -60,75 +70,19 @@ function StatusBadge({ status }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   Upload Zone
+   Upload progress
 ───────────────────────────────────────────────────────────────── */
-function UploadZone({ onFiles, uploadState }) {
-  const inputRef = useRef(null);
-  const [dragging, setDragging] = useState(false);
-  const isUploading = uploadState.length > 0;
-
-  function handleDrop(e) {
-    e.preventDefault();
-    setDragging(false);
-    const files = Array.from(e.dataTransfer.files).filter((f) => f.type === "application/pdf");
-    if (files.length && !isUploading) onFiles(files);
-  }
-
-  function handleChange(e) {
-    const files = Array.from(e.target.files).filter((f) => f.type === "application/pdf");
-    if (files.length) onFiles(files);
-    e.target.value = "";
-  }
-
+function UploadProgress({ uploadState }) {
   return (
-    <div className="space-y-3">
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        onClick={() => !isUploading && inputRef.current?.click()}
-        className={`
-          relative flex cursor-pointer flex-col items-center justify-center gap-3
-          rounded-xl border-2 border-dashed px-6 py-8 text-center transition-all duration-200
-          ${dragging ? "border-blue-400 bg-blue-50" : "border-slate-300 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/40"}
-          ${isUploading ? "pointer-events-none opacity-60" : ""}
-        `}
-      >
-        <input ref={inputRef} type="file" accept="application/pdf" multiple className="hidden" onChange={handleChange} />
-
-        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-blue-100 bg-blue-50 text-blue-600">
-          <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="12" y1="18" x2="12" y2="12" />
-            <line x1="9" y1="15" x2="15" y2="15" />
-          </svg>
-        </div>
-
-        <div>
-          <p className="text-[14px] font-semibold text-slate-700">
-            {isUploading ? "Processing — please wait…" : "Drop eT-RR PDFs here or click to browse"}
-          </p>
-          <p className="mt-1 text-[12px] text-slate-500">
-            Each PDF is uploaded and extracted one at a time · Supports multiple files
-          </p>
-        </div>
-
-        {!isUploading && (
-          <span className="rounded-lg border border-blue-200 bg-white px-4 py-1.5 text-[12px] font-semibold text-blue-700 shadow-sm">
-            Choose Files
-          </span>
-        )}
-      </div>
-
-      {/* ── Per-file progress list ── */}
+    <div>
       {uploadState.length > 0 && (
         <div className="space-y-2">
-          {uploadState.map((f) => (
-            <div key={f.name}
+          {uploadState.map((f, idx) => (
+            <div key={`${idx}-${f.name}`}
               className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-[12px] transition-colors ${
                 f.status === "done"    ? "border-emerald-200 bg-emerald-50" :
                 f.status === "error"  ? "border-red-200 bg-red-50" :
+                f.status === "duplicate" ? "border-amber-200 bg-amber-50" :
                 f.status === "active" || f.status === "polling" ? "border-blue-200 bg-blue-50" :
                                         "border-slate-200 bg-slate-50"
               }`}
@@ -142,6 +96,10 @@ function UploadZone({ onFiles, uploadState }) {
                 ) : f.status === "error" ? (
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                ) : f.status === "duplicate" ? (
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#d97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                   </svg>
                 ) : f.status === "active" || f.status === "polling" ? (
                   <svg className="animate-spin" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round">
@@ -159,6 +117,7 @@ function UploadZone({ onFiles, uploadState }) {
               <span className={`flex-1 truncate font-medium ${
                 f.status === "done"   ? "text-emerald-800" :
                 f.status === "error"  ? "text-red-700" :
+                f.status === "duplicate" ? "text-amber-800" :
                 f.status === "active" || f.status === "polling" ? "text-blue-700" :
                                         "text-slate-500"
               }`}>
@@ -169,11 +128,12 @@ function UploadZone({ onFiles, uploadState }) {
               <span className={`shrink-0 font-semibold tabular-nums ${
                 f.status === "done"   ? "text-emerald-600" :
                 f.status === "error"  ? "text-red-600" :
+                f.status === "duplicate" ? "text-amber-700" :
                 f.status === "active" || f.status === "polling" ? "text-blue-600" :
                                         "text-slate-400"
               }`}>
                 {f.status === "done"    ? "Extracted ✓" :
-                 f.status === "error"   ? (f.errorMsg || "Failed") :
+                 f.status === "error" || f.status === "duplicate" ? (f.errorMsg || "Failed") :
                  f.status === "active"  ? `Uploading… ${f.elapsed > 0 ? `${f.elapsed}s` : ""}` :
                  f.status === "polling" ? `Extracting… ${f.elapsed > 0 ? `${f.elapsed}s` : ""}` :
                                           "Queued"}
@@ -189,7 +149,81 @@ function UploadZone({ onFiles, uploadState }) {
 /* ─────────────────────────────────────────────────────────────────
    Detail Drawer  — maps API fields directly
 ───────────────────────────────────────────────────────────────── */
-function DetailDrawer({ record, onClose }) {
+const WAGON_COLUMNS = [
+  { key: "serial_number",      label: "Sr" },
+  { key: "owning_railway",     label: "Owning Rly" },
+  { key: "wagon_type",         label: "Type" },
+  { key: "wagon_number",       label: "Wagon No" },
+  { key: "cc",                 label: "CC (T)" },
+  { key: "tare_weight",        label: "Tare (T)" },
+  { key: "no_of_articles",     label: "Articles" },
+  { key: "commodity_code",     label: "Commodity" },
+  { key: "gross_weight",       label: "Gross (T)" },
+  { key: "dip_measurement",    label: "DIP Wt (T)" },
+  { key: "actual_weight",      label: "Actual (T)" },
+  { key: "permissible_weight", label: "Permissible (T)" },
+  { key: "over_weight",        label: "Over Wt (T)" },
+  { key: "normal_rate",        label: "Over Wt Normal" },
+  { key: "punitive_rate",      label: "Over Wt Punitive" },
+  { key: "chargeable_weight",  label: "Chargeable (T)" },
+];
+
+const WAGON_FILTER_COLUMNS = WAGON_COLUMNS.map((col) =>
+  col.key === "serial_number"
+    ? { key: col.key, label: col.label, type: "none" }
+    : { key: col.key, label: col.label, getValue: (wagon) => fmt(wagon[col.key]) },
+);
+
+function WagonTable({ wagons }) {
+  const columnFilters = useColumnFilters(WAGON_FILTER_COLUMNS);
+  const { applyFilters } = columnFilters;
+  const wagonRows = useMemo(() => (Array.isArray(wagons) ? wagons : []), [wagons]);
+  const filteredWagons = useMemo(() => applyFilters(wagonRows), [applyFilters, wagonRows]);
+
+  if (wagonRows.length === 0) {
+    return <p className="px-5 py-3 text-[12px] text-slate-500">No wagon rows were extracted.</p>;
+  }
+  return (
+    <div className="max-h-80 overflow-auto">
+      <table className="w-full whitespace-nowrap text-[11px]">
+        <thead className="sticky top-0 z-10 bg-slate-100">
+          <tr>
+            {WAGON_COLUMNS.map((col) => (
+              <th key={col.key} className="px-2 py-1.5 text-left font-bold uppercase tracking-wide text-slate-500">
+                {col.label}
+              </th>
+            ))}
+          </tr>
+          <ColumnFilterRow
+            {...columnFilters.filterRowProps}
+            rows={wagonRows}
+            cellClassName="px-2 py-1"
+            rowClassName="border-b border-slate-200 bg-slate-100"
+          />
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {filteredWagons.length === 0 ? (
+            <tr>
+              <td colSpan={WAGON_COLUMNS.length} className="px-5 py-4 text-center text-[12px] text-slate-500">
+                No wagons match the column filters.
+              </td>
+            </tr>
+          ) : (
+            filteredWagons.map((wagon) => (
+              <tr key={wagon.id ?? wagon.serial_number} className="hover:bg-slate-50">
+                {WAGON_COLUMNS.map((col) => (
+                  <td key={col.key} className="px-2 py-1.5 text-slate-700">{fmt(wagon[col.key])}</td>
+                ))}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function DetailDrawer({ record, onClose, onReprocess, reprocessing }) {
   if (!record) return null;
 
   const sections = [
@@ -228,6 +262,8 @@ function DetailDrawer({ record, onClose }) {
         ["Zone",           fmt(record.zone)],
         ["Traffic Type",   fmt(record.traffic_type)],
         ["Charged Via",    fmt(record.charged_via)],
+        ["Wagons",         fmt(record.wagons)],
+        ["Train/Wagon Load", fmt(record.train_wagon_load)],
       ],
     },
     {
@@ -294,7 +330,7 @@ function DetailDrawer({ record, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
       <div
-        className="relative h-full w-full max-w-lg overflow-y-auto bg-white shadow-2xl"
+        className="relative h-full w-full max-w-3xl overflow-y-auto bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* header */}
@@ -305,6 +341,15 @@ function DetailDrawer({ record, onClose }) {
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge status={record.status} />
+            <button
+              type="button"
+              onClick={() => onReprocess(record)}
+              disabled={reprocessing}
+              title="Run extraction again on the uploaded PDF"
+              className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[12px] font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {reprocessing ? "Re-extracting…" : "Re-extract"}
+            </button>
             <button onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
             >
@@ -315,26 +360,13 @@ function DetailDrawer({ record, onClose }) {
           </div>
         </div>
 
-        {/* wagon summary */}
-        {Array.isArray(record.wagon_details) && record.wagon_details.length > 0 && (
-          <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2">
-              Wagons ({record.wagon_details.length})
-            </p>
-            <div className="flex flex-wrap gap-1">
-              {record.wagon_details.slice(0, 10).map((w) => (
-                <span key={w.id} className="rounded bg-white border border-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                  {w.wagon_number ?? `#${w.serial_number}`}
-                </span>
-              ))}
-              {record.wagon_details.length > 10 && (
-                <span className="rounded bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">
-                  +{record.wagon_details.length - 10} more
-                </span>
-              )}
-            </div>
-          </div>
-        )}
+        {/* wagon details */}
+        <div className="border-b border-slate-100">
+          <p className="bg-slate-50 px-5 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            Wagon Details ({record.wagon_details?.length ?? 0})
+          </p>
+          <WagonTable wagons={record.wagon_details} />
+        </div>
 
         {/* sections */}
         {sections.map((sec) => (
@@ -368,8 +400,10 @@ const COLUMNS = [
   { key: "rr_number",               label: "RR No",             width: "w-[130px]" },
   { key: "rr_date",                 label: "RR Date",           width: "w-[110px]", isDate: true },
   { key: "fnr",                     label: "FNR",               width: "w-[150px]" },
+  { key: "wagons",                  label: "Wagons",            width: "w-[90px]"  },
   { key: "invoice_number",          label: "Invoice No",        width: "w-[160px]" },
   { key: "invoice_date",            label: "Invoice Date",      width: "w-[110px]", isDate: true },
+  { key: "f_note_number",           label: "F-Note No",         width: "w-[120px]" },
   { key: "from_station_name",       label: "From Station",      width: "w-[200px]" },
   { key: "to_station_name",         label: "To Station",        width: "w-[180px]" },
   { key: "consignor_name",          label: "Consignor",         width: "w-[200px]" },
@@ -379,21 +413,60 @@ const COLUMNS = [
   { key: "commodity_code",          label: "Commodity Code",    width: "w-[130px]" },
   { key: "commodity_description",   label: "Commodity",         width: "w-[220px]" },
   { key: "total_weight",            label: "Total Wt (T)",      width: "w-[120px]" },
+  { key: "actual_weight",           label: "Actual Wt (T)",     width: "w-[120px]" },
   { key: "chargeable_weight_normal",label: "Chargeable Wt (T)", width: "w-[140px]" },
+  { key: "punitive_weight",         label: "Punitive Wt (T)",   width: "w-[130px]" },
   { key: "freight",                 label: "Freight (₹)",       width: "w-[140px]", isCurrency: true },
+  { key: "gst_amount",              label: "GST (₹)",           width: "w-[120px]", isCurrency: true },
   { key: "total_freight",           label: "Total Freight (₹)", width: "w-[150px]", isCurrency: true },
   { key: "distance_km",             label: "Distance (km)",     width: "w-[120px]" },
   { key: "zone",                    label: "Zone",              width: "w-[80px]"  },
   { key: "hsn_code",                label: "HSN Code",          width: "w-[110px]" },
 ];
 
+function formatCell(col, value) {
+  if (col.isCurrency) return fmtCurrency(value);
+  if (col.isDate) return fmtDate(value);
+  return fmt(value);
+}
+
+const statusLabel = (status) => (STATUS_MAP[status?.toUpperCase()] ?? STATUS_MAP.PENDING).label;
+
+/* horizontal padding is per column so the narrow sticky View cell can still fit the Clear button */
+const HIDDEN_COLS_KEY = "nmdc_extraction_hidden_columns";
+const STICKY_FILTER_CELL = "sticky z-30 border-r border-slate-200/70 bg-white";
+const RECEIPT_FILTER_COLUMNS = [
+  { key: "view", type: "none", className: `${STICKY_FILTER_CELL} left-0 w-[80px] min-w-[80px] max-w-[80px] px-2` },
+  {
+    key: "status",
+    label: "Status",
+    type: "select",
+    options: Object.values(STATUS_MAP).map((s) => s.label),
+    getValue: (rec) => statusLabel(rec.status),
+    className: `${STICKY_FILTER_CELL} left-[80px] w-[130px] min-w-[130px] max-w-[130px] px-4`,
+  },
+  {
+    key: "pdf_file",
+    label: "File",
+    getValue: (rec) => getFileName(rec.pdf_file),
+    className: `${STICKY_FILTER_CELL} left-[210px] w-[180px] min-w-[180px] max-w-[180px] px-4`,
+  },
+  ...COLUMNS.map((col) => ({
+    key: col.key,
+    label: col.label,
+    getValue: (rec) => formatCell(col, rec[col.key]),
+    className: `${col.width} px-4`,
+  })),
+  { key: "created_at", label: "Created At", getValue: (rec) => fmtDate(rec.created_at), className: "w-[160px] px-4" },
+];
+
 /* ─────────────────────────────────────────────────────────────────
    Skeleton
 ───────────────────────────────────────────────────────────────── */
-function SkeletonRows() {
+function SkeletonRows({ columnCount }) {
   return Array.from({ length: 5 }).map((_, i) => (
     <tr key={i} className="border-b border-slate-100">
-      {Array.from({ length: COLUMNS.length + 3 }).map((__, j) => (
+      {Array.from({ length: columnCount }).map((__, j) => (
         <td key={j} className="px-4 py-3.5">
           <div className="h-3 animate-pulse rounded-full bg-slate-200"
             style={{ width: `${45 + ((j * 13 + i * 17) % 45)}%` }} />
@@ -418,9 +491,10 @@ export default function ExtractionPage() {
   const [sortBy, setSortBy]                   = useState("created_at");
   const [sortOrder, setSortOrder]             = useState("desc");
 
-  // uploadState: [{ name, status: "queued"|"active"|"done"|"error", errorMsg? }]
+  // uploadState: [{ name, status: "queued"|"active"|"polling"|"done"|"error"|"duplicate", errorMsg? }]
   const [uploadState, setUploadState]   = useState([]);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [reprocessingId, setReprocessingId] = useState(null);
   const [toast, setToast]               = useState({ msg: "", type: "success" });
 
   /* debounce search */
@@ -429,14 +503,50 @@ export default function ExtractionPage() {
     return () => clearTimeout(t);
   }, [search]);
 
+  /* client-side sort; while column filters are active this covers every loaded record */
+  const sorted = useMemo(() => [...records].sort((a, b) => {
+    const av = String(a[sortBy] ?? "").toLowerCase();
+    const bv = String(b[sortBy] ?? "").toLowerCase();
+    if (av === bv) return 0;
+    const cmp = av > bv ? 1 : -1;
+    return sortOrder === "asc" ? cmp : -cmp;
+  }), [records, sortBy, sortOrder]);
+
+  const fileInputRef = useRef(null);
+  const columnVisibility = useColumnVisibility(HIDDEN_COLS_KEY, COLUMNS, {
+    onHide: (keys) => keys.forEach((k) => columnFilters.setFilter(k, "")),
+  });
+  const hiddenCols = columnVisibility.hidden;
+  const visibleCols = useMemo(() => COLUMNS.filter((c) => !hiddenCols.includes(c.key)), [hiddenCols]);
+  const filterCols = useMemo(
+    () => RECEIPT_FILTER_COLUMNS.filter((c) => !hiddenCols.includes(c.key)),
+    [hiddenCols],
+  );
+
+  const resetPage = useCallback(() => setCurrentPage(1), []);
+  const columnFilters = useServerColumnFilters(filterCols, {
+    rows: sorted,
+    totalCount,
+    currentPage,
+    pageSize: PAGE_SIZE,
+    onChange: resetPage,
+  });
+  const { serverPage, serverPageSize, isFiltering } = columnFilters;
+
+  function handleFilePick(e) {
+    const files = Array.from(e.target.files).filter((f) => f.type === "application/pdf");
+    e.target.value = "";
+    if (files.length) handleFiles(files);
+  }
+
   /* fetch records */
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const data = await fetchRailwayReceipts({
-        page: currentPage,
-        page_size: PAGE_SIZE,
+        page: serverPage,
+        page_size: serverPageSize,
         ...(debouncedSearch ? { search: debouncedSearch } : {}),
       });
       setRecords(data.results ?? []);
@@ -447,7 +557,7 @@ export default function ExtractionPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, debouncedSearch]);
+  }, [serverPage, serverPageSize, debouncedSearch]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -487,6 +597,7 @@ export default function ExtractionPage() {
 
     let successCount = 0;
     let failCount = 0;
+    let duplicateCount = 0;
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -573,26 +684,69 @@ export default function ExtractionPage() {
         }
       } catch (err) {
         clearInterval(elapsedTimer);
-        setUploadState((prev) =>
-          prev.map((f, idx) =>
-            idx === i ? { ...f, status: "error", errorMsg: err?.message || "Upload failed" } : f
-          )
-        );
-        failCount++;
+        if (err?.status === 409) {
+          const rr = err.data?.existing_rr_number;
+          setUploadState((prev) =>
+            prev.map((f, idx) =>
+              idx === i
+                ? { ...f, status: "duplicate", errorMsg: rr ? `Already uploaded (RR ${rr})` : "Already uploaded" }
+                : f
+            )
+          );
+          duplicateCount++;
+        } else {
+          setUploadState((prev) =>
+            prev.map((f, idx) =>
+              idx === i ? { ...f, status: "error", errorMsg: err?.message || "Upload failed" } : f
+            )
+          );
+          failCount++;
+        }
       }
     }
 
     /* summary toast */
-    if (failCount === 0) {
-      showToast(`${successCount} PDF${successCount > 1 ? "s" : ""} extracted successfully.`, "success");
+    const plural = (n, word) => `${n} ${word}${n > 1 ? "s" : ""}`;
+    const duplicateNote = duplicateCount
+      ? `${plural(duplicateCount, "duplicate PDF")} rejected — already uploaded.`
+      : "";
+
+    if (successCount === 0 && failCount === 0) {
+      showToast(duplicateNote, "warning");
+    } else if (failCount === 0) {
+      showToast(
+        `${plural(successCount, "PDF")} extracted successfully.${duplicateNote ? ` ${duplicateNote}` : ""}`,
+        duplicateCount ? "warning" : "success",
+      );
     } else if (successCount === 0) {
-      showToast(`All ${failCount} upload${failCount > 1 ? "s" : ""} failed.`, "error");
+      showToast(`${failCount === 1 ? "Upload" : `All ${failCount} uploads`} failed.${duplicateNote ? ` ${duplicateNote}` : ""}`, "error");
     } else {
-      showToast(`${successCount} extracted, ${failCount} failed.`, "error");
+      showToast(`${successCount} extracted, ${failCount} failed.${duplicateNote ? ` ${duplicateNote}` : ""}`, "error");
     }
 
     /* clear progress list after 6 s */
     setTimeout(() => setUploadState([]), 6000);
+  }
+
+  async function handleReprocess(record) {
+    const applyUpdate = (updated) => {
+      setRecords((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      setSelectedRecord((prev) => (prev?.id === updated.id ? updated : prev));
+    };
+    setReprocessingId(record.id);
+    try {
+      applyUpdate(await reprocessRailwayReceipt(record.id));
+      const final = await pollUntilDone(record.id, applyUpdate);
+      if (final?.status?.toUpperCase() === "COMPLETED") {
+        showToast(`Re-extracted ${final.rr_number || getFileName(final.pdf_file)} (${final.wagon_details?.length ?? 0} wagons).`);
+      } else {
+        showToast(final?.error_message || "Re-extraction did not finish. Check that the extraction worker is running.", "error");
+      }
+    } catch (err) {
+      showToast(err?.message || "Unable to re-extract this PDF.", "error");
+    } finally {
+      setReprocessingId(null);
+    }
   }
 
   function showToast(msg, type = "success") {
@@ -605,16 +759,7 @@ export default function ExtractionPage() {
     else { setSortBy(field); setSortOrder("asc"); }
   }
 
-  /* client-side sort within the page */
-  const sorted = [...records].sort((a, b) => {
-    const av = String(a[sortBy] ?? "").toLowerCase();
-    const bv = String(b[sortBy] ?? "").toLowerCase();
-    if (av === bv) return 0;
-    const cmp = av > bv ? 1 : -1;
-    return sortOrder === "asc" ? cmp : -cmp;
-  });
-
-  const totalPages      = Math.ceil(totalCount / PAGE_SIZE) || 1;
+  const pageRows        = columnFilters.pageRows;
   const completedCount  = records.filter((r) => r.status === "COMPLETED").length;
   const processingCount = records.filter((r) => r.status === "PROCESSING" || r.status === "PENDING").length;
   const failedCount     = records.filter((r) => r.status === "FAILED").length;
@@ -652,17 +797,13 @@ export default function ExtractionPage() {
           ))}
         </div>
 
-        {/* ── Upload zone ── */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-3 text-[15px] font-bold text-[#102a57]">Upload PDFs</h3>
-          <UploadZone onFiles={handleFiles} uploadState={uploadState} />
-        </div>
-
         {/* ── Toast ── */}
         {toast.msg && (
           <div className={`rounded-lg border px-4 py-2.5 text-[13px] font-medium ${
             toast.type === "error"
               ? "border-red-200 bg-red-50 text-red-700"
+              : toast.type === "warning"
+              ? "border-amber-200 bg-amber-50 text-amber-800"
               : "border-emerald-200 bg-emerald-50 text-emerald-700"
           }`}>
             {toast.msg}
@@ -681,35 +822,47 @@ export default function ExtractionPage() {
           </div>
         )}
 
-        {/* ── Search ── */}
-        <SearchBar
-          placeholder="Search by RR No, FNR, consignor, consignee, commodity…"
-          value={search}
-          onChange={setSearch}
-          showFilter={false}
-        />
+        {/* ── Search + toolbar ── */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex-1">
+            <SearchBar
+              placeholder="Search by RR No, FNR, consignor, consignee, commodity…"
+              value={search}
+              onChange={setSearch}
+              showFilter={false}
+            />
+          </div>
+          <ColumnSettingsMenu {...columnVisibility.menuProps} />
+          <input ref={fileInputRef} type="file" accept="application/pdf" multiple className="hidden" onChange={handleFilePick} />
+          <button type="button" disabled={uploadState.length > 0} onClick={() => fileInputRef.current?.click()}
+            className={`${ICON_BUTTON_CLASS} disabled:cursor-not-allowed disabled:opacity-60`}
+            title={uploadState.length > 0 ? "Uploading…" : "Upload PDFs (multiple allowed)"}>
+            <Upload size={18} />
+          </button>
+        </div>
+        <UploadProgress uploadState={uploadState} />
 
         {/* ── Table ── */}
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-separate border-spacing-0 whitespace-nowrap text-[13px]"
-              style={{ minWidth: `${COLUMNS.length * 130 + 400}px` }}>
+              style={{ minWidth: `${visibleCols.length * 130 + 400}px` }}>
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
                   {/* sticky: view */}
-                  <th className="sticky left-0 z-30 w-[60px] border-r border-slate-200/70 bg-slate-50 px-4 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                  <th className="sticky left-0 z-30 w-[80px] min-w-[80px] max-w-[80px] border-r border-slate-200/70 bg-slate-50 px-4 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     View
                   </th>
                   {/* sticky: status */}
-                  <th className="sticky left-[60px] z-30 w-[130px] border-r border-slate-200/70 bg-slate-50 px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                  <th className="sticky left-[80px] z-30 w-[130px] min-w-[130px] max-w-[130px] border-r border-slate-200/70 bg-slate-50 px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     Status
                   </th>
                   {/* sticky: file */}
-                  <th className="sticky left-[190px] z-30 w-[180px] border-r border-slate-200/70 bg-slate-50 px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                  <th className="sticky left-[210px] z-30 w-[180px] min-w-[180px] max-w-[180px] border-r border-slate-200/70 bg-slate-50 px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     File
                   </th>
                   {/* data columns */}
-                  {COLUMNS.map((col) => (
+                  {visibleCols.map((col) => (
                     <th key={col.key} className={`${col.width} px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500`}>
                       <SortHeaderButton label={col.label} field={col.key} sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                     </th>
@@ -718,25 +871,28 @@ export default function ExtractionPage() {
                     Created At
                   </th>
                 </tr>
+                <ColumnFilterRow {...columnFilters.filterRowProps} rows={records} cellClassName="py-2" />
               </thead>
 
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <SkeletonRows />
-                ) : sorted.length === 0 ? (
+                  <SkeletonRows columnCount={visibleCols.length + 4} />
+                ) : pageRows.length === 0 ? (
                   <tr>
-                    <td colSpan={COLUMNS.length + 4} className="py-16 text-center">
+                    <td colSpan={visibleCols.length + 4} className="py-16 text-center">
                       <ExtractionIcon size={36} className="mx-auto mb-3 text-slate-300" />
                       <p className="text-[14px] font-semibold text-slate-500">
-                        {debouncedSearch ? "No records match your search" : "No receipts yet"}
+                        {debouncedSearch || isFiltering ? "No records match your search or filters" : "No receipts yet"}
                       </p>
                       <p className="mt-1 text-[12px] text-slate-400">
-                        {debouncedSearch ? "Try a different search term." : "Upload eT-RR PDFs above to get started."}
+                        {debouncedSearch || isFiltering
+                          ? "Try a different search term or clear the column filters."
+                          : "Click \"Upload PDFs\" to get started."}
                       </p>
                     </td>
                   </tr>
                 ) : (
-                  sorted.map((rec) => (
+                  pageRows.map((rec) => (
                     <tr key={rec.id}
                       className={`transition-colors hover:bg-blue-50/30 ${
                         rec.status === "PROCESSING" || rec.status === "PENDING"
@@ -747,7 +903,7 @@ export default function ExtractionPage() {
                       }`}
                     >
                       {/* view */}
-                      <td className="sticky left-0 z-20 w-[60px] border-r border-slate-200/70 bg-white px-4 py-3 text-center shadow-[2px_0_4px_-2px_rgba(15,23,42,0.06)]">
+                      <td className="sticky left-0 z-20 w-[80px] min-w-[80px] max-w-[80px] border-r border-slate-200/70 bg-white px-4 py-3 text-center shadow-[2px_0_4px_-2px_rgba(15,23,42,0.06)]">
                         <button
                           type="button"
                           onClick={() => setSelectedRecord(rec)}
@@ -762,12 +918,12 @@ export default function ExtractionPage() {
                       </td>
 
                       {/* status */}
-                      <td className="sticky left-[60px] z-20 w-[130px] border-r border-slate-200/70 bg-white px-4 py-3 shadow-[2px_0_4px_-2px_rgba(15,23,42,0.06)]">
+                      <td className="sticky left-[80px] z-20 w-[130px] min-w-[130px] max-w-[130px] border-r border-slate-200/70 bg-white px-4 py-3 shadow-[2px_0_4px_-2px_rgba(15,23,42,0.06)]">
                         <StatusBadge status={rec.status} />
                       </td>
 
                       {/* file */}
-                      <td className="sticky left-[190px] z-20 w-[180px] border-r border-slate-200/70 bg-white px-4 py-3 shadow-[2px_0_4px_-2px_rgba(15,23,42,0.06)]">
+                      <td className="sticky left-[210px] z-20 w-[180px] min-w-[180px] max-w-[180px] border-r border-slate-200/70 bg-white px-4 py-3 shadow-[2px_0_4px_-2px_rgba(15,23,42,0.06)]">
                         <span className="flex items-center gap-1.5 text-[12px] font-medium text-slate-600">
                           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-red-400">
                             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -780,13 +936,9 @@ export default function ExtractionPage() {
                       </td>
 
                       {/* data columns */}
-                      {COLUMNS.map((col) => (
+                      {visibleCols.map((col) => (
                         <td key={col.key} className={`${col.width} px-4 py-3 text-slate-700`}>
-                          {col.isCurrency
-                            ? fmtCurrency(rec[col.key])
-                            : col.isDate
-                              ? fmtDate(rec[col.key])
-                              : fmt(rec[col.key])}
+                          {formatCell(col, rec[col.key])}
                         </td>
                       ))}
 
@@ -802,12 +954,12 @@ export default function ExtractionPage() {
           </div>
 
           {/* pagination */}
-          {!loading && !error && totalCount > 0 && (
+          {!loading && !error && columnFilters.count > 0 && (
             <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-3">
               <Pagination
                 currentPage={currentPage}
-                totalPages={totalPages}
-                totalCount={totalCount}
+                totalPages={columnFilters.totalPages}
+                totalCount={columnFilters.count}
                 pageSize={PAGE_SIZE}
                 onPageChange={setCurrentPage}
               />
@@ -818,7 +970,12 @@ export default function ExtractionPage() {
 
       {/* ── Detail Drawer ── */}
       {selectedRecord && (
-        <DetailDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} />
+        <DetailDrawer
+          record={selectedRecord}
+          onClose={() => setSelectedRecord(null)}
+          onReprocess={handleReprocess}
+          reprocessing={reprocessingId === selectedRecord.id}
+        />
       )}
     </>
   );

@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
 import SearchBar from "../../../components/shared/SearchBar";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
+import Pagination from "../../../components/shared/Pagination";
+import { useClientPagination } from "../../../hooks/useClientPagination";
+import { useColumnFilters } from "../../../hooks/useColumnFilters";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 import {
   UniformFormField,
   UniformSectionCard,
@@ -31,7 +35,9 @@ import { useAuth } from "../../../context/AuthContext";
 import { USER_ROLES } from "../../../constants/roles";
 import {
   APPROVAL_DEPARTMENTS,
+  APPROVAL_STATUS,
   APPROVAL_STEP_LABELS,
+  REVIEW_DEPARTMENTS,
   countPendingApprovals,
 } from "../../../constants/approval";
 import {
@@ -39,10 +45,13 @@ import {
   saveApprovalWagonManifest,
   submitApprovalDecision,
 } from "../../../store/slices/approvalSlice";
-import { fetchLoadingRecords } from "../../../store/slices/loadingSlice";
+import { listLoadingRecords } from "../../../services/loadingManagementService";
+import { asResults, mapReportLoading } from "../../reports/utils/reportApiMappers";
 import {
   canDepartmentAct,
+  getApprovalStatusLabel,
   getPendingDepartmentForApproval,
+  getPendingDepartmentsForApproval,
   isApprovalAwaitingAction,
 } from "../../../utils/approvalUtils";
 import { formatDateTimeForTable, getLocalDateTimeValue } from "../../../utils/dateUtils";
@@ -80,6 +89,48 @@ function buildDecisionActor(user, department, isAdminProxy) {
   return `${baseName} (on behalf of ${departmentLabel})`;
 }
 
+function joinDepartmentLabels(departments) {
+  return departments.map((department) => APPROVAL_STEP_LABELS[department]).join(" & ");
+}
+
+function describeDecisionOutcome(action, department, updated, isAdminProxy) {
+  const actingAs = isAdminProxy ? ` on behalf of ${APPROVAL_STEP_LABELS[department]}` : "";
+  if (action !== "approve") return `Approval rejected${actingAs}.`;
+  if (updated?.status === APPROVAL_STATUS.APPROVED) {
+    return `Approved${actingAs}. All railway approvals are complete and the loading is ready for dispatch.`;
+  }
+  const waitingOn = getPendingDepartmentsForApproval(updated);
+  if (waitingOn.length === 0) return `Approved${actingAs}.`;
+  const lead = department === APPROVAL_DEPARTMENTS.OPERATIONS ? "Sent to" : "Still awaiting";
+  const parallel = waitingOn.length > 1 ? " for parallel approval" : "";
+  return `Approved${actingAs}. ${lead} ${joinDepartmentLabels(waitingOn)}${parallel}.`;
+}
+
+function getCurrentStepLabel(approval) {
+  return (
+    joinDepartmentLabels(getPendingDepartmentsForApproval(approval)) ||
+    getApprovalStatusLabel(approval.status)
+  );
+}
+
+function buildQueueFilterColumns(loadingById) {
+  return [
+    { key: "rakeNumber", label: "Rake Number" },
+    { key: "customer", label: "Customer", type: "select" },
+    { key: "siding", label: "Siding", type: "select" },
+    {
+      key: "completion",
+      label: "Completion",
+      getValue: (approval) =>
+        formatDateTimeForTable(
+          loadingById[approval.loadingId]?.completionTime || approval.completionTime,
+        ),
+    },
+    { key: "currentStep", label: "Current Step", type: "select", getValue: getCurrentStepLabel },
+    { key: "action", type: "none" },
+  ];
+}
+
 export default function RailwayApprovalsPage() {
   const dispatch = useDispatch();
   const { user, userRole } = useAuth();
@@ -87,7 +138,7 @@ export default function RailwayApprovalsPage() {
   const approvals = useSelector((state) => state.approvals.items);
   const approvalStatus = useSelector((state) => state.approvals.status);
   const approvalError = useSelector((state) => state.approvals.error);
-  const loadingItems = useSelector((state) => state.loading.items);
+  const [loadingItems, setLoadingItems] = useState([]);
 
   const isAdminProxy = userRole === USER_ROLES.ADMIN;
   const visibleTabs = isAdminProxy
@@ -106,12 +157,21 @@ export default function RailwayApprovalsPage() {
   const [wagonManifest, setWagonManifest] = useState(null);
   const [manifestSaving, setManifestSaving] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [approvalTargets, setApprovalTargets] = useState([]);
   const [message, setMessage] = useState("");
+
+  const reloadLoadingItems = useCallback(
+    () =>
+      listLoadingRecords({ page_size: 1000 })
+        .then((response) => setLoadingItems(asResults(response).map(mapReportLoading)))
+        .catch(() => setLoadingItems([])),
+    [],
+  );
 
   useEffect(() => {
     dispatch(fetchApprovalRequests());
-    dispatch(fetchLoadingRecords());
-  }, [dispatch]);
+    reloadLoadingItems();
+  }, [dispatch, reloadLoadingItems]);
 
   const loadingById = useMemo(
     () => Object.fromEntries(loadingItems.map((item) => [item.id, item])),
@@ -120,35 +180,48 @@ export default function RailwayApprovalsPage() {
 
   const pendingCount = useMemo(() => countPendingApprovals(approvals), [approvals]);
 
-  const queueItems = useMemo(() => {
-    const matchesSearch = (approval) => {
-      if (!search.trim()) return true;
-      const q = search.toLowerCase();
-      return [approval.rakeNumber, approval.customer, approval.siding, approval.loadingId]
+  const visibleQueueItems = useMemo(() => {
+    if (focusedLoadingId) {
+      return approvals.filter((approval) => String(approval.loadingId) === String(focusedLoadingId));
+    }
+    return isAdminProxy && activeDepartment === ADMIN_ALL_TAB
+      ? approvals.filter(isApprovalAwaitingAction)
+      : approvals.filter((approval) => canDepartmentAct(approval, activeDepartment));
+  }, [approvals, activeDepartment, isAdminProxy, focusedLoadingId]);
+
+  const searchedQueueItems = useMemo(() => {
+    if (!search.trim()) return visibleQueueItems;
+    const q = search.toLowerCase();
+    return visibleQueueItems.filter((approval) =>
+      [approval.rakeNumber, approval.customer, approval.siding, approval.loadingId]
         .join(" ")
         .toLowerCase()
-        .includes(q);
-    };
+        .includes(q),
+    );
+  }, [visibleQueueItems, search]);
 
-    const departmentItems =
-      isAdminProxy && activeDepartment === ADMIN_ALL_TAB
-        ? approvals.filter(isApprovalAwaitingAction)
-        : approvals.filter((approval) => canDepartmentAct(approval, activeDepartment));
+  const queueFilterColumns = useMemo(() => buildQueueFilterColumns(loadingById), [loadingById]);
+  const columnFilters = useColumnFilters(queueFilterColumns);
+  const { applyFilters } = columnFilters;
+  const queueItems = useMemo(
+    () => applyFilters(searchedQueueItems),
+    [applyFilters, searchedQueueItems],
+  );
 
-    const visibleItems = focusedLoadingId
-      ? approvals.filter((approval) => String(approval.loadingId) === String(focusedLoadingId))
-      : departmentItems;
-
-    return visibleItems.filter(matchesSearch);
-  }, [approvals, activeDepartment, search, isAdminProxy, focusedLoadingId]);
+  const { pageItems: pagedQueueItems, paginationProps } = useClientPagination(queueItems, {
+    resetKey: `${search}|${activeDepartment}|${focusedLoadingId ?? ""}|${columnFilters.filterKey}`,
+  });
 
   async function openApproval(approval) {
-    const pendingDepartment = getPendingDepartmentForApproval(approval);
+    const pendingDepartment = getPendingDepartmentForApproval(approval, activeDepartment);
     setSelectedApproval(approval);
     setReviewDepartment(pendingDepartment);
     setRemarks("");
     setTrackClearanceTime(getLocalDateTimeValue());
     setInspectionForm(emptyDepartmentInspection());
+    setApprovalTargets(
+      pendingDepartment === APPROVAL_DEPARTMENTS.OPERATIONS ? [...REVIEW_DEPARTMENTS] : [],
+    );
 
     const apiManifest = await fetchWagonManifestByRakeNumber(approval.rakeNumber);
     const baseManifest =
@@ -167,12 +240,32 @@ export default function RailwayApprovalsPage() {
     setInspectionForm(buildDepartmentInspectionFromManifest(department, manifest));
   }
 
+  function switchReviewDepartment(department) {
+    if (department === reviewDepartment) return;
+    setReviewDepartment(department);
+    setRemarks("");
+    setInspectionForm(
+      wagonManifest
+        ? buildDepartmentInspectionFromManifest(department, wagonManifest)
+        : emptyDepartmentInspection(),
+    );
+  }
+
+  function toggleApprovalTarget(department, checked) {
+    setApprovalTargets((prev) =>
+      checked
+        ? REVIEW_DEPARTMENTS.filter((item) => item === department || prev.includes(item))
+        : prev.filter((item) => item !== department),
+    );
+  }
+
   function closeApproval() {
     setSelectedApproval(null);
     setReviewDepartment(null);
     setWagonManifest(null);
     setInspectionForm(emptyDepartmentInspection());
     setConfirmAction(null);
+    setApprovalTargets([]);
   }
 
   async function persistWagonManifest(nextManifest) {
@@ -228,6 +321,10 @@ export default function RailwayApprovalsPage() {
         setMessage("Track clearance time is required for operations approval.");
         return;
       }
+      if (approvalTargets.length === 0) {
+        setMessage("Select at least one department (Railway Commercial or Railway C&W) to send the approval to.");
+        return;
+      }
     }
     setConfirmAction(action);
   }
@@ -246,7 +343,7 @@ export default function RailwayApprovalsPage() {
         }),
       );
 
-      await dispatch(
+      const result = await dispatch(
         submitApprovalDecision({
           approval: selectedApproval,
           department: reviewDepartment,
@@ -259,17 +356,15 @@ export default function RailwayApprovalsPage() {
               ? { trackClearanceTime }
               : {}),
           },
+          targets:
+            reviewDepartment === APPROVAL_DEPARTMENTS.OPERATIONS ? approvalTargets : undefined,
         }),
       ).unwrap();
 
       await dispatch(fetchApprovalRequests());
-      await dispatch(fetchLoadingRecords());
+      await reloadLoadingItems();
       setMessage(
-        confirmAction === "approve"
-          ? isAdminProxy
-            ? `Approved on behalf of ${APPROVAL_STEP_LABELS[reviewDepartment]}.`
-            : "Approval recorded successfully."
-          : "Approval rejection recorded.",
+        describeDecisionOutcome(confirmAction, reviewDepartment, result?.approval, isAdminProxy),
       );
       closeApproval();
     } catch (error) {
@@ -285,6 +380,15 @@ export default function RailwayApprovalsPage() {
     ? APPROVAL_STEP_LABELS[reviewDepartment]
     : "";
 
+  const selectedPendingDepartments = getPendingDepartmentsForApproval(selectedApproval);
+
+  const routingNote =
+    reviewDepartment === APPROVAL_DEPARTMENTS.OPERATIONS && approvalTargets.length > 0
+      ? ` This will send the approval to ${joinDepartmentLabels(approvalTargets)}${
+          approvalTargets.length > 1 ? " for parallel approval" : ""
+        }.`
+      : "";
+
   return (
     <>
       <div className="space-y-6 animate-fadeIn">
@@ -295,7 +399,7 @@ export default function RailwayApprovalsPage() {
           <p className="mt-1 text-[14px] text-slate-500">
             {isAdminProxy
               ? "Review and approve loading records on behalf of railway departments when required."
-              : "Review completed loading records and grant sequential railway approvals."}
+              : "Review completed loading records and grant railway approvals. Railway Commercial and C&W review in parallel once Operations sends a rake to both."}
           </p>
         </div>
 
@@ -363,6 +467,11 @@ export default function RailwayApprovalsPage() {
                   <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Current Step</th>
                   <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Action</th>
                 </tr>
+                <ColumnFilterRow
+                  {...columnFilters.filterRowProps}
+                  rows={visibleQueueItems}
+                  cellClassName="px-4 py-2"
+                />
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {approvalStatus === "loading" && queueItems.length === 0 ? (
@@ -374,18 +483,20 @@ export default function RailwayApprovalsPage() {
                 ) : queueItems.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
-                      {focusedLoadingId
-                        ? "No railway approval was found for this loading record."
-                        : isAdminProxy && activeDepartment === ADMIN_ALL_TAB
-                          ? "No loading records are awaiting railway approval."
-                          : "No pending approvals for this department."}
+                      {visibleQueueItems.length > 0
+                        ? "No approvals match your search or column filters."
+                        : focusedLoadingId
+                          ? "No railway approval was found for this loading record."
+                          : isAdminProxy && activeDepartment === ADMIN_ALL_TAB
+                            ? "No loading records are awaiting railway approval."
+                            : "No pending approvals for this department."}
                     </td>
                   </tr>
                 ) : (
-                  queueItems.map((approval) => {
+                  pagedQueueItems.map((approval) => {
                     const loading = loadingById[approval.loadingId];
                     const completionTime = loading?.completionTime || approval.completionTime;
-                    const pendingDepartment = getPendingDepartmentForApproval(approval);
+                    const pendingDepartments = getPendingDepartmentsForApproval(approval);
                     return (
                       <tr key={approval.id} className="hover:bg-slate-50/60">
                         <td className="px-4 py-3 text-[13px] font-semibold text-blue-600">
@@ -397,7 +508,13 @@ export default function RailwayApprovalsPage() {
                           {formatDateTimeForTable(completionTime)}
                         </td>
                         <td className="px-4 py-3 text-[13px] text-slate-700">
-                          {APPROVAL_STEP_LABELS[pendingDepartment] || approval.status}
+                          {joinDepartmentLabels(pendingDepartments) ||
+                            getApprovalStatusLabel(approval.status)}
+                          {pendingDepartments.length > 1 ? (
+                            <span className="ml-2 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700">
+                              Parallel
+                            </span>
+                          ) : null}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <button
@@ -415,6 +532,11 @@ export default function RailwayApprovalsPage() {
               </tbody>
             </table>
           </div>
+          {queueItems.length > 0 ? (
+            <div className="px-4 pb-4">
+              <Pagination {...paginationProps} />
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -433,6 +555,24 @@ export default function RailwayApprovalsPage() {
                   <p className="mt-1 text-[12px] font-semibold text-amber-700">
                     Acting on behalf of {reviewDepartmentLabel}
                   </p>
+                ) : null}
+                {isAdminProxy && selectedPendingDepartments.length > 1 ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selectedPendingDepartments.map((department) => (
+                      <button
+                        key={department}
+                        type="button"
+                        onClick={() => switchReviewDepartment(department)}
+                        className={`rounded-md border px-2.5 py-1 text-[12px] font-semibold transition-colors ${
+                          reviewDepartment === department
+                            ? "border-blue-600 bg-blue-600 text-white"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        Review as {APPROVAL_STEP_LABELS[department]}
+                      </button>
+                    ))}
+                  </div>
                 ) : null}
               </div>
               <button type="button" onClick={closeApproval} className={uniformSecondaryButtonClass}>
@@ -526,6 +666,38 @@ export default function RailwayApprovalsPage() {
                 />
               </UniformFormField>
 
+              {reviewDepartment === APPROVAL_DEPARTMENTS.OPERATIONS && (
+                <div className="mt-4">
+                  <UniformFormField label="Send Approval To" required>
+                    <div className="space-y-2">
+                      {REVIEW_DEPARTMENTS.map((department) => (
+                        <label
+                          key={department}
+                          className="flex items-center gap-2 text-sm text-slate-700"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={approvalTargets.includes(department)}
+                            onChange={(event) =>
+                              toggleApprovalTarget(department, event.target.checked)
+                            }
+                            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="font-medium">{APPROVAL_STEP_LABELS[department]}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500">
+                      {approvalTargets.length > 1
+                        ? "Both selected: the rake appears in the Railway Commercial and Railway C&W queues at the same time and is approved once both departments approve."
+                        : approvalTargets.length === 1
+                          ? `Only ${APPROVAL_STEP_LABELS[approvalTargets[0]]} will review; the other department is marked Not Required.`
+                          : "Select at least one department."}
+                    </p>
+                  </UniformFormField>
+                </div>
+              )}
+
               <div className="mt-4 flex flex-wrap justify-end gap-2">
                 <button
                   type="button"
@@ -556,8 +728,8 @@ export default function RailwayApprovalsPage() {
         message={
           confirmAction === "approve"
             ? isAdminProxy
-              ? `Approve this step on behalf of ${reviewDepartmentLabel}?`
-              : "Are you sure you want to approve this railway step?"
+              ? `Approve this step on behalf of ${reviewDepartmentLabel}?${routingNote}`
+              : `Are you sure you want to approve this railway step?${routingNote}`
             : isAdminProxy
               ? `Reject this step on behalf of ${reviewDepartmentLabel}?`
               : "Are you sure you want to reject this railway approval step?"

@@ -14,6 +14,9 @@ import {
   updateRoute,
   patchRoute,
 } from "../../../services/routeService";
+import { buildMasterListQuery } from "../../../utils/listQuery";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import { useServerColumnFilters } from "../../../hooks/useColumnFilters";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 function EditIcon() {
@@ -167,6 +170,21 @@ function RouteForm({ initialData, onSave, onCancel, isEditing, saving }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 10;
+const SORT_FIELD_MAP = {
+  code: "route_code",
+  routeNo: "route_no",
+  status: "status",
+};
+const STATUS_FILTER_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+const FILTER_COLUMNS = [
+  { key: "code", label: "Route Code" },
+  { key: "routeNo", label: "Route No", className: "hidden sm:table-cell" },
+  { key: "status", label: "Status", type: "select", options: STATUS_FILTER_OPTIONS },
+  { key: "actions", type: "none" },
+];
 
 export default function RouteMaster() {
   const { navigate, currentRoute } = useRouter();
@@ -189,7 +207,15 @@ export default function RouteMaster() {
   const [statusToggleItem, setStatusToggleItem] = useState(null);
   const [isStatusToggleOpen, setIsStatusToggleOpen] = useState(false);
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const resetPage = useCallback(() => setCurrentPage(1), []);
+  const columnFilters = useServerColumnFilters(FILTER_COLUMNS, {
+    rows: routes,
+    totalCount,
+    currentPage,
+    pageSize: PAGE_SIZE,
+    onChange: resetPage,
+  });
+  const { serverPage, serverPageSize, totalPages } = columnFilters;
 
   function showToast(message, type = "success") {
     setToast({ message, type, id: Date.now() });
@@ -199,7 +225,14 @@ export default function RouteMaster() {
   const loadRoutes = useCallback(async () => {
     setLoading(true);
     try {
-      const filters = search.trim() ? { route_code: search.trim() } : {};
+      const filters = buildMasterListQuery({
+        page: serverPage,
+        pageSize: serverPageSize,
+        sortBy,
+        sortOrder,
+        sortFieldMap: SORT_FIELD_MAP,
+        filters: search.trim() ? { route_code: search.trim() } : {},
+      });
       const res = await fetchRoutes(filters);
       const results = res?.results ?? res ?? [];
       setRoutes(results.map(toUi));
@@ -209,23 +242,13 @@ export default function RouteMaster() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, serverPage, serverPageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     if (!isAddPage && !isEditPage) loadRoutes();
   }, [isAddPage, isEditPage, loadRoutes]);
 
-  const sorted = [...routes].sort((a, b) => {
-    const av = sortBy === "routeNo"
-      ? (Number(a.routeNo) || 0)
-      : String(a[sortBy] ?? "").toLowerCase();
-    const bv = sortBy === "routeNo"
-      ? (Number(b.routeNo) || 0)
-      : String(b[sortBy] ?? "").toLowerCase();
-    if (av === bv) return 0;
-    return (av > bv ? 1 : -1) * (sortOrder === "asc" ? 1 : -1);
-  });
-  const paginatedData = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginatedData = columnFilters.pageRows;
 
   function handleSort(field) {
     if (sortBy === field) setSortOrder((p) => (p === "asc" ? "desc" : "asc"));
@@ -378,6 +401,7 @@ export default function RouteMaster() {
                   Actions
                 </th>
               </tr>
+              <ColumnFilterRow {...columnFilters.filterRowProps} rows={routes} />
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
@@ -433,7 +457,7 @@ export default function RouteMaster() {
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            totalCount={totalCount}
+            totalCount={columnFilters.count}
             pageSize={PAGE_SIZE}
             onPageChange={setCurrentPage}
           />

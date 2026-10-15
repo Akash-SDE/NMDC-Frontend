@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useRouter } from "../../../context/RouterContext";
 import ReportsHubPage from "./ReportsHubPage";
 import ReportTablePage from "./ReportTablePage";
@@ -16,11 +17,12 @@ export default function ReportsPage() {
     return <ReportsHubPage />;
   }
 
-  return <ReportDetailView report={report} />;
+  return <ReportDetailView key={report.id} report={report} />;
 }
 
 function ReportDetailView({ report }) {
-  const { rows, filters, loading, source } = useReportData(report.id);
+  const [filterValues, setFilterValues] = useState({});
+  const { rows, filters, status, error, refreshing, reload } = useReportData(report.id, filterValues);
 
   return (
     <ReportTablePage
@@ -28,8 +30,11 @@ function ReportDetailView({ report }) {
       reportId={report.id}
       rows={rows}
       filters={filters}
-      loading={loading}
-      dataSource={source}
+      loading={status === "loading"}
+      refreshing={refreshing}
+      error={status === "error" ? error : null}
+      onRetry={reload}
+      onFilterValuesChange={setFilterValues}
       dataSourceType={report.dataSource}
     />
   );

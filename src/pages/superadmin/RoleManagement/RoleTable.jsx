@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Pencil,
   Trash2,
@@ -7,6 +7,20 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import { useColumnFilters } from "../../../hooks/useColumnFilters";
+
+const FILTER_COLUMNS = [
+  { key: "select", type: "none" },
+  { key: "name", label: "Role Name" },
+  { key: "description", label: "Role Description" },
+  { key: "privileges", type: "none" },
+  { key: "createdBy", label: "Created By", type: "select" },
+  { key: "createdOn", label: "Created On" },
+  { key: "modifiedBy", label: "Modified By", type: "select" },
+  { key: "modifiedOn", label: "Modified On" },
+  { key: "actions", type: "none" },
+];
 
 function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
   const [selectedRoles, setSelectedRoles] = useState([]);
@@ -14,6 +28,8 @@ function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState("asc");
   const pageSize = 10;
+  const resetPage = useCallback(() => setCurrentPage(1), []);
+  const columnFilters = useColumnFilters(FILTER_COLUMNS, { onChange: resetPage });
 
   const getComparableValue = (role, field) => {
     const value = role[field];
@@ -24,7 +40,7 @@ function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
     return typeof value === "string" ? value.toLowerCase() : (value ?? "");
   };
 
-  const sortedRoles = [...roles].sort((a, b) => {
+  const sortedRoles = [...columnFilters.applyFilters(roles)].sort((a, b) => {
     const aValue = getComparableValue(a, sortBy);
     const bValue = getComparableValue(b, sortBy);
     if (aValue === bValue) return 0;
@@ -103,6 +119,7 @@ function RoleTable({ roles, onEdit, onDelete, onViewPrivileges }) {
                 Actions
               </th>
             </tr>
+            <ColumnFilterRow {...columnFilters.filterRowProps} rows={roles} cellClassName="px-4 py-2" />
           </thead>
           <tbody className="divide-y divide-slate-100">
             {paginatedRoles.map((role) => (

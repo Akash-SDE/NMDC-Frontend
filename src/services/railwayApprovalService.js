@@ -47,8 +47,13 @@ export function updateRailwayWagonManifest(approvalId, manifest) {
   });
 }
 
-export async function submitRailwayDecision(approval, department, decision) {
-  const next = applyApprovalDecision(approval, department, decision);
+export async function submitRailwayDecision(approval, department, decision, targets = []) {
+  const routesReview =
+    department === APPROVAL_DEPARTMENTS.OPERATIONS && decision.action === "approve" && targets.length > 0;
+  const next = applyApprovalDecision(approval, department, {
+    ...decision,
+    targets: routesReview ? targets : undefined,
+  });
   const historyEntry = next.history[next.history.length - 1];
   const payload = {
     status: RAILWAY_STATUS_CODE[next.status],
@@ -69,6 +74,9 @@ export async function submitRailwayDecision(approval, department, decision) {
 
   if (clearanceTime) {
     payload.clearance_time = clearanceTime;
+  }
+  if (routesReview) {
+    payload.approval_targets = targets.map((target) => DEPARTMENT_CODE[target]);
   }
   if (next.status === APPROVAL_STATUS.APPROVED) {
     payload.loading_status = LOADING_READY_FOR_DISPATCH;

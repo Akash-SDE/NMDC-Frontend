@@ -1,56 +1,51 @@
-import { useEffect, useState } from "react";
-import { loadReportDataset } from "./reportDataEngine";
+import { useCallback, useEffect, useState } from "react";
+import { loadReportDataset, toReportRequest } from "./reportDataEngine";
 import { getReportById } from "./reportRegistry";
 
-export function useReportData(reportId) {
-  const [state, setState] = useState({
+const FILTER_DEBOUNCE_MS = 300;
+
+export function useReportData(reportId, filterValues) {
+  const baseConfig = getReportById(reportId)?.config;
+  const requestKey = JSON.stringify(toReportRequest(filterValues));
+  const [reloadToken, setReloadToken] = useState(0);
+  const [state, setState] = useState(() => ({
     rows: [],
-    filters: [],
-    loading: Boolean(reportId),
-    source: "static",
-  });
+    filters: baseConfig?.filters ?? [],
+    status: "loading",
+    error: null,
+    refreshing: false,
+  }));
 
   useEffect(() => {
-    const report = getReportById(reportId);
-    const baseConfig = report?.config;
-
-    if (!reportId || !baseConfig) {
-      setState({ rows: [], filters: [], loading: false, source: "static" });
-      return;
-    }
+    if (!baseConfig) return undefined;
 
     let cancelled = false;
-    setState({
-      rows: baseConfig.rows ?? [],
-      filters: baseConfig.filters ?? [],
-      loading: true,
-      source: "static",
-    });
-
-    loadReportDataset(reportId, baseConfig)
-      .then((dataset) => {
-        if (cancelled) return;
-        setState({
-          rows: dataset.rows?.length ? dataset.rows : baseConfig.rows ?? [],
-          filters: dataset.filters ?? baseConfig.filters ?? [],
-          loading: false,
-          source: dataset.rows?.length ? "live" : "static",
+    const timer = setTimeout(() => {
+      setState((previous) => ({ ...previous, refreshing: true }));
+      loadReportDataset(reportId, baseConfig, JSON.parse(requestKey))
+        .then((dataset) => {
+          if (cancelled) return;
+          setState({
+            rows: dataset.rows,
+            filters: dataset.filters,
+            status: "ready",
+            error: null,
+            refreshing: false,
+          });
+        })
+        .catch((error) => {
+          if (cancelled) return;
+          setState((previous) => ({ ...previous, status: "error", error, refreshing: false }));
         });
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setState({
-          rows: baseConfig.rows ?? [],
-          filters: baseConfig.filters ?? [],
-          loading: false,
-          source: "static",
-        });
-      });
+    }, FILTER_DEBOUNCE_MS);
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [reportId]);
+  }, [reportId, baseConfig, requestKey, reloadToken]);
 
-  return state;
+  const reload = useCallback(() => setReloadToken((token) => token + 1), []);
+
+  return { ...state, reload };
 }

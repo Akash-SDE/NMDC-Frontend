@@ -23,12 +23,22 @@ import {
   loadingPathForRake,
   ROUTES,
 } from "../../../constants/routes";
-import { fetchDelayRecords, saveDelayRecord } from "../../../store/slices/delaySlice";
+import { fetchDelayRecords } from "../../../store/slices/delaySlice";
 import { fetchLoadingById, fetchLoadingRecords } from "../../../store/slices/loadingSlice";
 import { fetchRakeById } from "../../../store/slices/rakeSlice";
 import { fetchApprovalRequests } from "../../../store/slices/approvalSlice";
 import { getErrorMessage } from "../../../api/apiError";
-import { createDelayRecord, listDelayRecords } from "../../../services/delayManagementService";
+import {
+  createDelayRecord,
+  listDelayRecords,
+  updateDelayRecord,
+} from "../../../services/delayManagementService";
+import Pagination from "../../../components/shared/Pagination";
+import { useClientPagination } from "../../../hooks/useClientPagination";
+import { useColumnFilters } from "../../../hooks/useColumnFilters";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import ColumnSettingsMenu from "../../../components/shared/ColumnSettingsMenu";
+import { useColumnVisibility } from "../../../hooks/useColumnVisibility";
 import { toIsoDateTime } from "../../../types/transforms";
 import {
   buildAllProcessDelayRows,
@@ -55,6 +65,9 @@ const delayStatusOptions = [
   { code: 15, label: "Resolved" },
   { code: 20, label: "Closed" },
 ];
+
+const DELAY_STATUS_LOGGED = 10;
+const DELAY_STATUS_CLOSED = 20;
 
 function enumLabel(options, code) {
   return options.find((option) => String(option.code) === String(code))?.label || "";
@@ -212,25 +225,39 @@ function mapApiDelay(item) {
     reportedBy: item.reported_by ?? "",
     statusCode: item.status,
     statusLabel,
-    isDisabled: false,
+    isDisabled: Number(item.status) === DELAY_STATUS_CLOSED,
     isReadOnly: false,
   };
 }
 
-function inferManualStageFromCategory(category) {
-  const value = String(category || "").toLowerCase();
-  if (value.includes("wagon")) return "Wagon Supply";
-  if (value.includes("railway")) return "Railway Operations";
-  return "Loading";
+function getRowDuration(row) {
+  return formatDuration(
+    row.durationMinutes != null
+      ? Number(row.durationMinutes)
+      : getDurationMinutes(row.startTime, row.endTime),
+  );
 }
 
-function resolveLoadingForRakeNumber(rakeNumber, loadingItems, selectedLoading, selectedRake) {
-  if (selectedLoading?.rakeNumber === rakeNumber) return selectedLoading;
-  if (selectedRake?.rakeNumber === rakeNumber) {
-    return loadingItems.find((item) => item.rakeId === selectedRake.id) ?? null;
-  }
-  return loadingItems.find((item) => item.rakeNumber === rakeNumber) ?? null;
-}
+const DELAY_HIDDEN_COLS_KEY = "nmdc_delay_hidden_columns";
+const DELAY_FILTER_COLUMNS = [
+  { key: "actions", type: "none", className: "sticky left-0 z-30 border-r border-slate-200/70 bg-white" },
+  { key: "logId", label: "Log ID", getValue: (row) => row.logId || row.id },
+  { key: "rakeNumber", label: "Rake Number" },
+  {
+    key: "source",
+    label: "Source",
+    type: "select",
+    getValue: (row) => row.sourceLabel || sourceBadgeLabels[row.source] || "Manual",
+  },
+  { key: "processStage", label: "Process Stage", type: "select", getValue: (row) => row.processStage || "-" },
+  { key: "category", label: "Category", type: "select" },
+  { key: "startTime", label: "Start Time", getValue: (row) => formatDateTimeForTable(row.startTime) },
+  { key: "endTime", label: "End Time", getValue: (row) => formatDateTimeForTable(row.endTime) },
+  { key: "duration", label: "Duration", getValue: getRowDuration },
+  { key: "reason", label: "Reason" },
+  { key: "reportedBy", label: "Reported By" },
+  { key: "status", label: "Status", type: "select", getValue: (row) => row.statusLabel || getStatusMeta(row).label },
+];
 
 export default function DelayManagementPage() {
   const dispatch = useDispatch();
@@ -267,7 +294,7 @@ export default function DelayManagementPage() {
   }, [dispatch]);
 
   const loadApiDelays = async () => {
-    const response = await listDelayRecords({});
+    const response = await listDelayRecords({ page_size: 1000 });
     setApiRows(asResults(response).map(mapApiDelay));
   };
 
@@ -290,9 +317,8 @@ export default function DelayManagementPage() {
   );
 
   const registerRows = useMemo(() => {
-    const manualOnly = manualRows.filter((item) => !item.isDisabled);
-    if (!includeProcessDelays) return manualOnly;
-    return [...manualOnly, ...processDelayRows].sort(
+    if (!includeProcessDelays) return manualRows;
+    return [...manualRows, ...processDelayRows].sort(
       (a, b) => parseDateTimeToTimestamp(b.startTime) - parseDateTimeToTimestamp(a.startTime),
     );
   }, [manualRows, processDelayRows, includeProcessDelays]);
@@ -422,6 +448,13 @@ export default function DelayManagementPage() {
     });
   }, [registerRows, tableSearch]);
 
+  const columnFilters = useColumnFilters(DELAY_FILTER_COLUMNS);
+  const columnVisibility = useColumnVisibility(DELAY_HIDDEN_COLS_KEY, DELAY_FILTER_COLUMNS, {
+    onHide: (keys) => keys.forEach((k) => columnFilters.setFilter(k, "")),
+  });
+  const { applyFilters } = columnFilters;
+  const columnFilteredRows = useMemo(() => applyFilters(filteredRows), [applyFilters, filteredRows]);
+
   const sortedRows = useMemo(() => {
     const getComparableValue = (row, field) => {
       if (field === "startTime" || field === "endTime") {
@@ -443,14 +476,18 @@ export default function DelayManagementPage() {
       return String(row[field] ?? "").toLowerCase();
     };
 
-    return [...filteredRows].sort((a, b) => {
+    return [...columnFilteredRows].sort((a, b) => {
       const aValue = getComparableValue(a, sortBy);
       const bValue = getComparableValue(b, sortBy);
       if (aValue === bValue) return 0;
       const comparison = aValue > bValue ? 1 : -1;
       return sortOrder === "asc" ? comparison : -comparison;
     });
-  }, [filteredRows, sortBy, sortOrder]);
+  }, [columnFilteredRows, sortBy, sortOrder]);
+
+  const { pageItems: pagedRows, paginationProps } = useClientPagination(sortedRows, {
+    resetKey: `${tableSearch}|${includeProcessDelays}|${sortBy}|${sortOrder}|${columnFilters.filterKey}`,
+  });
 
   function handleSort(field) {
     if (sortBy === field) {
@@ -524,68 +561,34 @@ export default function DelayManagementPage() {
       return;
     }
 
-    const loadingContext = resolveLoadingForRakeNumber(
-      inlineForm.rakeNumber.trim(),
-      loadingItems,
-      selectedLoading,
-      selectedRake,
-    );
+    const actorId = Number(profile?.id);
 
     if (inlineActionMode === "adjust" && activeInlineLogId !== null) {
       const existing = manualRows.find((item) => item.id === activeInlineLogId);
       if (!existing) return;
 
+      const adjustment = {
+        category: Number(inlineForm.category),
+        delay_end_time: toIsoDateTime(inlineForm.endTime),
+        duration: getDurationMinutes(inlineForm.startTime, inlineForm.endTime),
+        reason: inlineForm.reason.trim(),
+      };
+      if (Number.isFinite(actorId)) adjustment.modified_by = actorId;
+
+      setSaving(true);
       try {
-        await dispatch(
-          saveDelayRecord({
-            ...existing,
-            category: inlineForm.category,
-            endTime: toIsoDateTime(inlineForm.endTime),
-            reason: inlineForm.reason.trim(),
-            startTime: toIsoDateTime(existing.startTime),
-          }),
-        ).unwrap();
+        await updateDelayRecord(existing.id, adjustment);
+        await loadApiDelays();
+        clearInlineForm();
         setMessage("Delay adjustment saved successfully.");
-        clearInlineForm();
       } catch (error) {
-        setMessage(error?.message || "Unable to save delay adjustment.");
+        setMessage(getErrorMessage(error, "Unable to save delay adjustment."));
+      } finally {
+        setSaving(false);
       }
       return;
     }
 
-    const normalized = {
-      rakeNumber: inlineForm.rakeNumber.trim(),
-      category: inlineForm.category,
-      startTime: toIsoDateTime(inlineForm.startTime),
-      endTime: toIsoDateTime(inlineForm.endTime),
-      reason: inlineForm.reason.trim(),
-      reportedBy: inlineForm.reportedBy.trim(),
-      processStage: inferManualStageFromCategory(inlineForm.category),
-      rakeId: loadingContext?.rakeId ?? selectedRake?.id ?? "",
-      loadingId: loadingContext?.id ?? selectedLoading?.id ?? "",
-      isDisabled: false,
-    };
-
-    if (inlineActionMode === "edit" && activeInlineLogId !== null) {
-      const existing = manualRows.find((item) => item.id === activeInlineLogId);
-      if (!existing) return;
-
-      try {
-        await dispatch(
-          saveDelayRecord({
-            ...existing,
-            ...normalized,
-          }),
-        ).unwrap();
-        setMessage("Delay log updated successfully.");
-        clearInlineForm();
-      } catch (error) {
-        setMessage(error?.message || "Unable to update delay log.");
-      }
-      return;
-    }
-
-    const reportedBy = Number(inlineForm.reportedBy);
     const payload = {
       log_id: inlineForm.logId.trim(),
       rake: inlineForm.rakeNumber.trim(),
@@ -596,11 +599,31 @@ export default function DelayManagementPage() {
       delay_end_time: toIsoDateTime(inlineForm.endTime),
       duration: getDurationMinutes(inlineForm.startTime, inlineForm.endTime),
       reason: inlineForm.reason.trim(),
-      reported_by: reportedBy,
+      reported_by: Number(inlineForm.reportedBy),
       status: Number(inlineForm.status),
     };
-    const createdBy = Number(profile?.id);
-    if (Number.isFinite(createdBy)) payload.created_by = createdBy;
+
+    if (inlineActionMode === "edit" && activeInlineLogId !== null) {
+      const existing = manualRows.find((item) => item.id === activeInlineLogId);
+      if (!existing) return;
+
+      if (Number.isFinite(actorId)) payload.modified_by = actorId;
+
+      setSaving(true);
+      try {
+        await updateDelayRecord(existing.id, payload);
+        await loadApiDelays();
+        clearInlineForm();
+        setMessage("Delay log updated successfully.");
+      } catch (error) {
+        setMessage(getErrorMessage(error, "Unable to update delay log."));
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    if (Number.isFinite(actorId)) payload.created_by = actorId;
 
     setSaving(true);
     try {
@@ -692,20 +715,27 @@ export default function DelayManagementPage() {
     setStatusConfirmLogId(null);
   }
 
-  function confirmLogStatusToggle() {
+  async function confirmLogStatusToggle() {
     if (statusConfirmLogId === null) return;
     const existing = manualRows.find((item) => item.id === statusConfirmLogId);
+    setStatusConfirmLogId(null);
     if (!existing) return;
 
-    dispatch(
-      saveDelayRecord({
-        ...existing,
-        isDisabled: !existing.isDisabled,
-        startTime: toIsoDateTime(existing.startTime),
-        endTime: toIsoDateTime(existing.endTime),
-      }),
-    );
-    setStatusConfirmLogId(null);
+    const nextStatus = existing.isDisabled ? DELAY_STATUS_LOGGED : DELAY_STATUS_CLOSED;
+    const patch = { status: nextStatus };
+    const actorId = Number(profile?.id);
+    if (Number.isFinite(actorId)) patch.modified_by = actorId;
+
+    try {
+      await updateDelayRecord(existing.id, patch);
+      await loadApiDelays();
+      if (activeInlineLogId === existing.id) clearInlineForm();
+      setMessage(
+        existing.isDisabled ? "Delay log enabled successfully." : "Delay log disabled successfully.",
+      );
+    } catch (error) {
+      setMessage(getErrorMessage(error, "Unable to update delay log status."));
+    }
   }
 
   function toggleTimelineRow(row) {
@@ -850,16 +880,22 @@ export default function DelayManagementPage() {
           </div>
         ) : (
           <>
-        <SearchBar
-          placeholder="Search by rake number, category, process stage, source, reason, or status..."
-          value={tableSearch}
-          onChange={setTableSearch}
-          showFilter={false}
-        />
+        <div className="flex items-center gap-3">
+          <div className="flex-1">
+            <SearchBar
+              placeholder="Search by rake number, category, process stage, source, reason, or status..."
+              value={tableSearch}
+              onChange={setTableSearch}
+              showFilter={false}
+            />
+          </div>
+          <ColumnSettingsMenu {...columnVisibility.menuProps} />
+        </div>
+        <style>{columnVisibility.css}</style>
 
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-425 whitespace-nowrap">
+            <table data-colset={DELAY_HIDDEN_COLS_KEY} className="w-full min-w-425 whitespace-nowrap">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
                   <th className="sticky left-0 z-30 border-r border-slate-200/70 bg-slate-50 px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
@@ -899,6 +935,7 @@ export default function DelayManagementPage() {
                     <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                 </tr>
+                <ColumnFilterRow {...columnFilters.filterRowProps} rows={registerRows} />
               </thead>
               <tbody className="divide-y divide-slate-100">
                 <tr className="bg-blue-50/50 align-top [&>td]:py-4">
@@ -1075,13 +1112,13 @@ export default function DelayManagementPage() {
                           No delay logs found
                         </p>
                         <p className="text-[13px] text-slate-400">
-                          Try adjusting your search keyword.
+                          Try adjusting your search keyword or column filters.
                         </p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  sortedRows.map((row) => {
+                  pagedRows.map((row) => {
                     const duration = formatDuration(
                       row.durationMinutes != null
                         ? Number(row.durationMinutes)
@@ -1264,10 +1301,8 @@ export default function DelayManagementPage() {
             </table>
           </div>
 
-          <div className="border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500">
-            <p>
-              Showing <span className="font-semibold text-slate-700">{sortedRows.length}</span> record(s)
-            </p>
+          <div className="px-5 pb-4">
+            <Pagination {...paginationProps} />
           </div>
         </div>
           </>

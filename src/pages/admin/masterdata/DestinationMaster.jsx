@@ -14,6 +14,9 @@ import {
   updateDestination,
   patchDestination,
 } from "../../../services/destinationService";
+import { buildMasterListQuery } from "../../../utils/listQuery";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import { useServerColumnFilters } from "../../../hooks/useColumnFilters";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 function EditIcon() {
@@ -193,6 +196,25 @@ function DestinationForm({ initialData, onSave, onCancel, isEditing, saving }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 10;
+const SORT_FIELD_MAP = {
+  code: "destination_code",
+  name: "destination_name",
+  state: "destination_state",
+  stationCode: "destination_address",
+  status: "status",
+};
+const STATUS_FILTER_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+const FILTER_COLUMNS = [
+  { key: "code", label: "Code" },
+  { key: "name", label: "Destination Name" },
+  { key: "state", label: "State", className: "hidden sm:table-cell" },
+  { key: "stationCode", label: "Station Code", className: "hidden md:table-cell" },
+  { key: "status", label: "Status", type: "select", options: STATUS_FILTER_OPTIONS },
+  { key: "actions", type: "none" },
+];
 
 export default function DestinationMaster() {
   const { navigate, currentRoute } = useRouter();
@@ -215,7 +237,15 @@ export default function DestinationMaster() {
   const [statusToggleItem, setStatusToggleItem] = useState(null);
   const [isStatusToggleOpen, setIsStatusToggleOpen] = useState(false);
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const resetPage = useCallback(() => setCurrentPage(1), []);
+  const columnFilters = useServerColumnFilters(FILTER_COLUMNS, {
+    rows: destinations,
+    totalCount,
+    currentPage,
+    pageSize: PAGE_SIZE,
+    onChange: resetPage,
+  });
+  const { serverPage, serverPageSize, totalPages } = columnFilters;
 
   function showToast(message, type = "success") {
     setToast({ message, type, id: Date.now() });
@@ -225,7 +255,14 @@ export default function DestinationMaster() {
   const loadDestinations = useCallback(async () => {
     setLoading(true);
     try {
-      const filters = search.trim() ? { destination_name: search.trim() } : {};
+      const filters = buildMasterListQuery({
+        page: serverPage,
+        pageSize: serverPageSize,
+        sortBy,
+        sortOrder,
+        sortFieldMap: SORT_FIELD_MAP,
+        filters: search.trim() ? { destination_name: search.trim() } : {},
+      });
       const res = await fetchDestinations(filters);
       const results = res?.results ?? res ?? [];
       setDestinations(results.map(toUi));
@@ -235,20 +272,14 @@ export default function DestinationMaster() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, serverPage, serverPageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     if (!isAddPage && !isEditPage) loadDestinations();
   }, [isAddPage, isEditPage, loadDestinations]);
 
   // Client-side sort
-  const sorted = [...destinations].sort((a, b) => {
-    const av = String(a[sortBy] ?? "").toLowerCase();
-    const bv = String(b[sortBy] ?? "").toLowerCase();
-    if (av === bv) return 0;
-    return (av > bv ? 1 : -1) * (sortOrder === "asc" ? 1 : -1);
-  });
-  const paginatedData = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginatedData = columnFilters.pageRows;
 
   function handleSort(field) {
     if (sortBy === field) setSortOrder((p) => (p === "asc" ? "desc" : "asc"));
@@ -410,6 +441,7 @@ export default function DestinationMaster() {
                   Actions
                 </th>
               </tr>
+              <ColumnFilterRow {...columnFilters.filterRowProps} rows={destinations} />
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
@@ -467,7 +499,7 @@ export default function DestinationMaster() {
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            totalCount={totalCount}
+            totalCount={columnFilters.count}
             pageSize={PAGE_SIZE}
             onPageChange={setCurrentPage}
           />

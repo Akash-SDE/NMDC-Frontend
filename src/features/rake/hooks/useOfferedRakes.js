@@ -57,7 +57,7 @@ export function useOfferedRakes() {
         setError(null);
       }
 
-      const response = await listRakes({});
+      const response = await listRakes({ page_size: 1000 });
       const results = asResults(response);
 
       const normalizedRows = results.map((item, index) => ({
@@ -113,12 +113,12 @@ export function useOfferedRakes() {
       try {
         const [sidings, routes, oreTypes, customers, destinations, wagonTypes] =
           await Promise.all([
-            fetchSidings({}),
-            fetchRoutes({}),
-            fetchOreTypes({}),
-            fetchCustomers({}),
-            fetchDestinations({}),
-            fetchWagonTypes({}),
+            fetchSidings({ page_size: 1000 }),
+            fetchRoutes({ page_size: 1000 }),
+            fetchOreTypes({ page_size: 1000 }),
+            fetchCustomers({ page_size: 1000 }),
+            fetchDestinations({ page_size: 1000 }),
+            fetchWagonTypes({ page_size: 1000 }),
           ]);
 
         if (cancelled) return;

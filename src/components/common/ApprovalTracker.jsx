@@ -9,6 +9,7 @@ import {
   UniformSectionCard,
   uniformSecondaryButtonClass,
 } from "../shared/UniformUi";
+import { getApprovalStatusLabel } from "../../utils/approvalUtils";
 import { formatDateTimeForTable } from "../../utils/dateUtils";
 import { summarizeInspection } from "../../utils/wagonInspectionUtils";
 
@@ -17,6 +18,7 @@ const stepStyles = {
   active: "border-violet-200 bg-violet-50 text-violet-700",
   pending: "border-slate-200 bg-slate-50 text-slate-500",
   rejected: "border-rose-200 bg-rose-50 text-rose-700",
+  skipped: "border-dashed border-slate-200 bg-white text-slate-400",
 };
 
 const dotStyles = {
@@ -24,6 +26,7 @@ const dotStyles = {
   active: "bg-violet-500",
   pending: "bg-slate-300",
   rejected: "bg-rose-500",
+  skipped: "bg-slate-200",
 };
 
 const stepStateLabels = {
@@ -31,6 +34,7 @@ const stepStateLabels = {
   active: "In Progress",
   pending: "Pending",
   rejected: "Rejected",
+  skipped: "Not Required",
 };
 
 const DEPARTMENT_ACCENTS = {
@@ -48,12 +52,7 @@ export function ApprovalStatusBadge({ approval, compact = false }) {
     );
   }
 
-  const label =
-    approval.status === "APPROVED"
-      ? "All Approved"
-      : approval.status === "REJECTED"
-        ? "Rejected"
-        : approval.status.replace("AWAITING_", "Awaiting ");
+  const label = getApprovalStatusLabel(approval.status);
 
   return (
     <span
@@ -209,7 +208,7 @@ export function ApprovalTrackerPanel({
   showHistory = true,
   compact = false,
   title = "Railway Approval Tracker",
-  subtitle = "Sequential approval progress across railway departments.",
+  subtitle = "Operations first, then Railway Commercial and C&W (in parallel when both are required).",
 }) {
   return (
     <UniformSectionCard title={title} subtitle={subtitle}>

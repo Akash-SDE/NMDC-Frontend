@@ -12,8 +12,10 @@ import {
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
+import ApiErrorState from "../../../components/common/ApiErrorState";
 import { countPendingApprovals } from "../../../constants/approval";
 import { fetchApprovalRequests } from "../../../store/slices/approvalSlice";
+import { useDashboardData } from "../../../features/dashboard/hooks/useDashboardData";
 
 const METRIC_TONE_STYLES = {
   navy: {
@@ -74,49 +76,50 @@ const METRIC_ICONS = {
 const baseMetricCards = [
   {
     title: "Received",
-    value: "12",
+    value: "-",
     tone: "navy",
     icon: "received",
   },
   {
     title: "Loaded",
-    value: "8",
+    value: "-",
     tone: "green",
     icon: "loaded",
   },
   {
     title: "Under Loading",
-    value: "4",
+    value: "-",
     tone: "sky",
     icon: "loading",
   },
   {
     title: "Load adjustment",
-    value: "2",
+    value: "-",
     tone: "rose",
     icon: "adjustment",
   },
   {
     title: "Demurraged Hours",
-    value: "11",
+    value: "-",
     tone: "rose",
     icon: "demurrage",
   },
   {
     title: "Gross Loading Hours",
-    value: "5.5",
+    value: "-",
     tone: "amber",
     icon: "hours",
   },
   {
     title: "Pending Indents",
-    value: "33",
+    value: "-",
     tone: "slate",
     icon: "pending",
   },
   {
     title: "Dispatch Qty",
-    value: "32,845",
+    value: "-",
+    unit: "T",
     tone: "indigo",
     icon: "dispatch",
   },
@@ -286,95 +289,6 @@ function buildDispatchRowSummary(routeEvents) {
     { loading: 0, idle: 0, shutdown: 0, demurrage: 0 },
   );
 }
-
-const dispatchGridHierarchy = [
-  {
-    id: "siding-1a",
-    name: "SIDING 1A",
-    type: "siding",
-    count: 3,
-    routes: [
-      {
-        id: "route-1a-1",
-        name: "Route 1",
-        type: "route",
-        code: "BOXN",
-        count: 2,
-      },
-      {
-        id: "route-1a-2",
-        name: "Route 2",
-        type: "route",
-        code: "BOBRN",
-        count: 1,
-      },
-    ],
-  },
-  {
-    id: "siding-2c",
-    name: "SIDING 2C",
-    type: "siding",
-    count: 1,
-    routes: [
-      {
-        id: "route-2c-1",
-        name: "Route 1",
-        type: "route",
-        code: "BOXNHL",
-        count: 1,
-      },
-    ],
-  },
-  {
-    id: "siding-north-junc",
-    name: "NORTH JCT",
-    type: "siding",
-    count: 1,
-    alert: "HIGH ALERT",
-    routes: [
-      {
-        id: "route-nj-1",
-        name: "Route 1",
-        type: "route",
-        code: "BOST",
-        count: 1,
-      },
-    ],
-  },
-  {
-    id: "siding-4b",
-    name: "SIDING 4B",
-    type: "siding",
-    count: 2,
-    routes: [
-      {
-        id: "route-4b-1",
-        name: "Route 1",
-        type: "route",
-        code: "MIXED",
-        count: 2,
-      },
-    ],
-  },
-];
-
-const dispatchGridEvents = [
-  { id: "dispatch-1", siding: "siding-1a", route: "route-1a-1", start: 0.0, end: 4.0, status: "completed", label: "RK-7729" },
-  { id: "dispatch-1a-idle", siding: "siding-1a", route: "route-1a-1", start: 4.0, end: 6.0, status: "Siding Idle", label: "IDLE-1" },
-  { id: "dispatch-2", siding: "siding-1a", route: "route-1a-1", start: 13.0, end: 17.0, status: "offered", label: "RK-7729-A" },
-  { id: "dispatch-3", siding: "siding-1a", route: "route-1a-2", start: 4.0, end: 8.0, status: "unloading", label: "RK-8812" },
-  { id: "dispatch-3a-empty", siding: "siding-1a", route: "route-1a-2", start: 8.0, end: 10.0, label: "UNSTATUS-1" },
-  { id: "dispatch-4", siding: "siding-2c", route: "route-2c-1", start: 6.0, end: 10.0, status: "offered", label: "RK-9003" },
-  { id: "dispatch-4a-idle", siding: "siding-2c", route: "route-2c-1", start: 10.0, end: 12.0, status: "Siding Idle", label: "IDLE-2" },
-  { id: "dispatch-5", siding: "siding-2c", route: "route-2c-1", start: 17.0, end: 21.0, status: "offered", label: "RK-4420" },
-  { id: "dispatch-6", siding: "siding-north-junc", route: "route-nj-1", start: 9.0, end: 14.0, status: "delayed", label: "RK-6541" },
-  { id: "dispatch-6a-empty", siding: "siding-north-junc", route: "route-nj-1", start: 14.0, end: 16.0, label: "UNSTATUS-2" },
-  { id: "dispatch-7", siding: "siding-4b", route: "route-4b-1", start: 2.0, end: 5.0, status: "delayed", label: "RK-7655" },
-  { id: "dispatch-7a-idle", siding: "siding-4b", route: "route-4b-1", start: 5.0, end: 7.0, status: "Siding Idle", label: "IDLE-3" },
-  { id: "dispatch-8", siding: "siding-4b", route: "route-4b-1", start: 8.0, end: 12.0, status: "completed", label: "RK-2205" },
-];
-
-
 
 const activeRakeRows = [
   {
@@ -553,23 +467,6 @@ const activeRakeRows = [
     status: "READY",
     lag: "0m 35s",
   },
-];
-
-const adjustmentRakeRows = [
-  {
-    sno: 1,
-    oreType: "LUMPS-62",
-    siding: "SIDING-A",
-    destination: "PORT-A",
-    placementTime: "10:15",
-  },
-  {
-    sno: 2,
-    oreType: "FINES-58",
-    siding: "SIDING-C",
-    destination: "STOCKPILE-2",
-    placementTime: "11:00",
-  }
 ];
 
 function getStatusClasses(status) {
@@ -1148,6 +1045,11 @@ const DispatchTimelineCard = memo(function DispatchTimelineCard({ sheetRows }) {
               return [labelCell, ...hourCells];
             })}
           </div>
+          {sheetRows.length === 0 ? (
+            <p className="px-3 py-6 text-center text-[12px] font-medium text-slate-400">
+              No rake activity recorded for the selected date.
+            </p>
+          ) : null}
         </div>
 
         <DispatchGridTooltip tooltip={hoveredCell} />
@@ -1251,6 +1153,15 @@ export default function Dashboard() {
     }, {})
   );
 
+  const {
+    status: dashboardStatus,
+    error: dashboardError,
+    metricValues,
+    dispatchGrid,
+    upcomingRakeRows,
+    reload: reloadDashboard,
+  } = useDashboardData(dashboardDate);
+
   useEffect(() => {
     dispatch(fetchApprovalRequests());
   }, [dispatch]);
@@ -1265,12 +1176,14 @@ export default function Dashboard() {
 
   const metricCards = useMemo(
     () =>
-      baseMetricCards.map((card) =>
-        card.title === "Pending Indents"
-          ? { ...card, title: "Awaiting Railway Approval", value: String(pendingApprovalCount) }
-          : card,
-      ),
-    [pendingApprovalCount],
+      baseMetricCards.map((card) => {
+        if (card.title === "Pending Indents") {
+          return { ...card, title: "Awaiting Railway Approval", value: String(pendingApprovalCount) };
+        }
+        if (dashboardStatus !== "success") return card;
+        return { ...card, value: metricValues[card.title] ?? card.value };
+      }),
+    [pendingApprovalCount, dashboardStatus, metricValues],
   );
 
   const handleSort = (field) => {
@@ -1339,7 +1252,7 @@ export default function Dashboard() {
   }, [activeHourlySeries, hourlySeries, hourlySeriesMeta]);
 
   const eventsByRouteId = useMemo(() => {
-    return dispatchGridEvents.reduce((accumulator, event) => {
+    return dispatchGrid.events.reduce((accumulator, event) => {
       const routeKey = event.route || event.siding;
       if (!accumulator[routeKey]) {
         accumulator[routeKey] = [];
@@ -1347,10 +1260,10 @@ export default function Dashboard() {
       accumulator[routeKey].push(event);
       return accumulator;
     }, {});
-  }, []);
+  }, [dispatchGrid.events]);
 
   const sheetRows = useMemo(() => {
-    return dispatchGridHierarchy.flatMap((siding) =>
+    return dispatchGrid.hierarchy.flatMap((siding) =>
       siding.routes.map((route) => {
         const routeEvents = eventsByRouteId[route.id] || [];
 
@@ -1363,7 +1276,7 @@ export default function Dashboard() {
         };
       }),
     );
-  }, [eventsByRouteId]);
+  }, [dispatchGrid.hierarchy, eventsByRouteId]);
   return (
   <div className="min-h-screen bg-[#F8FAFC] p-4 lg:p-8">
     <div className="mx-auto max-w-[1600px] space-y-4">
@@ -1387,6 +1300,14 @@ export default function Dashboard() {
         </div>
       </header>
 
+      {dashboardStatus === "failed" ? (
+        <ApiErrorState
+          error={dashboardError}
+          onRetry={() => reloadDashboard()}
+          title="Failed to load dashboard data"
+        />
+      ) : null}
+
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metricCards.map((card) => (
           <MetricCard key={card.title} card={card} />
@@ -1409,7 +1330,7 @@ export default function Dashboard() {
         <LiveWagonCountCard rows={hourlyChartData.bars} seriesMeta={hourlySeriesMeta} />
       </section> */}
 
-      {adjustmentRakeRows.length > 0 && (
+      {upcomingRakeRows.length > 0 && (
         <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/30 px-6 py-5">
             <div>
@@ -1423,16 +1344,18 @@ export default function Dashboard() {
               <thead>
                 <tr className="bg-slate-50/50">
                   <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">SNO</th>
+                  <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">RAKE NUMBER</th>
                   <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">ORE TYPE</th>
                   <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">SIDING</th>
                   <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">DESTINATION</th>
-                  <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">PLACEMENT TIME</th>
+                  <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">OFFER TIME</th>
                 </tr>
               </thead>
               <tbody>
-                {adjustmentRakeRows.map((row, index) => (
-                  <tr key={row.sno} className={`border-b border-slate-200/70 ${index % 2 === 0 ? "bg-white" : "bg-[#fbfcfe]"}`}>
+                {upcomingRakeRows.map((row, index) => (
+                  <tr key={row.rakeId} className={`border-b border-slate-200/70 ${index % 2 === 0 ? "bg-white" : "bg-[#fbfcfe]"}`}>
                     <td className="whitespace-nowrap px-6 py-3 text-[12px] font-bold text-slate-400">{row.sno}</td>
+                    <td className="whitespace-nowrap px-6 py-3 text-[12px] font-bold text-[#155eef]">{row.rakeNumber}</td>
                     <td className="whitespace-nowrap px-6 py-3 text-[12px] font-bold text-[#0f2f67]">{row.oreType}</td>
                     <td className="whitespace-nowrap px-6 py-3 text-[12px] font-semibold text-slate-700">{row.siding}</td>
                     <td className="whitespace-nowrap px-6 py-3 text-[12px] font-semibold text-slate-700">{row.destination}</td>

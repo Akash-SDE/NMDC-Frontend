@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Users,
   CheckCircle,
@@ -17,6 +17,8 @@ import {
 } from "../../../components/shared/UniformUi";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import { useRouter } from "../../../context/RouterContext";
+import { useColumnFilters } from "../../../hooks/useColumnFilters";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 
 const initialUsers = [
   {
@@ -151,6 +153,20 @@ function formatDate(value) {
   });
 }
 
+const USER_FILTER_COLUMNS = [
+  { key: "fullName", label: "User", getValue: (user) => `${user.fullName} @${user.username}` },
+  { key: "email", label: "Email" },
+  { key: "role", label: "Role", type: "select" },
+  {
+    key: "status",
+    label: "Status",
+    type: "select",
+    getValue: (user) => (user.status === "active" ? "Active" : "Inactive"),
+  },
+  { key: "createdDate", label: "Created On", getValue: (user) => formatDate(user.createdDate) },
+  { key: "actions", type: "none" },
+];
+
 function RoleDropdown({ value, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef(null);
@@ -242,6 +258,11 @@ export default function AdminUserManagementPage() {
     );
   }, [searchQuery, users]);
 
+  const resetPage = useCallback(() => setCurrentPage(1), []);
+  const columnFilters = useColumnFilters(USER_FILTER_COLUMNS, { onChange: resetPage });
+  const { applyFilters } = columnFilters;
+  const columnFilteredUsers = useMemo(() => applyFilters(filteredUsers), [applyFilters, filteredUsers]);
+
   const sortedUsers = useMemo(() => {
     const getComparableValue = (user, field) => {
       if (field === "createdDate") {
@@ -251,14 +272,14 @@ export default function AdminUserManagementPage() {
       return String(user[field] ?? "").toLowerCase();
     };
 
-    return [...filteredUsers].sort((a, b) => {
+    return [...columnFilteredUsers].sort((a, b) => {
       const aValue = getComparableValue(a, sortBy);
       const bValue = getComparableValue(b, sortBy);
       if (aValue === bValue) return 0;
       const comparison = aValue > bValue ? 1 : -1;
       return sortOrder === "asc" ? comparison : -comparison;
     });
-  }, [filteredUsers, sortBy, sortOrder]);
+  }, [columnFilteredUsers, sortBy, sortOrder]);
 
   const totalPages = Math.max(1, Math.ceil(sortedUsers.length / pageSize));
 
@@ -699,12 +720,13 @@ export default function AdminUserManagementPage() {
                   Actions
                 </th>
               </tr>
+              <ColumnFilterRow {...columnFilters.filterRowProps} rows={filteredUsers} cellClassName="px-4 py-2" />
             </thead>
             <tbody className="divide-y divide-slate-100">
               {paginatedUsers.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
-                    No users found for this search.
+                    No users found. Try adjusting your search or column filters.
                   </td>
                 </tr>
               ) : (

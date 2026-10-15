@@ -1,6 +1,7 @@
 import {
   APPROVAL_DEPARTMENTS,
   APPROVAL_STATUS,
+  STEP_NOT_REQUIRED,
 } from "../../../constants/approval";
 import { emptyDepartmentInspection, wagonListFromNumbers } from "../../../utils/wagonInspectionUtils";
 
@@ -10,6 +11,7 @@ export const RAILWAY_STATUS_CODE = {
   AWAITING_COMMERCIAL: 15,
   AWAITING_CW: 20,
   REJECTED: 25,
+  AWAITING_COMMERCIAL_CW: 30,
 };
 
 export const DEPARTMENT_CODE = {
@@ -22,6 +24,7 @@ export const STEP_STATUS_CODE = {
   pending: 5,
   approved: 10,
   rejected: 15,
+  [STEP_NOT_REQUIRED]: 20,
 };
 
 export const ACTION_CODE = {

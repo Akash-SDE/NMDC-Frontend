@@ -2,6 +2,7 @@ import axios from "axios";
 import { TOKEN_STORAGE_KEY } from "../constants/storageKeys";
 import { isMockSession, isMockToken } from "../utils/mockSession";
 import { parseApiError } from "./apiError";
+import { notifySessionExpired } from "./session";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -68,16 +69,31 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * Logs the user out instead of surfacing "token expired" errors. The returned
+ * promise never settles so callers don't flash error toasts while the app
+ * redirects to the login page.
+ */
+function expireSession() {
+  notifySessionExpired();
+  return new Promise(() => {});
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
-    if (!original || original._retry || error.response?.status !== 401) {
+    if (!original || error.response?.status !== 401) {
       return Promise.reject(parseApiError(error));
     }
 
-    if (!readRefreshToken() || isMockSession()) {
+    // Unauthenticated calls (login, OTP) report their own 401s.
+    if (!original.headers?.Authorization || isMockSession()) {
       return Promise.reject(parseApiError(error));
+    }
+
+    if (original._retry || !readRefreshToken()) {
+      return expireSession();
     }
 
     try {
@@ -91,6 +107,10 @@ apiClient.interceptors.response.use(
       original.headers.Authorization = `Bearer ${access}`;
       return apiClient(original);
     } catch (refreshError) {
+      const status = refreshError?.response?.status;
+      if (status === 400 || status === 401 || !readRefreshToken()) {
+        return expireSession();
+      }
       return Promise.reject(parseApiError(refreshError));
     }
   },

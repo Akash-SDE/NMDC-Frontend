@@ -4,26 +4,18 @@ export function exportToCSV(data, filename, columns) {
     return;
   }
 
-  const headers = columns.map((col) => col.label);
-  const rows = data.map((row) =>
-    columns.map((col) => {
-      let value = row[col.key] || "";
-      // Escape commas and quotes
-      if (
-        typeof value === "string" &&
-        (value.includes(",") || value.includes('"'))
-      ) {
-        value = `"${value.replace(/"/g, '""')}"`;
-      }
-      return value;
-    }),
-  );
+  const escapeCell = (raw) => {
+    const value = raw === null || raw === undefined ? "" : String(raw);
+    return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  };
+  const headers = columns.map((col) => escapeCell(col.label));
+  const rows = data.map((row) => columns.map((col) => escapeCell(row[col.key])));
 
   const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join(
-    "\n",
+    "\r\n",
   );
 
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob(["\uFEFF", csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
   link.setAttribute("href", url);
@@ -40,9 +32,14 @@ export function exportToCSV(data, filename, columns) {
 export function printTable(title) {
   const printWindow = window.open("", "_blank");
   const tableEl = document.querySelector("[data-print-table]");
-  if (!tableEl || !printWindow) return;
+  if (!tableEl || !printWindow) {
+    printWindow?.close();
+    return false;
+  }
 
-  const tableHtml = tableEl.outerHTML.replace(/\shidden\s/g, " ");
+  const tableClone = tableEl.cloneNode(true);
+  tableClone.querySelectorAll("[data-print-hide]").forEach((node) => node.remove());
+  const tableHtml = tableClone.outerHTML.replace(/\shidden\s/g, " ");
 
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -66,4 +63,5 @@ export function printTable(title) {
     </html>
   `);
   printWindow.document.close();
+  return true;
 }

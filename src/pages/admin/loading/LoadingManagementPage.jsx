@@ -37,7 +37,13 @@ import {
   ViewTrackerButton,
 } from "../../../components/common/ApprovalTracker";
 import { countPendingApprovals } from "../../../constants/approval";
-import { getLoadingStatusMeta } from "../../../utils/approvalUtils";
+import { getApprovalStatusLabel, getLoadingStatusMeta } from "../../../utils/approvalUtils";
+import Pagination from "../../../components/shared/Pagination";
+import { useClientPagination } from "../../../hooks/useClientPagination";
+import { useColumnFilters } from "../../../hooks/useColumnFilters";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import ColumnSettingsMenu from "../../../components/shared/ColumnSettingsMenu";
+import { useColumnVisibility } from "../../../hooks/useColumnVisibility";
 
 const LOADING_STATUS_CODE = {
   PENDING: 5,
@@ -45,14 +51,15 @@ const LOADING_STATUS_CODE = {
   AWAITING_APPROVAL: 15,
 };
 
+const WAGON_SICK_NO = "5";
 const wagonSickOptions = [
-  { value: "0", label: "No" },
-  { value: "1", label: "Yes" },
+  { value: WAGON_SICK_NO, label: "No" },
+  { value: "10", label: "Yes" },
 ];
 const manualLoadingTrackOptions = [
   { value: "", label: "None" },
-  { value: "3", label: "Manual R3" },
-  { value: "4", label: "Manual R4" },
+  { value: "5", label: "Manual R3" },
+  { value: "10", label: "Manual R4" },
 ];
 
 const initialInlineForm = {
@@ -67,7 +74,7 @@ const initialInlineForm = {
   placementTime: "",
   offerTime: "",
   operatorFtp: "",
-  wagonSick: "0",
+  wagonSick: WAGON_SICK_NO,
   manualLoadingTrack: "",
   tonnage: "",
   stockpile: "",
@@ -126,8 +133,8 @@ function mapApiLoading(item) {
     placementTime: toDateTimeLocalValue(item.placement_time),
     offerTime: toDateTimeLocalValue(item.offertime),
     operatorFtp: item.operator_ftp || "",
-    wagonSick: item.wagon_sick_name || (Number(item.wagon_sick) === 1 ? "Yes" : "No"),
-    wagonSickCode: item.wagon_sick == null ? "0" : String(item.wagon_sick),
+    wagonSick: item.wagon_sick_name || "No",
+    wagonSickCode: item.wagon_sick == null ? WAGON_SICK_NO : String(item.wagon_sick),
     manualLoadingTrack: track?.label && track.value ? track.label : "",
     manualLoadingTrackCode: item.manual_loading_track == null ? "" : String(item.manual_loading_track),
     tonnage: item.tonnage ?? "",
@@ -165,7 +172,7 @@ function loadingFieldsFromForm(form) {
   return {
     placement_time: toIsoOrNull(form.placementTime),
     operator_ftp: String(form.operatorFtp || "").trim(),
-    wagon_sick: Number(form.wagonSick || 0),
+    wagon_sick: Number(form.wagonSick || WAGON_SICK_NO),
     manual_loading_track: Number.isFinite(track) ? track : null,
     tonnage: form.tonnage === "" ? null : form.tonnage,
     stockpile: Number.isFinite(stockpile) ? stockpile : null,
@@ -209,6 +216,62 @@ function compareValues(a, b, order) {
   if (left === right) return 0;
   if (left > right) return order === "asc" ? 1 : -1;
   return order === "asc" ? -1 : 1;
+}
+
+function resolveLoadingId(row) {
+  return row.id || (row.rakeId ? `LD-${row.rakeId.replace("RK-", "")}` : null);
+}
+
+const pinnedFilterShadowClass = "border-l border-slate-200/70 bg-white shadow-[-4px_0_8px_-4px_rgba(15,23,42,0.08)]";
+
+const LOADING_HIDDEN_COLS_KEY = "nmdc_loading_hidden_columns";
+
+function buildLoadingFilterColumns(approvalByLoadingId) {
+  return [
+    { key: "actions", type: "none", className: "sticky left-0 z-30 border-r border-slate-200/70 bg-white" },
+    { key: "rakeId", label: "Rake ID" },
+    { key: "rakeNumber", label: "Rake Number", getValue: (row) => row.rakeNumber || "-" },
+    { key: "wagonSupply", label: "Wagon Supply", getValue: (row) => row.wagonSupply || "-" },
+    { key: "siding", label: "Siding", type: "select", getValue: (row) => row.siding || "-" },
+    { key: "route", label: "Route", type: "select", getValue: (row) => row.route || "-" },
+    { key: "customer", label: "Customer", type: "select", getValue: (row) => row.customer || "-" },
+    { key: "destination", label: "Destination", type: "select", getValue: (row) => row.destination || "-" },
+    { key: "fNote", label: "F-Note", getValue: (row) => row.fNote || "-" },
+    { key: "placementTime", label: "Placement Time", getValue: (row) => formatDateTimeForTable(row.placementTime) },
+    { key: "offerTime", label: "Offer Time", getValue: (row) => formatDateTimeForTable(row.offerTime) },
+    { key: "operatorFtp", label: "Operator FTP", getValue: (row) => row.operatorFtp || "-" },
+    { key: "wagonSick", label: "Wagon Sick", type: "select", getValue: (row) => row.wagonSick || "No" },
+    {
+      key: "manualLoadingTrack",
+      label: "Manual Track",
+      type: "select",
+      className: "hidden xl:table-cell",
+      getValue: (row) => row.manualLoadingTrack || "-",
+    },
+    { key: "tonnage", label: "Tonnage", getValue: (row) => row.tonnage || "-" },
+    { key: "stockpile", label: "Stockpile", type: "select", getValue: (row) => row.stockpile || "-" },
+    { key: "completionTime", label: "Completion Time", getValue: (row) => formatDateTimeForTable(row.completionTime) },
+    { key: "clearanceTime", label: "Clearance Time", getValue: (row) => formatDateTimeForTable(row.clearanceTime) },
+    { key: "overloadedWagons", label: "No. of Overloaded Wagons", getValue: (row) => row.overloadedWagons ?? "-" },
+    { key: "weightRemoved", label: "Weight Removed", getValue: (row) => row.weightRemoved ?? "-" },
+    {
+      key: "railwayApproval",
+      label: "Railway Approval",
+      type: "select",
+      className: `sticky right-[142px] z-30 w-[186px] min-w-[186px] max-w-[186px] ${pinnedFilterShadowClass}`,
+      getValue: (row) => {
+        const approval = approvalByLoadingId[resolveLoadingId(row)];
+        return approval ? getApprovalStatusLabel(approval.status) : "Not submitted";
+      },
+    },
+    {
+      key: "status",
+      label: "Status",
+      type: "select",
+      className: `sticky right-0 z-30 w-[142px] min-w-[142px] max-w-[142px] ${pinnedFilterShadowClass}`,
+      getValue: (row) => getRowStatusMeta(row).label,
+    },
+  ];
 }
 
 export default function LoadingManagementPage() {
@@ -265,9 +328,9 @@ export default function LoadingManagementPage() {
     async function loadScreenData() {
       try {
         const [loadingResponse, rakeResponse, stockpileResponse] = await Promise.all([
-          listLoadingRecords({}),
-          listRakes({}).catch(() => ({ results: [] })),
-          fetchStockpiles({}).catch(() => ({ results: [] })),
+          listLoadingRecords({ page_size: 1000 }),
+          listRakes({ page_size: 1000 }).catch(() => ({ results: [] })),
+          fetchStockpiles({ page_size: 1000 }).catch(() => ({ results: [] })),
         ]);
         if (cancelled) return;
         const loadedRows = asResults(loadingResponse).map(mapApiLoading);
@@ -323,7 +386,7 @@ export default function LoadingManagementPage() {
   }, [rakeIdParam, rakeOptions, inlineForm.rakeId]);
 
   async function reloadRows() {
-    const response = await listLoadingRecords({});
+    const response = await listLoadingRecords({ page_size: 1000 });
     setRows(asResults(response).map(mapApiLoading));
   }
 
@@ -369,7 +432,7 @@ export default function LoadingManagementPage() {
       placementTime: row.placementTime,
       offerTime: row.offerTime,
       operatorFtp: row.operatorFtp || "",
-      wagonSick: row.wagonSickCode || "0",
+      wagonSick: row.wagonSickCode || WAGON_SICK_NO,
       manualLoadingTrack: row.manualLoadingTrackCode || "",
       tonnage: row.tonnage || "",
       stockpile: row.stockpileId || "",
@@ -421,6 +484,18 @@ export default function LoadingManagementPage() {
     });
   }, [rows, tableSearch]);
 
+  const loadingFilterColumns = useMemo(
+    () => buildLoadingFilterColumns(approvalByLoadingId),
+    [approvalByLoadingId],
+  );
+  const columnFilters = useColumnFilters(loadingFilterColumns);
+  const columnVisibility = useColumnVisibility(LOADING_HIDDEN_COLS_KEY, loadingFilterColumns, {
+    pinned: ["railwayApproval", "status"],
+    onHide: (keys) => keys.forEach((k) => columnFilters.setFilter(k, "")),
+  });
+  const { applyFilters } = columnFilters;
+  const columnFilteredRows = useMemo(() => applyFilters(filteredRows), [applyFilters, filteredRows]);
+
   const sortedRows = useMemo(() => {
     const getComparableValue = (row, field) => {
       if (
@@ -445,14 +520,18 @@ export default function LoadingManagementPage() {
       return String(row[field] ?? "").toLowerCase();
     };
 
-    return [...filteredRows].sort((a, b) => {
+    return [...columnFilteredRows].sort((a, b) => {
       const aValue = getComparableValue(a, sortBy);
       const bValue = getComparableValue(b, sortBy);
       if (aValue === bValue) return 0;
       const comparison = aValue > bValue ? 1 : -1;
       return sortOrder === "asc" ? comparison : -comparison;
     });
-  }, [filteredRows, sortBy, sortOrder]);
+  }, [columnFilteredRows, sortBy, sortOrder]);
+
+  const { pageItems: pagedRows, paginationProps } = useClientPagination(sortedRows, {
+    resetKey: `${tableSearch}|${sortBy}|${sortOrder}|${columnFilters.filterKey}`,
+  });
 
   function handleSort(field) {
     if (sortBy === field) {
@@ -620,7 +699,7 @@ export default function LoadingManagementPage() {
       placementTime: row.placementTime,
       offerTime: row.offerTime,
       operatorFtp: row.operatorFtp || "",
-      wagonSick: row.wagonSickCode || "0",
+      wagonSick: row.wagonSickCode || WAGON_SICK_NO,
       manualLoadingTrack: row.manualLoadingTrackCode || "",
       tonnage: row.tonnage || "",
       stockpile: row.stockpileId || "",
@@ -660,10 +739,6 @@ export default function LoadingManagementPage() {
     } finally {
       setSaving(false);
     }
-  }
-
-  function resolveLoadingId(row) {
-    return row.id || (row.rakeId ? `LD-${row.rakeId.replace("RK-", "")}` : null);
   }
 
   const requiredInlineMissing = [
@@ -754,12 +829,18 @@ export default function LoadingManagementPage() {
           </div>
         )}
 
-        <SearchBar
-          placeholder="Search by rake, route, customer, stockpile, or status..."
-          value={tableSearch}
-          onChange={setTableSearch}
-          showFilter={false}
-        />
+        <div className="flex items-center gap-3">
+          <div className="flex-1">
+            <SearchBar
+              placeholder="Search by rake, route, customer, stockpile, or status..."
+              value={tableSearch}
+              onChange={setTableSearch}
+              showFilter={false}
+            />
+          </div>
+          <ColumnSettingsMenu {...columnVisibility.menuProps} />
+        </div>
+        <style>{columnVisibility.css}</style>
 
         <p className="text-[13px] text-slate-500">
           Railway Approval and Status stay pinned on the right while you scroll the table horizontally.
@@ -767,7 +848,7 @@ export default function LoadingManagementPage() {
 
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1400px] border-separate border-spacing-0 whitespace-nowrap">
+            <table data-colset={LOADING_HIDDEN_COLS_KEY} className="w-full min-w-[1400px] border-separate border-spacing-0 whitespace-nowrap">
               <colgroup>
                 <col className="w-[108px]" />
                 <col />
@@ -861,6 +942,7 @@ export default function LoadingManagementPage() {
                     <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                 </tr>
+                <ColumnFilterRow {...columnFilters.filterRowProps} rows={rows} />
               </thead>
               <tbody className="divide-y divide-slate-100">
                 <tr className="bg-blue-50/50 align-top [&>td]:py-4">
@@ -1139,13 +1221,13 @@ export default function LoadingManagementPage() {
                           No loading rows found
                         </p>
                         <p className="text-[13px] text-slate-400">
-                          Try adjusting your search keyword.
+                          Try adjusting your search keyword or column filters.
                         </p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  sortedRows.map((row) => {
+                  pagedRows.map((row) => {
                     const loadingId = resolveLoadingId(row);
                     const approval = approvalByLoadingId[loadingId];
                     const statusMeta = getRowStatusMeta(row);
@@ -1312,10 +1394,8 @@ export default function LoadingManagementPage() {
             </table>
           </div>
 
-          <div className="border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500">
-            <p>
-              Showing <span className="font-semibold text-slate-700">{sortedRows.length}</span> record(s)
-            </p>
+          <div className="px-5 pb-4">
+            <Pagination {...paginationProps} />
           </div>
         </div>
       </div>

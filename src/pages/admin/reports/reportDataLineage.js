@@ -7,7 +7,8 @@ export const REPORT_DATA_LINEAGE = {
       { field: "rakeNumber", label: "Rake Number", source: "Rake Management", hasInput: true },
       { field: "wagonType", label: "Wagon Type", source: "Rake Management", hasInput: true },
       { field: "siding", label: "Siding", source: "Rake / Load Management", hasInput: true },
-      { field: "routeNo", label: "Route No", source: "Derived from route", hasInput: false },
+      { field: "routeNo", label: "Route No", source: "Route master (route number)", hasInput: false },
+      { field: "fNoteDate", label: "F/Note Date", source: "Manage E-Demand date for the rake's F-Note", hasInput: true },
       { field: "customer", label: "Customer", source: "Rake Management", hasInput: true },
       { field: "tonnage", label: "Tonnage", source: "Load Management", hasInput: true },
       { field: "status", label: "Status", source: "Load Management + Railway Approvals", hasInput: true },
@@ -33,6 +34,8 @@ export const REPORT_DATA_LINEAGE = {
       { field: "destination", label: "Destination", source: "Manage E-Demand", hasInput: true },
       { field: "oreType", label: "Ore Type", source: "Manage E-Demand", hasInput: true },
       { field: "salesType", label: "Sales Type", source: "Manage E-Demand", hasInput: true },
+      { field: "rakesOffered", label: "Rakes Offered", source: "Rakes offered with the same F-Note", hasInput: false },
+      { field: "tonnageLoaded", label: "Tonnage Loaded", source: "Completed loads for those rakes", hasInput: false },
     ],
   },
   daily: {
@@ -73,7 +76,7 @@ export const REPORT_DATA_LINEAGE = {
     ],
   },
   "sick-wagon": {
-    summary: "Sick wagon flag from Load Management; counts from Railway Approvals inspection.",
+    summary: "Sick wagon flag from Load Management; unique sick/repair wagon numbers from Railway Approvals inspection.",
     inputScreen: "Load Management / Railway Approvals",
     fields: [
       { field: "wagonSick", label: "Wagon Sick", source: "Load Management", hasInput: true },
@@ -87,7 +90,7 @@ export const REPORT_DATA_LINEAGE = {
     fields: [
       { field: "rackNumber", label: "Rack Number", source: "Load Management (auto-sync)", hasInput: true },
       { field: "ePermitNumber", label: "E-Permit Number", source: "Manage E-Permit", hasInput: true },
-      { field: "railwayTransitPass", label: "Railway Transit Pass", source: "Manage E-Permit / seed", hasInput: true },
+      { field: "railwayTransitPass", label: "Railway Transit Pass", source: "E-Permit register", hasInput: true },
       { field: "updatedBy", label: "Updated By", source: "Captured on E-Permit save", hasInput: true },
     ],
   },
@@ -97,7 +100,7 @@ export const REPORT_DATA_LINEAGE = {
     fields: [
       { field: "category", label: "Category", source: "Delay Management", hasInput: true },
       { field: "reason", label: "Reason", source: "Delay Management", hasInput: true },
-      { field: "reportedBy", label: "Reported By", source: "Delay Management", hasInput: true },
+      { field: "reportedBy", label: "Reported By", source: "Delay Management (user name)", hasInput: true },
       { field: "durationHours", label: "Duration", source: "Computed from start/end times", hasInput: false },
     ],
   },

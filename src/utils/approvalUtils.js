@@ -1,11 +1,11 @@
 import {
   APPROVAL_STATUS,
-  APPROVAL_STATUS_TO_DEPARTMENT,
   APPROVAL_STEP_LABELS,
   APPROVAL_STEP_ORDER,
   LOADING_STATUS,
   deriveLoadingStatus,
   getApprovalStepState,
+  getPendingDepartments,
 } from "../constants/approval";
 
 export function getLoadingStatusMeta(status) {
@@ -52,6 +52,8 @@ export function getApprovalStatusLabel(status) {
       return "Awaiting Commercial";
     case APPROVAL_STATUS.AWAITING_CW:
       return "Awaiting C&W";
+    case APPROVAL_STATUS.AWAITING_COMMERCIAL_CW:
+      return "Awaiting Commercial & C&W";
     case APPROVAL_STATUS.APPROVED:
       return "All Approved";
     case APPROVAL_STATUS.REJECTED:
@@ -61,27 +63,32 @@ export function getApprovalStatusLabel(status) {
   }
 }
 
-export function canDepartmentAct(approval, department) {
-  if (!approval) return false;
-  if (approval.status === APPROVAL_STATUS.REJECTED) return false;
-  if (approval.status === APPROVAL_STATUS.APPROVED) return false;
-  return APPROVAL_STATUS_TO_DEPARTMENT[approval.status] === department;
+export function getPendingDepartmentsForApproval(approval) {
+  if (!approval) return [];
+  return getPendingDepartments(approval).filter(
+    (department) => (approval[department]?.status || "pending") === "pending",
+  );
 }
 
-export function getPendingDepartmentForApproval(approval) {
-  if (!approval) return null;
-  return APPROVAL_STATUS_TO_DEPARTMENT[approval.status] ?? null;
+export function canDepartmentAct(approval, department) {
+  return getPendingDepartmentsForApproval(approval).includes(department);
+}
+
+/** The department to review as: `preferred` when it is pending, otherwise the first pending one. */
+export function getPendingDepartmentForApproval(approval, preferred = null) {
+  const pending = getPendingDepartmentsForApproval(approval);
+  if (preferred && pending.includes(preferred)) return preferred;
+  return pending[0] ?? null;
 }
 
 export function isApprovalAwaitingAction(approval) {
-  return Boolean(getPendingDepartmentForApproval(approval));
+  return getPendingDepartmentsForApproval(approval).length > 0;
 }
 
-/** Departments whose submitted data should be visible when reviewing a later step. */
+/** Other departments whose submitted data should be visible to the reviewer (Commercial and C&W can run in parallel). */
 export function getPriorVisibleDepartments(reviewDepartment) {
-  const stepIndex = APPROVAL_STEP_ORDER.indexOf(reviewDepartment);
-  if (stepIndex <= 0) return [];
-  return APPROVAL_STEP_ORDER.slice(0, stepIndex);
+  if (!APPROVAL_STEP_ORDER.includes(reviewDepartment)) return [];
+  return APPROVAL_STEP_ORDER.filter((department) => department !== reviewDepartment);
 }
 
 export function isPriorStepSubmitted(step) {

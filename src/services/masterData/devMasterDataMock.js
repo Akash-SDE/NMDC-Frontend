@@ -127,7 +127,20 @@ export function handleDevMasterDataRequest(path, options = {}) {
   const records = stores[resource];
 
   if (rest === "list" && method === "POST") {
-    return listResponse(filterRecords(records, body));
+    const { page, page_size: pageSize, order_by: orderBy, order_type: orderType, ...filters } = body || {};
+    const filtered = [...filterRecords(records, filters)];
+    if (orderBy) {
+      const direction = orderType === "desc" ? -1 : 1;
+      filtered.sort((a, b) => {
+        const av = a[orderBy] ?? "";
+        const bv = b[orderBy] ?? "";
+        if (av === bv) return 0;
+        return (av > bv ? 1 : -1) * direction;
+      });
+    }
+    if (!pageSize) return listResponse(filtered);
+    const start = ((page || 1) - 1) * pageSize;
+    return { count: filtered.length, results: filtered.slice(start, start + pageSize) };
   }
 
   if (!rest && method === "POST") {

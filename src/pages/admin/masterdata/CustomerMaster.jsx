@@ -14,6 +14,9 @@ import {
   updateCustomer,
   patchCustomer,
 } from "../../../services/customerService";
+import { buildMasterListQuery } from "../../../utils/listQuery";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import { useServerColumnFilters } from "../../../hooks/useColumnFilters";
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
@@ -226,6 +229,25 @@ function CustomerForm({ initialData, onSave, onCancel, isEditing, saving }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 10;
+const SORT_FIELD_MAP = {
+  code: "customer_code",
+  name: "customer_name",
+  contactPerson: "customer_state",
+  location: "customer_address",
+  status: "status",
+};
+const STATUS_FILTER_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+const FILTER_COLUMNS = [
+  { key: "code", label: "Code" },
+  { key: "name", label: "Customer Name" },
+  { key: "contactPerson", label: "State", className: "hidden sm:table-cell" },
+  { key: "location", label: "Address", className: "hidden md:table-cell" },
+  { key: "status", label: "Status", type: "select", options: STATUS_FILTER_OPTIONS },
+  { key: "actions", type: "none" },
+];
 
 export default function CustomerMaster() {
   const { navigate, currentRoute } = useRouter();
@@ -240,7 +262,7 @@ export default function CustomerMaster() {
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("customer_code");
+  const [sortBy, setSortBy] = useState("code");
   const [sortOrder, setSortOrder] = useState("asc");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
@@ -253,7 +275,15 @@ export default function CustomerMaster() {
   const [statusToggleItem, setStatusToggleItem] = useState(null);
   const [isStatusToggleOpen, setIsStatusToggleOpen] = useState(false);
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const resetPage = useCallback(() => setCurrentPage(1), []);
+  const columnFilters = useServerColumnFilters(FILTER_COLUMNS, {
+    rows: customers,
+    totalCount,
+    currentPage,
+    pageSize: PAGE_SIZE,
+    onChange: resetPage,
+  });
+  const { serverPage, serverPageSize, totalPages } = columnFilters;
 
   function showToast(message, type = "success") {
     setToast({ message, type, id: Date.now() });
@@ -264,10 +294,14 @@ export default function CustomerMaster() {
   const loadCustomers = useCallback(async () => {
     setLoading(true);
     try {
-      const filters = {};
-      if (search.trim()) {
-        filters.customer_name = search.trim();
-      }
+      const filters = buildMasterListQuery({
+        page: serverPage,
+        pageSize: serverPageSize,
+        sortBy,
+        sortOrder,
+        sortFieldMap: SORT_FIELD_MAP,
+        filters: search.trim() ? { customer_name: search.trim() } : {},
+      });
       const res = await fetchCustomers(filters);
       const results = res?.results ?? res ?? [];
       setCustomers(results.map(toUi));
@@ -277,24 +311,13 @@ export default function CustomerMaster() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, serverPage, serverPageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     if (!isAddPage && !isEditPage) loadCustomers();
   }, [isAddPage, isEditPage, loadCustomers]);
 
-  // ── Sort (client-side on current page data) ─────────────────────────────────
-  const sortedCustomers = [...customers].sort((a, b) => {
-    const aVal = String(a[sortBy] ?? "").toLowerCase();
-    const bVal = String(b[sortBy] ?? "").toLowerCase();
-    if (aVal === bVal) return 0;
-    return (aVal > bVal ? 1 : -1) * (sortOrder === "asc" ? 1 : -1);
-  });
-
-  const paginatedData = sortedCustomers.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
+  const paginatedData = columnFilters.pageRows;
 
   function handleSort(field) {
     if (sortBy === field) setSortOrder((p) => (p === "asc" ? "desc" : "asc"));
@@ -478,6 +501,7 @@ export default function CustomerMaster() {
                   Actions
                 </th>
               </tr>
+              <ColumnFilterRow {...columnFilters.filterRowProps} rows={customers} />
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
@@ -497,7 +521,7 @@ export default function CustomerMaster() {
                         <path d="M16 3.13a4 4 0 010 7.75" />
                       </svg>
                       <p className="text-[15px] font-semibold text-slate-400">No customers found</p>
-                      <p className="text-[13px] text-slate-400">Try adjusting your search</p>
+                      <p className="text-[13px] text-slate-400">Try adjusting your search or filters</p>
                     </div>
                   </td>
                 </tr>
@@ -564,7 +588,7 @@ export default function CustomerMaster() {
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            totalCount={totalCount}
+            totalCount={columnFilters.count}
             pageSize={PAGE_SIZE}
             onPageChange={setCurrentPage}
           />

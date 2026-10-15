@@ -7,6 +7,8 @@ import {
   uniformInputClass,
   uniformPrimaryButtonClass,
 } from "../../../components/shared/UniformUi";
+import { useColumnFilters } from "../../../hooks/useColumnFilters";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 
 const initialRows = [
   {
@@ -58,6 +60,22 @@ const pageTitleClass = "text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44p
 const pageSubtitleClass = "mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500";
 const tableCardClass = "rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden";
 
+const DELETE_OFFERED_FILTER_COLUMNS = [
+  { key: "id", label: "Sl No" },
+  { key: "refNo", label: "Ref No" },
+  { key: "rakeId", label: "Rake ID" },
+  { key: "rakeNumber", label: "Rake Number" },
+  { key: "wagonType", label: "Wagon Type", type: "select", className: "hidden lg:table-cell" },
+  { key: "siding", label: "Siding", type: "select", className: "hidden lg:table-cell" },
+  { key: "oreType", label: "Ore Type", type: "select", className: "hidden xl:table-cell" },
+  { key: "fNoteDate", label: "F/Note Date", className: "hidden xl:table-cell" },
+  { key: "customer", label: "Customer", type: "select" },
+  { key: "destination", label: "Destination", type: "select", className: "hidden 2xl:table-cell" },
+  { key: "offerDate", label: "Offer Date", className: "hidden 2xl:table-cell" },
+  { key: "completionDate", label: "Completion Date", className: "hidden 2xl:table-cell" },
+  { key: "action", type: "none" },
+];
+
 function compareValues(a, b, order) {
   const left = typeof a === "number" ? a : String(a ?? "").toLowerCase();
   const right = typeof b === "number" ? b : String(b ?? "").toLowerCase();
@@ -82,9 +100,13 @@ export default function DeleteOfferedRakesPage() {
     return rows.filter((row) => row.fNoteDate === appliedDate);
   }, [rows, appliedDate]);
 
+  const columnFilters = useColumnFilters(DELETE_OFFERED_FILTER_COLUMNS);
+  const { applyFilters } = columnFilters;
+  const columnFilteredRows = useMemo(() => applyFilters(filteredRows), [applyFilters, filteredRows]);
+
   const sortedRows = useMemo(() => {
-    return [...filteredRows].sort((a, b) => compareValues(a[sortBy], b[sortBy], sortOrder));
-  }, [filteredRows, sortBy, sortOrder]);
+    return [...columnFilteredRows].sort((a, b) => compareValues(a[sortBy], b[sortBy], sortOrder));
+  }, [columnFilteredRows, sortBy, sortOrder]);
 
   function handleSort(field) {
     if (sortBy === field) {
@@ -154,6 +176,7 @@ export default function DeleteOfferedRakesPage() {
                 <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500 hidden 2xl:table-cell">Completion Date</th>
                 <th className="px-5 py-3.5 text-right text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Action</th>
               </tr>
+              <ColumnFilterRow {...columnFilters.filterRowProps} rows={filteredRows} />
             </thead>
             <tbody>
               {sortedRows.length > 0 ? (
@@ -185,7 +208,9 @@ export default function DeleteOfferedRakesPage() {
               ) : (
                 <tr>
                   <td colSpan={13} className="px-5 py-12 text-center text-[14px] text-slate-500">
-                    No records found for the selected date.
+                    {columnFilters.isFiltering
+                      ? "No records match the column filters for the selected date."
+                      : "No records found for the selected date."}
                   </td>
                 </tr>
               )}

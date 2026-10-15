@@ -1,7 +1,21 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { STATUS_COLORS } from "../shared/superadminData";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import { useColumnFilters } from "../../../hooks/useColumnFilters";
+
+const formatStatus = (status) => (status ? status.charAt(0).toUpperCase() + status.slice(1) : "");
+
+const FILTER_COLUMNS = [
+  { key: "select", type: "none" },
+  { key: "name", label: "User" },
+  { key: "email", label: "Email" },
+  { key: "role", label: "Role", type: "select" },
+  { key: "status", label: "Status", type: "select", getValue: (user) => formatStatus(user.status) },
+  { key: "createdOn", label: "Created On" },
+  { key: "actions", type: "none" },
+];
 
 function UserTable({ users, onEdit, onDelete }) {
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -9,6 +23,8 @@ function UserTable({ users, onEdit, onDelete }) {
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState("asc");
   const pageSize = 10;
+  const resetPage = useCallback(() => setCurrentPage(1), []);
+  const columnFilters = useColumnFilters(FILTER_COLUMNS, { onChange: resetPage });
 
   const getComparableValue = (user, field) => {
     const value = user[field];
@@ -19,7 +35,7 @@ function UserTable({ users, onEdit, onDelete }) {
     return typeof value === "string" ? value.toLowerCase() : (value ?? "");
   };
 
-  const sortedUsers = [...users].sort((a, b) => {
+  const sortedUsers = [...columnFilters.applyFilters(users)].sort((a, b) => {
     const aValue = getComparableValue(a, sortBy);
     const bValue = getComparableValue(b, sortBy);
     if (aValue === bValue) return 0;
@@ -57,7 +73,7 @@ function UserTable({ users, onEdit, onDelete }) {
 
   const getStatusBadge = (status) => {
     const colors = STATUS_COLORS[status] || STATUS_COLORS.inactive;
-    const label = status.charAt(0).toUpperCase() + status.slice(1);
+    const label = formatStatus(status);
     return (
       <span
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${colors.bg} ${colors.text}`}
@@ -105,6 +121,7 @@ function UserTable({ users, onEdit, onDelete }) {
                 Actions
               </th>
             </tr>
+            <ColumnFilterRow {...columnFilters.filterRowProps} rows={users} cellClassName="px-4 py-2" />
           </thead>
           <tbody className="divide-y divide-slate-100">
             {paginatedUsers.map((user) => (

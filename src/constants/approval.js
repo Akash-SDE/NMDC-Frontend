@@ -10,9 +10,12 @@ export const APPROVAL_STATUS = {
   AWAITING_OPERATIONS: "AWAITING_OPERATIONS",
   AWAITING_COMMERCIAL: "AWAITING_COMMERCIAL",
   AWAITING_CW: "AWAITING_CW",
+  AWAITING_COMMERCIAL_CW: "AWAITING_COMMERCIAL_CW",
   APPROVED: "APPROVED",
   REJECTED: "REJECTED",
 };
+
+export const STEP_NOT_REQUIRED = "not_required";
 
 export const APPROVAL_DEPARTMENTS = {
   OPERATIONS: "operations",
@@ -32,11 +35,34 @@ export const APPROVAL_STEP_LABELS = {
   [APPROVAL_DEPARTMENTS.CW]: "Railway C&W",
 };
 
-export const APPROVAL_STATUS_TO_DEPARTMENT = {
-  [APPROVAL_STATUS.AWAITING_OPERATIONS]: APPROVAL_DEPARTMENTS.OPERATIONS,
-  [APPROVAL_STATUS.AWAITING_COMMERCIAL]: APPROVAL_DEPARTMENTS.COMMERCIAL,
-  [APPROVAL_STATUS.AWAITING_CW]: APPROVAL_DEPARTMENTS.CW,
+/** Review departments Operations can route to; when both are selected they approve in parallel. */
+export const REVIEW_DEPARTMENTS = [APPROVAL_DEPARTMENTS.COMMERCIAL, APPROVAL_DEPARTMENTS.CW];
+
+export const APPROVAL_STATUS_TO_DEPARTMENTS = {
+  [APPROVAL_STATUS.AWAITING_OPERATIONS]: [APPROVAL_DEPARTMENTS.OPERATIONS],
+  [APPROVAL_STATUS.AWAITING_COMMERCIAL]: [APPROVAL_DEPARTMENTS.COMMERCIAL],
+  [APPROVAL_STATUS.AWAITING_CW]: [APPROVAL_DEPARTMENTS.CW],
+  [APPROVAL_STATUS.AWAITING_COMMERCIAL_CW]: REVIEW_DEPARTMENTS,
 };
+
+export function getPendingDepartments(approval) {
+  if (!approval) return [];
+  return APPROVAL_STATUS_TO_DEPARTMENTS[approval.status] ?? [];
+}
+
+/** Mirrors the backend: any rejection closes the request, Operations goes first, then every required review step. */
+export function deriveApprovalStatus(approval) {
+  const steps = APPROVAL_STEP_ORDER.map((department) => approval?.[department]?.status || "pending");
+  if (steps.includes("rejected")) return APPROVAL_STATUS.REJECTED;
+  if (approval?.operations?.status !== "approved") return APPROVAL_STATUS.AWAITING_OPERATIONS;
+  const awaiting = REVIEW_DEPARTMENTS.filter(
+    (department) => (approval?.[department]?.status || "pending") === "pending",
+  );
+  if (awaiting.length === REVIEW_DEPARTMENTS.length) return APPROVAL_STATUS.AWAITING_COMMERCIAL_CW;
+  if (awaiting.includes(APPROVAL_DEPARTMENTS.COMMERCIAL)) return APPROVAL_STATUS.AWAITING_COMMERCIAL;
+  if (awaiting.includes(APPROVAL_DEPARTMENTS.CW)) return APPROVAL_STATUS.AWAITING_CW;
+  return APPROVAL_STATUS.APPROVED;
+}
 
 export function deriveLoadingStatus(loading, approval) {
   if (loading?.status) return loading.status;
@@ -58,20 +84,18 @@ export function getApprovalStepState(approval, department) {
   const step = approval[department];
   if (step?.status === "approved") return "approved";
   if (step?.status === "rejected") return "rejected";
+  if (step?.status === STEP_NOT_REQUIRED) return "skipped";
   if (approval.status === APPROVAL_STATUS.REJECTED) return "rejected";
-  const currentDept = APPROVAL_STATUS_TO_DEPARTMENT[approval.status];
-  if (currentDept === department) return "active";
-  const currentIndex = APPROVAL_STEP_ORDER.indexOf(currentDept);
+  const pendingDepartments = getPendingDepartments(approval);
+  if (pendingDepartments.includes(department)) return "active";
+  const currentIndex = Math.min(
+    ...pendingDepartments.map((pending) => APPROVAL_STEP_ORDER.indexOf(pending)),
+  );
   const deptIndex = APPROVAL_STEP_ORDER.indexOf(department);
-  if (currentIndex < 0 || deptIndex < currentIndex) return "approved";
+  if (!Number.isFinite(currentIndex) || deptIndex < currentIndex) return "approved";
   return "pending";
 }
 
 export function countPendingApprovals(approvals = []) {
-  return approvals.filter(
-    (item) =>
-      item.status === APPROVAL_STATUS.AWAITING_OPERATIONS ||
-      item.status === APPROVAL_STATUS.AWAITING_COMMERCIAL ||
-      item.status === APPROVAL_STATUS.AWAITING_CW,
-  ).length;
+  return approvals.filter((item) => getPendingDepartments(item).length > 0).length;
 }

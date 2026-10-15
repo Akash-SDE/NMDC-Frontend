@@ -14,6 +14,9 @@ import {
   updateDelayReason,
   patchDelayReason,
 } from "../../../services/delayReasonService";
+import { buildMasterListQuery } from "../../../utils/listQuery";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import { useServerColumnFilters } from "../../../hooks/useColumnFilters";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 function EditIcon() {
@@ -164,6 +167,22 @@ function DelayCategoryForm({ initialData, onSave, onCancel, isEditing, saving })
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 10;
+const SORT_FIELD_MAP = {
+  name: "delay_reason_type",
+  description: "delay_reason_description",
+  status: "status",
+};
+const STATUS_FILTER_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+const FILTER_COLUMNS = [
+  { key: "id", label: "#" },
+  { key: "name", label: "Category Name" },
+  { key: "description", label: "Description", className: "hidden md:table-cell" },
+  { key: "status", label: "Status", type: "select", options: STATUS_FILTER_OPTIONS },
+  { key: "actions", type: "none" },
+];
 
 export default function DelayCategoryMaster() {
   const { navigate, currentRoute } = useRouter();
@@ -186,7 +205,15 @@ export default function DelayCategoryMaster() {
   const [statusToggleItem, setStatusToggleItem] = useState(null);
   const [isStatusToggleOpen, setIsStatusToggleOpen] = useState(false);
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const resetPage = useCallback(() => setCurrentPage(1), []);
+  const columnFilters = useServerColumnFilters(FILTER_COLUMNS, {
+    rows: categories,
+    totalCount,
+    currentPage,
+    pageSize: PAGE_SIZE,
+    onChange: resetPage,
+  });
+  const { serverPage, serverPageSize, totalPages } = columnFilters;
 
   function showToast(message, type = "success") {
     setToast({ message, type, id: Date.now() });
@@ -196,7 +223,14 @@ export default function DelayCategoryMaster() {
   const loadCategories = useCallback(async () => {
     setLoading(true);
     try {
-      const filters = search.trim() ? { delay_reason_type: search.trim() } : {};
+      const filters = buildMasterListQuery({
+        page: serverPage,
+        pageSize: serverPageSize,
+        sortBy,
+        sortOrder,
+        sortFieldMap: SORT_FIELD_MAP,
+        filters: search.trim() ? { delay_reason_type: search.trim() } : {},
+      });
       const res = await fetchDelayReasons(filters);
       const results = res?.results ?? res ?? [];
       setCategories(results.map(toUi));
@@ -206,19 +240,13 @@ export default function DelayCategoryMaster() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, serverPage, serverPageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     if (!isAddPage && !isEditPage) loadCategories();
   }, [isAddPage, isEditPage, loadCategories]);
 
-  const sorted = [...categories].sort((a, b) => {
-    const av = String(a[sortBy] ?? "").toLowerCase();
-    const bv = String(b[sortBy] ?? "").toLowerCase();
-    if (av === bv) return 0;
-    return (av > bv ? 1 : -1) * (sortOrder === "asc" ? 1 : -1);
-  });
-  const paginatedData = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginatedData = columnFilters.pageRows;
 
   function handleSort(field) {
     if (sortBy === field) setSortOrder((p) => (p === "asc" ? "desc" : "asc"));
@@ -374,6 +402,7 @@ export default function DelayCategoryMaster() {
                   Actions
                 </th>
               </tr>
+              <ColumnFilterRow {...columnFilters.filterRowProps} rows={categories} />
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
@@ -386,7 +415,7 @@ export default function DelayCategoryMaster() {
                 <tr>
                   <td colSpan={5} className="px-5 py-12 text-center">
                     <p className="text-[15px] font-semibold text-slate-400">No delay categories found</p>
-                    <p className="text-[13px] text-slate-400 mt-1">Try adjusting your search</p>
+                    <p className="text-[13px] text-slate-400 mt-1">Try adjusting your search or filters</p>
                   </td>
                 </tr>
               ) : (
@@ -431,7 +460,7 @@ export default function DelayCategoryMaster() {
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            totalCount={totalCount}
+            totalCount={columnFilters.count}
             pageSize={PAGE_SIZE}
             onPageChange={setCurrentPage}
           />

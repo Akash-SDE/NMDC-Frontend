@@ -376,7 +376,9 @@ function inferManualStage(category) {
 function resolveCurrentStage(loading, approval) {
   if (approval?.status === "APPROVED") return PROCESS_STAGES.DISPATCH;
   if (approval?.status === "AWAITING_CW") return PROCESS_STAGES.RAILWAY_CW;
-  if (approval?.status === "AWAITING_COMMERCIAL") return PROCESS_STAGES.RAILWAY_COMMERCIAL;
+  if (approval?.status === "AWAITING_COMMERCIAL" || approval?.status === "AWAITING_COMMERCIAL_CW") {
+    return PROCESS_STAGES.RAILWAY_COMMERCIAL;
+  }
   if (approval?.status === "AWAITING_OPERATIONS") return PROCESS_STAGES.RAILWAY_OPERATIONS;
   if (loading.completionTime && loading.isSubmitted) return PROCESS_STAGES.APPROVAL_QUEUE;
   if (loading.completionTime) return PROCESS_STAGES.LOADING;

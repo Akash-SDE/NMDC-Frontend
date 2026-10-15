@@ -14,6 +14,9 @@ import {
   updateSiding,
   patchSiding,
 } from "../../../services/sidingService";
+import { buildMasterListQuery } from "../../../utils/listQuery";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import { useServerColumnFilters } from "../../../hooks/useColumnFilters";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 function EditIcon() {
@@ -178,6 +181,23 @@ function SidingForm({ initialData, onSave, onCancel, isEditing, saving }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 10;
+const SORT_FIELD_MAP = {
+  code: "siding_code",
+  description: "siding_description",
+  dailyCapacity: "daily_capacity",
+  status: "status",
+};
+const STATUS_FILTER_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+const FILTER_COLUMNS = [
+  { key: "code", label: "Siding Code" },
+  { key: "description", label: "Description", className: "hidden md:table-cell" },
+  { key: "dailyCapacity", label: "Daily Capacity", className: "hidden lg:table-cell" },
+  { key: "status", label: "Status", type: "select", options: STATUS_FILTER_OPTIONS },
+  { key: "actions", type: "none" },
+];
 
 export default function SidingMaster() {
   const { navigate, currentRoute } = useRouter();
@@ -200,7 +220,15 @@ export default function SidingMaster() {
   const [statusToggleItem, setStatusToggleItem] = useState(null);
   const [isStatusToggleOpen, setIsStatusToggleOpen] = useState(false);
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const resetPage = useCallback(() => setCurrentPage(1), []);
+  const columnFilters = useServerColumnFilters(FILTER_COLUMNS, {
+    rows: sidings,
+    totalCount,
+    currentPage,
+    pageSize: PAGE_SIZE,
+    onChange: resetPage,
+  });
+  const { serverPage, serverPageSize, totalPages } = columnFilters;
 
   function showToast(message, type = "success") {
     setToast({ message, type, id: Date.now() });
@@ -210,7 +238,14 @@ export default function SidingMaster() {
   const loadSidings = useCallback(async () => {
     setLoading(true);
     try {
-      const filters = search.trim() ? { siding_code: search.trim() } : {};
+      const filters = buildMasterListQuery({
+        page: serverPage,
+        pageSize: serverPageSize,
+        sortBy,
+        sortOrder,
+        sortFieldMap: SORT_FIELD_MAP,
+        filters: search.trim() ? { siding_code: search.trim() } : {},
+      });
       const res = await fetchSidings(filters);
       const results = res?.results ?? res ?? [];
       setSidings(results.map(toUi));
@@ -220,23 +255,13 @@ export default function SidingMaster() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, serverPage, serverPageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     if (!isAddPage && !isEditPage) loadSidings();
   }, [isAddPage, isEditPage, loadSidings]);
 
-  const sorted = [...sidings].sort((a, b) => {
-    const av = sortBy === "dailyCapacity"
-      ? (Number(a.dailyCapacity) || 0)
-      : String(a[sortBy] ?? "").toLowerCase();
-    const bv = sortBy === "dailyCapacity"
-      ? (Number(b.dailyCapacity) || 0)
-      : String(b[sortBy] ?? "").toLowerCase();
-    if (av === bv) return 0;
-    return (av > bv ? 1 : -1) * (sortOrder === "asc" ? 1 : -1);
-  });
-  const paginatedData = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginatedData = columnFilters.pageRows;
 
   function handleSort(field) {
     if (sortBy === field) setSortOrder((p) => (p === "asc" ? "desc" : "asc"));
@@ -392,6 +417,7 @@ export default function SidingMaster() {
                   Actions
                 </th>
               </tr>
+              <ColumnFilterRow {...columnFilters.filterRowProps} rows={sidings} />
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
@@ -409,7 +435,7 @@ export default function SidingMaster() {
                         <line x1="21" y1="21" x2="16.65" y2="16.65" />
                       </svg>
                       <p className="text-[15px] font-semibold text-slate-400">No sidings found</p>
-                      <p className="text-[13px] text-slate-400">Try adjusting your search</p>
+                      <p className="text-[13px] text-slate-400">Try adjusting your search or filters</p>
                     </div>
                   </td>
                 </tr>
@@ -455,7 +481,7 @@ export default function SidingMaster() {
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            totalCount={totalCount}
+            totalCount={columnFilters.count}
             pageSize={PAGE_SIZE}
             onPageChange={setCurrentPage}
           />

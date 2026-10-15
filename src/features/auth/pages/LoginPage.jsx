@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { DEFAULT_ROUTE_BY_ROLE } from "../../../constants/roles";
+import { SESSION_EXPIRED_FLAG_KEY } from "../../../constants/storageKeys";
 import { Logo } from "../../../components/icons";
 
 const LOGIN_HERO_IMAGE =
@@ -13,7 +14,11 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState("email"); // "email" | "otp"
   const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
+  const [info, setInfo] = useState(() =>
+    sessionStorage.getItem(SESSION_EXPIRED_FLAG_KEY)
+      ? "Your session has expired. Please sign in again."
+      : "",
+  );
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -22,6 +27,7 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
+    sessionStorage.removeItem(SESSION_EXPIRED_FLAG_KEY);
     const remembered = localStorage.getItem(REMEMBER_USERNAME_KEY);
     if (remembered) {
       setFormData((prev) => ({ ...prev, email: remembered, remember: true }));

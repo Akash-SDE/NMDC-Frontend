@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
+import Pagination from "../../../components/shared/Pagination";
+import { useClientPagination } from "../../../hooks/useClientPagination";
+import { useColumnFilters } from "../../../hooks/useColumnFilters";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 import Toast from "../../../components/shared/Toast";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import {
@@ -8,6 +13,7 @@ import {
   uniformInputClass,
 } from "../../../components/shared/UniformUi";
 import { reportActionIconMap, ConfigIcon } from "../../../components/icons";
+import ApiErrorState from "../../../components/common/ApiErrorState";
 import { useRouter } from "../../../context/RouterContext";
 import { useToast } from "../../../hooks/useToast";
 import { exportToCSV, printTable } from "../../../utils/export";
@@ -87,6 +93,41 @@ function formatChipValue(filter, value) {
   return value;
 }
 
+function isColumnEnabled(column, filterValues) {
+  return !column.requiresFilter || Boolean(filterValues[column.requiresFilter]);
+}
+
+function exportCellValue(column, row) {
+  const value = row[column.field];
+  if (typeof column.render === "function") {
+    const rendered = column.render(value, row);
+    if (typeof rendered === "string" || typeof rendered === "number") return rendered;
+  }
+  return value ?? "";
+}
+
+function displayCellText(column, row) {
+  const value = row[column.field];
+  if (typeof column.render === "function") {
+    const rendered = column.render(value, row);
+    if (typeof rendered === "string" || typeof rendered === "number") return rendered;
+  }
+  return value ?? "-";
+}
+
+const SELECT_FILTER_FIELD_PATTERN =
+  /status$|^siding$|^oreType$|^wagonType$|^alertLevel$|^processStage$|^salesType$|^customer$|^destination$|^stockpile$|^category$|^shift$/i;
+
+function buildColumnFilter(column) {
+  return {
+    key: column.field,
+    label: column.label,
+    type: column.filterType ?? (SELECT_FILTER_FIELD_PATTERN.test(column.field) ? "select" : "text"),
+    getValue: (row) => displayCellText(column, row),
+    className: column.className,
+  };
+}
+
 export default function ReportTablePage({
   reportId,
   title,
@@ -97,22 +138,28 @@ export default function ReportTablePage({
   emptyMessage = "No records found for the selected filters.",
   tableMinWidth = DEFAULT_TABLE_MIN_WIDTH,
   loading = false,
-  dataSource = "static",
+  refreshing = false,
+  error = null,
+  onRetry,
+  onFilterValuesChange,
   dataSourceType = "live",
 }) {
   const { navigate, currentRoute } = useRouter();
   const { toast, showToast } = useToast();
 
+  const filterSignature = filters
+    .map((filter) => `${filter.id}:${filter.type}:${filter.defaultValue ?? ""}`)
+    .join("|");
   const initialFilters = useMemo(() => {
-    return filters.reduce((accumulator, filter) => {
-      if (filter.type === "checkbox") {
-        accumulator[filter.id] = Boolean(filter.defaultValue);
-      } else {
-        accumulator[filter.id] = filter.defaultValue ?? "";
-      }
-      return accumulator;
-    }, {});
-  }, [filters]);
+    return filterSignature
+      .split("|")
+      .filter(Boolean)
+      .reduce((accumulator, entry) => {
+        const [id, type, defaultValue] = entry.split(":");
+        accumulator[id] = type === "checkbox" ? defaultValue === "true" : defaultValue;
+        return accumulator;
+      }, {});
+  }, [filterSignature]);
 
   const [filterValues, setFilterValues] = useState(initialFilters);
   const [filtersOpen, setFiltersOpen] = useState(true);
@@ -178,11 +225,43 @@ export default function ReportTablePage({
     });
   }, [rows, filters, filterValues]);
 
+  const enabledColumns = columns.filter((column) => isColumnEnabled(column, filterValues));
+  const displayColumns = enabledColumns.filter((column) => visibleFields.includes(column.field));
+  const displayColumnSignature = displayColumns.map((column) => column.field).join("|");
+
+  const columnFilterDefs = useMemo(
+    () =>
+      displayColumnSignature
+        .split("|")
+        .filter(Boolean)
+        .map((field) => columns.find((column) => column.field === field))
+        .filter(Boolean)
+        .map(buildColumnFilter),
+    [columns, displayColumnSignature],
+  );
+  const columnFilters = useColumnFilters(columnFilterDefs);
+  const { applyFilters, clearFilters: clearColumnFilters } = columnFilters;
+  const columnFilteredRows = useMemo(() => applyFilters(filteredRows), [applyFilters, filteredRows]);
+  const hasActiveColumnFilters = columnFilterDefs.some(
+    (column) => String(columnFilters.filters[column.key] ?? "").trim() !== "",
+  );
+
+  useEffect(() => {
+    clearColumnFilters();
+  }, [columns, clearColumnFilters]);
+
   const sortedRows = useMemo(() => {
-    return [...filteredRows].sort((left, right) => {
+    return [...columnFilteredRows].sort((left, right) => {
       return compareValues(left[sortBy], right[sortBy], sortOrder);
     });
-  }, [filteredRows, sortBy, sortOrder]);
+  }, [columnFilteredRows, sortBy, sortOrder]);
+
+  const [printingAllRows, setPrintingAllRows] = useState(false);
+  const { pageItems: pagedRows, paginationProps } = useClientPagination(sortedRows, {
+    pageSize: 25,
+    resetKey: `${JSON.stringify(filterValues)}|${sortBy}|${sortOrder}|${columnFilters.filterKey}`,
+  });
+  const displayRows = printingAllRows ? sortedRows : pagedRows;
 
   const activeFilterChips = useMemo(() => {
     return filters
@@ -199,18 +278,14 @@ export default function ReportTablePage({
   }, [filters, filterValues]);
 
   const hasActiveFilters = activeFilterChips.length > 0;
-  const displayColumns = columns.filter((column) => visibleFields.includes(column.field));
-  const exportColumns = columns.map((column) => ({
-    label: column.label,
-    key: column.field,
-  }));
-  const dataSourceLabel =
-    dataSource === "live"
-      ? dataSourceType === "aggregated"
-        ? "Aggregated data"
-        : "Live data"
-      : "Demo fallback data";
+  const dataSourceLabel = dataSourceType === "aggregated" ? "Aggregated data" : "Live data";
   const lineage = getReportLineage(reportId);
+
+  function updateFilterValues(updater) {
+    const next = updater(filterValues);
+    setFilterValues(next);
+    onFilterValuesChange?.(next);
+  }
 
   function handleSort(field) {
     if (sortBy === field) {
@@ -224,21 +299,26 @@ export default function ReportTablePage({
 
   function handleFilterChange(event) {
     const { name, value, type, checked } = event.target;
-    setFilterValues((previous) => ({
+    updateFilterValues((previous) => ({
       ...previous,
       [name]: type === "checkbox" ? checked : value,
     }));
   }
 
   function handleClearFilters() {
-    setFilterValues(initialFilters);
+    updateFilterValues(() => initialFilters);
+  }
+
+  function handleClearAllFilters() {
+    if (hasActiveFilters) handleClearFilters();
+    clearColumnFilters();
   }
 
   function handleRemoveChip(filterId) {
     const filter = filters.find((item) => item.id === filterId);
     if (!filter) return;
 
-    setFilterValues((previous) => ({
+    updateFilterValues((previous) => ({
       ...previous,
       [filterId]: filter.type === "checkbox" ? false : "",
     }));
@@ -246,7 +326,7 @@ export default function ReportTablePage({
 
   function handleDatePreset(presetId) {
     const presetValues = buildDatePresetValues(presetId);
-    setFilterValues((previous) => {
+    updateFilterValues((previous) => {
       const next = { ...previous };
       if ("fromDate" in previous) next.fromDate = presetValues.fromDate ?? "";
       if ("toDate" in previous) next.toDate = presetValues.toDate ?? "";
@@ -270,7 +350,13 @@ export default function ReportTablePage({
       showToast("No data to export. Adjust your filters.", "error");
       return;
     }
-    printTable(title);
+    flushSync(() => setPrintingAllRows(true));
+    const opened = printTable(title);
+    setPrintingAllRows(false);
+    if (!opened) {
+      showToast("Allow pop-ups for this site to open the print preview.", "error");
+      return;
+    }
     showToast("Print preview opened.", "success");
   }
 
@@ -279,7 +365,14 @@ export default function ReportTablePage({
       showToast("No data to export. Adjust your filters.", "error");
       return;
     }
-    exportToCSV(sortedRows, title.replace(/\s+/g, "_"), exportColumns);
+    const exportRows = sortedRows.map((row) =>
+      Object.fromEntries(displayColumns.map((column) => [column.field, exportCellValue(column, row)])),
+    );
+    exportToCSV(
+      exportRows,
+      title.replace(/\s+/g, "_"),
+      displayColumns.map((column) => ({ label: column.label, key: column.field })),
+    );
     showToast("Excel file downloaded.", "success");
   }
 
@@ -298,16 +391,10 @@ export default function ReportTablePage({
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span
-                className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
-                  dataSource === "live"
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "bg-amber-50 text-amber-700"
-                }`}
-              >
+              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
                 {dataSourceLabel}
               </span>
-              {loading ? (
+              {loading || refreshing ? (
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">
                   Loading…
                 </span>
@@ -515,7 +602,7 @@ export default function ReportTablePage({
                     Visible columns
                   </p>
                   <div className="max-h-52 space-y-2 overflow-y-auto">
-                    {columns.map((column) => (
+                    {enabledColumns.map((column) => (
                       <label
                         key={column.field}
                         className="flex items-center gap-2 text-sm font-medium text-slate-700"
@@ -538,7 +625,11 @@ export default function ReportTablePage({
           </div>
         </div>
 
-        {loading ? (
+        {error ? (
+          <div className="p-4 sm:p-5">
+            <ApiErrorState error={error} onRetry={onRetry} title="Failed to load report data" />
+          </div>
+        ) : loading ? (
           <div className="px-5 py-16 text-center text-sm font-medium text-slate-500">
             Loading report data…
           </div>
@@ -562,10 +653,11 @@ export default function ReportTablePage({
                   </th>
                 ))}
               </tr>
+              <ColumnFilterRow {...columnFilters.filterRowProps} rows={filteredRows} />
             </thead>
             <tbody>
               {sortedRows.length > 0 ? (
-                sortedRows.map((row, index) => (
+                displayRows.map((row, index) => (
                   <tr
                     key={`${row.id || row.rakeNumber || "row"}-${index}`}
                     className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70"
@@ -587,12 +679,14 @@ export default function ReportTablePage({
                   <td colSpan={displayColumns.length || 1} className="px-5 py-14 text-center">
                     <p className="text-[15px] font-semibold text-slate-700">{emptyMessage}</p>
                     <p className="mt-1 text-[13px] text-slate-500">
-                      Try clearing filters or choosing a wider date range.
+                      {hasActiveColumnFilters
+                        ? "Try clearing the column filters, the report filters, or choosing a wider date range."
+                        : "Try clearing filters or choosing a wider date range."}
                     </p>
-                    {hasActiveFilters ? (
+                    {hasActiveFilters || hasActiveColumnFilters ? (
                       <button
                         type="button"
-                        onClick={handleClearFilters}
+                        onClick={handleClearAllFilters}
                         className="mt-4 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
                       >
                         Clear all filters
@@ -605,6 +699,11 @@ export default function ReportTablePage({
           </table>
         </div>
         )}
+        {!error && !loading && sortedRows.length > 0 ? (
+          <div className="px-5 pb-4">
+            <Pagination {...paginationProps} />
+          </div>
+        ) : null}
       </div>
 
       <Toast toast={toast} />

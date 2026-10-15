@@ -8,7 +8,7 @@ import {
 } from "../../services/railwayApprovalService";
 
 export const fetchApprovalRequests = createAsyncThunk("approvals/fetchAll", async () =>
-  listRailwayApprovals(),
+  listRailwayApprovals({ page_size: 1000 }),
 );
 
 export const fetchApprovalByLoadingId = createAsyncThunk(
@@ -28,8 +28,8 @@ export const completeLoadingAndRequestApproval = createAsyncThunk(
 
 export const submitApprovalDecision = createAsyncThunk(
   "approvals/submitDecision",
-  async ({ approval, department, decision }) => {
-    const updated = await submitRailwayDecision(approval, department, decision);
+  async ({ approval, department, decision, targets }) => {
+    const updated = await submitRailwayDecision(approval, department, decision, targets);
     return { approval: updated, loading: null };
   },
 );

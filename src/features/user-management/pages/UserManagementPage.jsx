@@ -6,6 +6,8 @@ import Modal from "../../../components/shared/Modal";
 import SearchBar from "../../../components/shared/SearchBar";
 import Pagination from "../../../components/shared/Pagination";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import { useServerColumnFilters } from "../../../hooks/useColumnFilters";
 import {
   uniformInputClass,
   UniformFormField,
@@ -37,6 +39,31 @@ const AVATAR_COLORS = [
   "bg-cyan-100 text-cyan-700",
 ];
 const avatarColor = (id) => AVATAR_COLORS[id % AVATAR_COLORS.length];
+
+const fullName = (user) => `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() || "—";
+
+const formatPhone = (user) =>
+  user.phone_number
+    ? `${user.country_code ? `+${user.country_code} ` : ""}${user.phone_number}`
+    : "—";
+
+const USER_FILTER_COLUMNS = [
+  { key: "serial", type: "none" },
+  { key: "full_name", label: "Name", getValue: fullName },
+  { key: "email", label: "Email", getValue: (user) => user.email || "—" },
+  { key: "phone_number", label: "Phone", getValue: formatPhone },
+  { key: "roles", label: "Roles", getValue: (user) => (user.role_data ?? []).map((r) => r.role_name ?? r) },
+  {
+    key: "status",
+    label: "Status",
+    type: "select",
+    options: ["Active", "Inactive"],
+    getValue: (user) => (user.status ? "Active" : "Inactive"),
+  },
+  { key: "created_on", label: "Created On", getValue: (user) => formatDate(user.created_on) },
+  { key: "last_login", label: "Last Login", getValue: (user) => formatDate(user.last_login) },
+  { key: "actions", type: "none", className: "sticky right-0 z-20 border-l border-slate-200/70 bg-white" },
+];
 
 /* ─────────────────────────────────────────────────────────────────
    Small reusable UI pieces
@@ -103,16 +130,19 @@ function SkeletonRows({ cols }) {
   ));
 }
 
-function EmptyState({ search, colSpan }) {
+function EmptyState({ search, filtering, colSpan }) {
+  const narrowed = search || filtering;
   return (
     <tr>
       <td colSpan={colSpan} className="py-16 text-center">
         <UsersIcon size={36} className="mx-auto mb-3 text-slate-300" />
         <p className="text-[14px] font-semibold text-slate-500">
-          {search ? "No users match your search" : "No users found"}
+          {narrowed ? "No users match your search or filters" : "No users found"}
         </p>
         <p className="mt-1 text-[12px] text-slate-400">
-          {search ? "Try adjusting the search or filters." : "Create a user with the button above to get started."}
+          {narrowed
+            ? "Try adjusting the search, status tabs or column filters."
+            : "Create a user with the button above to get started."}
         </p>
       </td>
     </tr>
@@ -459,14 +489,43 @@ export default function UserManagementPage() {
 
   useEffect(() => { setCurrentPage(1); }, [statusFilter]);
 
+  /* sort */
+  const sorted = useMemo(() => {
+    return [...users].sort((a, b) => {
+      let av, bv;
+      if (sortBy === "full_name") {
+        av = `${a.first_name ?? ""} ${a.last_name ?? ""}`.toLowerCase();
+        bv = `${b.first_name ?? ""} ${b.last_name ?? ""}`.toLowerCase();
+      } else if (sortBy === "status") {
+        av = a.status ? "1" : "0"; bv = b.status ? "1" : "0";
+      } else {
+        av = String(a[sortBy] ?? "").toLowerCase();
+        bv = String(b[sortBy] ?? "").toLowerCase();
+      }
+      if (av === bv) return 0;
+      const cmp = av > bv ? 1 : -1;
+      return sortOrder === "asc" ? cmp : -cmp;
+    });
+  }, [users, sortBy, sortOrder]);
+
+  const resetPage = useCallback(() => setCurrentPage(1), []);
+  const columnFilters = useServerColumnFilters(USER_FILTER_COLUMNS, {
+    rows: sorted,
+    totalCount,
+    currentPage,
+    pageSize: PAGE_SIZE,
+    onChange: resetPage,
+  });
+  const { serverPage, serverPageSize, pageRows } = columnFilters;
+
   /* fetch users */
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const payload = {
-        page: currentPage,
-        page_size: PAGE_SIZE,
+        page: serverPage,
+        page_size: serverPageSize,
         ...(debouncedSearch ? { search: debouncedSearch } : {}),
         ...(statusFilter === "active" ? { status: true } : {}),
         ...(statusFilter === "inactive" ? { status: false } : {}),
@@ -482,7 +541,7 @@ export default function UserManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, debouncedSearch, statusFilter]);
+  }, [serverPage, serverPageSize, debouncedSearch, statusFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -517,31 +576,11 @@ export default function UserManagementPage() {
     load();
   }
 
-  /* sort */
-  const sorted = useMemo(() => {
-    return [...users].sort((a, b) => {
-      let av, bv;
-      if (sortBy === "full_name") {
-        av = `${a.first_name ?? ""} ${a.last_name ?? ""}`.toLowerCase();
-        bv = `${b.first_name ?? ""} ${b.last_name ?? ""}`.toLowerCase();
-      } else if (sortBy === "status") {
-        av = a.status ? "1" : "0"; bv = b.status ? "1" : "0";
-      } else {
-        av = String(a[sortBy] ?? "").toLowerCase();
-        bv = String(b[sortBy] ?? "").toLowerCase();
-      }
-      if (av === bv) return 0;
-      const cmp = av > bv ? 1 : -1;
-      return sortOrder === "asc" ? cmp : -cmp;
-    });
-  }, [users, sortBy, sortOrder]);
-
   function handleSort(field) {
     if (sortBy === field) setSortOrder((p) => (p === "asc" ? "desc" : "asc"));
     else { setSortBy(field); setSortOrder("asc"); }
   }
 
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
   const COL_COUNT = 9; // # + Name + Email + Phone + Roles + Status + Created + LastLogin + Actions
 
   return (
@@ -641,15 +680,20 @@ export default function UserManagementPage() {
                     Actions
                   </th>
                 </tr>
+                <ColumnFilterRow {...columnFilters.filterRowProps} rows={users} />
               </thead>
 
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <SkeletonRows cols={COL_COUNT} />
-                ) : sorted.length === 0 ? (
-                  <EmptyState search={debouncedSearch} colSpan={COL_COUNT} />
+                ) : pageRows.length === 0 ? (
+                  <EmptyState
+                    search={debouncedSearch || statusFilter !== "all"}
+                    filtering={columnFilters.isFiltering}
+                    colSpan={COL_COUNT}
+                  />
                 ) : (
-                  sorted.map((user, idx) => (
+                  pageRows.map((user, idx) => (
                     <tr key={user.id} className="group transition-colors hover:bg-blue-50/30">
                       <td className="px-5 py-4 text-[12px] font-medium text-slate-400">
                         {(currentPage - 1) * PAGE_SIZE + idx + 1}
@@ -662,7 +706,7 @@ export default function UserManagementPage() {
                           </div>
                           <div className="min-w-0">
                             <p className="font-semibold text-slate-800 truncate">
-                              {`${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() || "—"}
+                              {fullName(user)}
                             </p>
                             {user.is_superuser && <div className="mt-0.5"><SuperuserBadge /></div>}
                           </div>
@@ -676,9 +720,7 @@ export default function UserManagementPage() {
                       </td>
 
                       <td className="px-5 py-4 text-slate-600">
-                        {user.phone_number
-                          ? `${user.country_code ? `+${user.country_code} ` : ""}${user.phone_number}`
-                          : "—"}
+                        {formatPhone(user)}
                       </td>
 
                       <td className="px-5 py-4"><RoleChips roles={user.role_data} /></td>
@@ -707,12 +749,12 @@ export default function UserManagementPage() {
             </table>
           </div>
 
-          {!loading && !error && totalCount > 0 && (
+          {!loading && !error && columnFilters.count > 0 && (
             <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-3">
               <Pagination
                 currentPage={currentPage}
-                totalPages={totalPages}
-                totalCount={totalCount}
+                totalPages={columnFilters.totalPages}
+                totalCount={columnFilters.count}
                 pageSize={PAGE_SIZE}
                 onPageChange={setCurrentPage}
               />

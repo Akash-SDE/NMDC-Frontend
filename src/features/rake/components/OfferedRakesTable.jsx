@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import {
@@ -15,6 +16,44 @@ import {
 } from "../../../components/shared/UniformUi";
 import { formatDateTimeForTable } from "../../../utils/dateUtils";
 import { adjustmentReasonOptions } from "../constants/rakeConstants";
+import Pagination from "../../../components/shared/Pagination";
+import { useClientPagination } from "../../../hooks/useClientPagination";
+import { useColumnFilters } from "../../../hooks/useColumnFilters";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import ColumnSettingsMenu from "../../../components/shared/ColumnSettingsMenu";
+import { useColumnVisibility } from "../../../hooks/useColumnVisibility";
+
+const getOfferedRakeStatusLabel = (row) =>
+  row.isDisabled
+    ? "Cancelled"
+    : row.statusDescription || (row.status != null ? `Status ${row.status}` : "Draft");
+
+const RAKE_HIDDEN_COLS_KEY = "nmdc_rake_hidden_columns";
+const OFFERED_RAKE_FILTER_COLUMNS = [
+  { key: "actions", type: "none", className: "sticky left-0 z-30 border-r border-slate-200/70 bg-white" },
+  { key: "rakeId", label: "Rake ID" },
+  { key: "rakeNumber", label: "Rake Number", getValue: (row) => row.rakeNumber || "-" },
+  { key: "siding", label: "Siding", type: "select", getValue: (row) => row.siding || "-" },
+  { key: "route", label: "Route", type: "select", getValue: (row) => row.route || "-" },
+  { key: "oreType", label: "Ore Type", type: "select", getValue: (row) => row.oreType || "-" },
+  { key: "customer", label: "Customer", type: "select", getValue: (row) => row.customer || "-" },
+  { key: "destination", label: "Destination", type: "select", getValue: (row) => row.destination || "-" },
+  { key: "wagonType", label: "Wagon Type", type: "select", getValue: (row) => row.wagonType || "-" },
+  { key: "wagonSupply", label: "Wagon Supply", getValue: (row) => row.wagonSupply ?? "-" },
+  { key: "fNote", label: "F-Note", getValue: (row) => row.fNote || "-" },
+  {
+    key: "adjustOfferFor",
+    label: "Offered For",
+    type: "select",
+    getValue: (row) => (row.adjustOfferFor && row.adjustOfferFor !== "-" ? row.adjustOfferFor : ""),
+  },
+  {
+    key: "offerTime",
+    label: "Offer Time",
+    getValue: (row) => formatDateTimeForTable(row.offerTime) || String(row.offerTime || "-"),
+  },
+  { key: "status", label: "Status", type: "select", getValue: getOfferedRakeStatusLabel },
+];
 
 export default function OfferedRakesTable({
   sortedRows,
@@ -52,6 +91,15 @@ export default function OfferedRakesTable({
   formNotice = "",
   saving = false,
 }) {
+  const columnFilters = useColumnFilters(OFFERED_RAKE_FILTER_COLUMNS);
+  const columnVisibility = useColumnVisibility(RAKE_HIDDEN_COLS_KEY, OFFERED_RAKE_FILTER_COLUMNS, {
+    onHide: (keys) => keys.forEach((k) => columnFilters.setFilter(k, "")),
+  });
+  const { applyFilters } = columnFilters;
+  const filteredRows = useMemo(() => applyFilters(sortedRows), [applyFilters, sortedRows]);
+  const { pageItems: pagedRows, paginationProps } = useClientPagination(filteredRows, {
+    resetKey: `${search}|${sortBy}|${sortOrder}|${columnFilters.filterKey}`,
+  });
   const inputClass = uniformInputClass;
   const compactInputClass = `${inputClass} h-8 px-2 text-[11px]`;
   const headerButtonClass =
@@ -103,12 +151,18 @@ export default function OfferedRakesTable({
         </button>
       </div>
 
-      <SearchBar
-        placeholder="Search by rake id, number, route or customer..."
-        value={search}
-        onChange={setSearch}
-        showFilter={false}
-      />
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <SearchBar
+            placeholder="Search by rake id, number, route or customer..."
+            value={search}
+            onChange={setSearch}
+            showFilter={false}
+          />
+        </div>
+        <ColumnSettingsMenu {...columnVisibility.menuProps} />
+      </div>
+      <style>{columnVisibility.css}</style>
 
       {formError ? (
         <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
@@ -123,7 +177,7 @@ export default function OfferedRakesTable({
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-475 whitespace-nowrap">
+          <table data-colset={RAKE_HIDDEN_COLS_KEY} className="w-full min-w-475 whitespace-nowrap">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th className="sticky left-0 z-30 border-r border-slate-200/70 bg-slate-50 px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
@@ -169,6 +223,7 @@ export default function OfferedRakesTable({
                   <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                 </th>
               </tr>
+              <ColumnFilterRow {...columnFilters.filterRowProps} rows={sortedRows} />
             </thead>
             <tbody className="divide-y divide-slate-100">
               <tr className="bg-blue-50/50 align-top [&>td]:py-4">
@@ -393,7 +448,7 @@ export default function OfferedRakesTable({
                 </td>
               </tr>
 
-              {sortedRows.length === 0 ? (
+              {filteredRows.length === 0 ? (
                 <tr>
                   <td colSpan={14} className="px-5 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
@@ -413,13 +468,13 @@ export default function OfferedRakesTable({
                         No rakes found
                       </p>
                       <p className="text-[13px] text-slate-400">
-                        Try adjusting your search keyword.
+                        Try adjusting your search keyword or column filters.
                       </p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                sortedRows.map((row) => {
+                pagedRows.map((row) => {
                   const formattedOfferTime =
                     formatDateTimeForTable(row.offerTime) || String(row.offerTime || "-");
                   const [offerDate = "-", offerClock = "-"] = formattedOfferTime.split(" ");
@@ -567,8 +622,8 @@ export default function OfferedRakesTable({
           </table>
         </div>
 
-        <div className="border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500">
-          Showing <span className="font-semibold text-slate-700">{sortedRows.length}</span> record(s)
+        <div className="px-5 pb-4">
+          <Pagination {...paginationProps} />
         </div>
       </div>
     </div>

@@ -5,6 +5,8 @@ import Modal from "../../../components/shared/Modal";
 import SearchBar from "../../../components/shared/SearchBar";
 import Pagination from "../../../components/shared/Pagination";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import { useServerColumnFilters } from "../../../hooks/useColumnFilters";
 import {
   uniformInputClass,
   UniformFormField,
@@ -22,6 +24,18 @@ function formatDate(iso) {
     hour: "2-digit", minute: "2-digit", hour12: true,
   });
 }
+
+const createdByLabel = (role) => role.created_by_name || `ID: ${role.created_by}`;
+
+const ROLE_FILTER_COLUMNS = [
+  { key: "serial", type: "none" },
+  { key: "role_name", label: "Role Name" },
+  { key: "role_description", label: "Description", getValue: (role) => role.role_description || "—" },
+  { key: "privilege_names", label: "Privileges" },
+  { key: "created_by_name", label: "Created By", getValue: createdByLabel },
+  { key: "created_on", label: "Created On", getValue: (role) => formatDate(role.created_on) },
+  { key: "actions", type: "none", className: "sticky right-0 z-20 border-l border-slate-200/70 bg-white" },
+];
 
 /* ─────────────────────────────────────────────────────────────────
    Small reusable pieces
@@ -46,17 +60,18 @@ function SkeletonRows({ cols }) {
   ));
 }
 
-function EmptyState({ search, colSpan }) {
+function EmptyState({ search, filtering, colSpan }) {
+  const narrowed = search || filtering;
   return (
     <tr>
       <td colSpan={colSpan} className="py-16 text-center">
         <RolesIcon size={36} className="mx-auto mb-3 text-slate-300" />
         <p className="text-[14px] font-semibold text-slate-500">
-          {search ? "No roles match your search" : "No roles found"}
+          {narrowed ? "No roles match your search or filters" : "No roles found"}
         </p>
         <p className="mt-1 text-[12px] text-slate-400">
-          {search
-            ? "Try a different search term."
+          {narrowed
+            ? "Try a different search term or clear the column filters."
             : "Create a role with the button above to get started."}
         </p>
       </td>
@@ -538,14 +553,34 @@ export default function RoleManagementPage() {
     return () => clearTimeout(t);
   }, [search]);
 
+  const sorted = useMemo(() => {
+    return [...roles].sort((a, b) => {
+      const av = String(a[sortBy] ?? "").toLowerCase();
+      const bv = String(b[sortBy] ?? "").toLowerCase();
+      if (av === bv) return 0;
+      const cmp = av > bv ? 1 : -1;
+      return sortOrder === "asc" ? cmp : -cmp;
+    });
+  }, [roles, sortBy, sortOrder]);
+
+  const resetPage = useCallback(() => setCurrentPage(1), []);
+  const columnFilters = useServerColumnFilters(ROLE_FILTER_COLUMNS, {
+    rows: sorted,
+    totalCount,
+    currentPage,
+    pageSize: PAGE_SIZE,
+    onChange: resetPage,
+  });
+  const { serverPage, serverPageSize, pageRows } = columnFilters;
+
   /* fetch roles */
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const data = await fetchRoles({
-        page: currentPage,
-        page_size: PAGE_SIZE,
+        page: serverPage,
+        page_size: serverPageSize,
         ...(debouncedSearch ? { search: debouncedSearch } : {}),
       });
       setRoles(data.results ?? []);
@@ -556,7 +591,7 @@ export default function RoleManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, debouncedSearch]);
+  }, [serverPage, serverPageSize, debouncedSearch]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -574,22 +609,11 @@ export default function RoleManagementPage() {
     load();
   }
 
-  const sorted = useMemo(() => {
-    return [...roles].sort((a, b) => {
-      const av = String(a[sortBy] ?? "").toLowerCase();
-      const bv = String(b[sortBy] ?? "").toLowerCase();
-      if (av === bv) return 0;
-      const cmp = av > bv ? 1 : -1;
-      return sortOrder === "asc" ? cmp : -cmp;
-    });
-  }, [roles, sortBy, sortOrder]);
-
   function handleSort(field) {
     if (sortBy === field) setSortOrder((p) => (p === "asc" ? "desc" : "asc"));
     else { setSortBy(field); setSortOrder("asc"); }
   }
 
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
   const COL_COUNT = 7;
 
   return (
@@ -680,15 +704,16 @@ export default function RoleManagementPage() {
                     Actions
                   </th>
                 </tr>
+                <ColumnFilterRow {...columnFilters.filterRowProps} rows={roles} />
               </thead>
 
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <SkeletonRows cols={COL_COUNT} />
-                ) : sorted.length === 0 ? (
-                  <EmptyState search={debouncedSearch} colSpan={COL_COUNT} />
+                ) : pageRows.length === 0 ? (
+                  <EmptyState search={debouncedSearch} filtering={columnFilters.isFiltering} colSpan={COL_COUNT} />
                 ) : (
-                  sorted.map((role, idx) => (
+                  pageRows.map((role, idx) => (
                     <tr key={role.id} className="group transition-colors hover:bg-blue-50/30">
                       <td className="px-5 py-4 text-[12px] font-medium text-slate-400">
                         {(currentPage - 1) * PAGE_SIZE + idx + 1}
@@ -713,7 +738,7 @@ export default function RoleManagementPage() {
                             {role.created_by_name?.[0] ?? "?"}
                           </div>
                           <span className="text-slate-700">
-                            {role.created_by_name || `ID: ${role.created_by}`}
+                            {createdByLabel(role)}
                           </span>
                         </div>
                       </td>
@@ -737,12 +762,12 @@ export default function RoleManagementPage() {
             </table>
           </div>
 
-          {!loading && !error && totalCount > 0 && (
+          {!loading && !error && columnFilters.count > 0 && (
             <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-3">
               <Pagination
                 currentPage={currentPage}
-                totalPages={totalPages}
-                totalCount={totalCount}
+                totalPages={columnFilters.totalPages}
+                totalCount={columnFilters.count}
                 pageSize={PAGE_SIZE}
                 onPageChange={setCurrentPage}
               />

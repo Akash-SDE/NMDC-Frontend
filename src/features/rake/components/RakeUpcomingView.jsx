@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef } from "react";
 import { CalendarIcon, ClearIcon, DeleteIcon, PlusIcon } from "../../../components/icons";
 import {
   uniformInputClass,
@@ -6,6 +7,35 @@ import {
 } from "../../../components/shared/UniformUi";
 import { formatDateTimeForTable } from "../../../utils/dateUtils";
 import { isUpcomingRowReady } from "../constants/rakeConstants";
+import Pagination from "../../../components/shared/Pagination";
+import { useClientPagination } from "../../../hooks/useClientPagination";
+import { useColumnFilters } from "../../../hooks/useColumnFilters";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+
+const UPCOMING_OFFERED_FILTER_COLUMNS = [
+  { key: "sno", type: "none" },
+  { key: "rakeNumber", label: "Rake Number", getValue: (row) => row.rakeNumber || "-" },
+  {
+    key: "status",
+    label: "Status",
+    type: "select",
+    getValue: (row) => row.statusDescription || row.status || "Offered",
+  },
+  { key: "oreType", label: "Ore Type", type: "select", getValue: (row) => row.oreType || "-" },
+  { key: "siding", label: "Siding", type: "select", getValue: (row) => row.siding || "-" },
+  { key: "destination", label: "Destination", type: "select", getValue: (row) => row.destination || "-" },
+  { key: "wagonType", label: "Wagon Type", type: "select", getValue: (row) => row.wagonType || "-" },
+  { key: "wagons", label: "Wagons", getValue: (row) => row.noOfWagons ?? row.wagonSupply ?? "-" },
+  { key: "route", label: "Route", type: "select", getValue: (row) => row.route || "-" },
+  { key: "customer", label: "Customer", type: "select", getValue: (row) => row.customer || "-" },
+  { key: "offerTime", label: "Offer Time", getValue: (row) => formatDateTimeForTable(row.offerTime) },
+];
+
+function lookupLabel(options, id) {
+  if (id === null || id === undefined || id === "") return "";
+  const match = (options ?? []).find((option) => String(option.id) === String(id));
+  return match ? match.label : "";
+}
 
 export default function RakeUpcomingView({
   onNavigateBack,
@@ -29,6 +59,93 @@ export default function RakeUpcomingView({
     wagonTypes: [],
   },
 }) {
+  const draftFilterColumns = useMemo(
+    () => [
+      { key: "actions", type: "none", className: "sticky left-0 z-20 bg-white" },
+      { key: "sno", type: "none" },
+      {
+        key: "status",
+        label: "Status",
+        type: "select",
+        getValue: (row) => (isUpcomingRowReady(row) ? "Ready" : "Incomplete"),
+      },
+      {
+        key: "oreType",
+        label: "Ore Type",
+        type: "select",
+        getValue: (row) => lookupLabel(lookupOptions.oreTypes, row.oreType),
+      },
+      {
+        key: "siding",
+        label: "Siding",
+        type: "select",
+        getValue: (row) => lookupLabel(lookupOptions.sidings, row.siding),
+      },
+      {
+        key: "destination",
+        label: "Destination",
+        type: "select",
+        getValue: (row) => lookupLabel(lookupOptions.destinations, row.destination),
+      },
+      {
+        key: "wagonType",
+        label: "Wagon Type",
+        type: "select",
+        getValue: (row) => lookupLabel(lookupOptions.wagonTypes, row.wagonType),
+      },
+      { key: "wagonCount", label: "Wagons" },
+      {
+        key: "route",
+        label: "Route",
+        type: "select",
+        getValue: (row) => lookupLabel(lookupOptions.routes, row.route),
+      },
+      {
+        key: "customer",
+        label: "Customer",
+        type: "select",
+        getValue: (row) => lookupLabel(lookupOptions.customers, row.customer),
+      },
+      {
+        key: "placementTime",
+        label: "Placement Time",
+        getValue: (row) => formatDateTimeForTable(row.placementTime),
+      },
+    ],
+    [lookupOptions],
+  );
+  const draftFilters = useColumnFilters(draftFilterColumns);
+  const offeredFilters = useColumnFilters(UPCOMING_OFFERED_FILTER_COLUMNS);
+  const { applyFilters: applyDraftFilters, clearFilters: clearDraftFilters } = draftFilters;
+  const { applyFilters: applyOfferedFilters } = offeredFilters;
+  const filteredUpcomingRows = useMemo(
+    () => applyDraftFilters(upcomingRows),
+    [applyDraftFilters, upcomingRows],
+  );
+  const filteredUpcomingOfferedRows = useMemo(
+    () => applyOfferedFilters(upcomingOfferedRows),
+    [applyOfferedFilters, upcomingOfferedRows],
+  );
+
+  const draftPaging = useClientPagination(filteredUpcomingRows, { resetKey: draftFilters.filterKey });
+  const offeredPaging = useClientPagination(filteredUpcomingOfferedRows, {
+    resetKey: offeredFilters.filterKey,
+  });
+  const previousDraftCount = useRef(upcomingRows.length);
+  const { totalPages: draftTotalPages, setCurrentPage: setDraftPage } = draftPaging;
+
+  const handleAddUpcomingRow = () => {
+    clearDraftFilters();
+    onAddUpcomingRow();
+  };
+
+  useEffect(() => {
+    if (upcomingRows.length > previousDraftCount.current) {
+      setDraftPage(draftTotalPages);
+    }
+    previousDraftCount.current = upcomingRows.length;
+  }, [upcomingRows.length, draftTotalPages, setDraftPage]);
+
   const inputClass = uniformInputClass;
   const compactInputClass = `${inputClass} h-9 px-2 text-[12px]`;
   const toolbarButtonClass =
@@ -114,7 +231,7 @@ export default function RakeUpcomingView({
           <div className="mt-3 flex flex-nowrap items-center gap-2 overflow-x-auto pb-0.5">
             <button
               type="button"
-              onClick={onAddUpcomingRow}
+              onClick={handleAddUpcomingRow}
               disabled={moving}
               className={`${toolbarButtonClass} border border-slate-300 bg-white text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50`}
             >
@@ -181,6 +298,7 @@ export default function RakeUpcomingView({
                   Placement Time
                 </th>
               </tr>
+              <ColumnFilterRow {...draftFilters.filterRowProps} rows={upcomingRows} cellClassName="px-4 py-2" />
             </thead>
             <tbody className="divide-y divide-slate-100">
               {upcomingRows.length === 0 ? (
@@ -189,8 +307,14 @@ export default function RakeUpcomingView({
                     No draft rakes yet. Use Add row to plan one.
                   </td>
                 </tr>
+              ) : filteredUpcomingRows.length === 0 ? (
+                <tr>
+                  <td colSpan={11} className="px-4 py-8 text-center text-[13px] text-slate-500">
+                    No draft rakes match the column filters. Clear the filters to see all rows.
+                  </td>
+                </tr>
               ) : null}
-              {upcomingRows.map((row, index) => {
+              {draftPaging.pageItems.map((row, index) => {
                 const ready = isUpcomingRowReady(row);
 
                 return (
@@ -211,7 +335,7 @@ export default function RakeUpcomingView({
                       </button>
                     </td>
                     <td className="px-4 py-3 text-[12px] font-semibold text-slate-500">
-                      {index + 1}
+                      {(draftPaging.currentPage - 1) * draftPaging.pageSize + index + 1}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -272,6 +396,12 @@ export default function RakeUpcomingView({
           </table>
         </div>
 
+        {upcomingRows.length > 0 ? (
+          <div className="px-4 pb-4">
+            <Pagination {...draftPaging.paginationProps} />
+          </div>
+        ) : null}
+
         {upcomingOfferedRows.length > 0 ? (
           <div className="border-t border-slate-200 bg-slate-50/40">
             <div className="border-b border-slate-100 px-4 py-4">
@@ -319,12 +449,24 @@ export default function RakeUpcomingView({
                       Offer Time
                     </th>
                   </tr>
+                  <ColumnFilterRow
+                    {...offeredFilters.filterRowProps}
+                    rows={upcomingOfferedRows}
+                    cellClassName="px-4 py-2"
+                  />
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {upcomingOfferedRows.map((row, index) => (
+                  {filteredUpcomingOfferedRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} className="bg-white px-4 py-8 text-center text-[13px] text-slate-500">
+                        No upcoming offered rakes match the column filters. Clear the filters to see all rows.
+                      </td>
+                    </tr>
+                  ) : null}
+                  {offeredPaging.pageItems.map((row, index) => (
                     <tr key={row.rakeId} className="bg-white">
                       <td className="px-4 py-3 text-[12px] font-semibold text-slate-500">
-                        {index + 1}
+                        {(offeredPaging.currentPage - 1) * offeredPaging.pageSize + index + 1}
                       </td>
                       <td className="px-4 py-3 text-[12px] font-semibold text-slate-700">
                         {row.rakeNumber || "-"}
@@ -350,6 +492,9 @@ export default function RakeUpcomingView({
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="px-4 pb-4">
+              <Pagination {...offeredPaging.paginationProps} />
             </div>
           </div>
         ) : null}

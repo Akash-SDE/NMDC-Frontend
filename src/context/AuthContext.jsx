@@ -6,11 +6,20 @@ import {
   useMemo,
   useState,
 } from "react";
-import { AUTH_STORAGE_KEY, AUTH_TAB_SESSION_KEY, TOKEN_STORAGE_KEY } from "../constants/storageKeys";
+import {
+  AUTH_STORAGE_KEY,
+  AUTH_TAB_SESSION_KEY,
+  SESSION_EXPIRED_FLAG_KEY,
+  TOKEN_STORAGE_KEY,
+} from "../constants/storageKeys";
 import { USER_ROLES, DEFAULT_ROUTE_BY_ROLE } from "../constants/roles";
 import { loginWithOtp, sendLoginOtp } from "../services/auth/authService";
 import { fetchProfile } from "../services/profileService";
 import { writeTokens } from "../api/axiosClient";
+import { getSessionExpiry, isSessionExpired, onSessionExpired } from "../api/session";
+import { readStoredTokens } from "../utils/mockSession";
+
+const MAX_TIMEOUT_MS = 2 ** 31 - 1;
 
 const AuthContext = createContext(null);
 
@@ -82,7 +91,10 @@ export function AuthProvider({ children }) {
   /* restore session on mount */
   useEffect(() => {
     const session = readStoredSession();
-    if (session) {
+    if (session && isSessionExpired(readStoredTokens())) {
+      clearStoredSession();
+      sessionStorage.setItem(SESSION_EXPIRED_FLAG_KEY, "1");
+    } else if (session) {
       setUser(session.user ?? null);
       setProfile(session.profile ?? null);
       setUserRole(session.userRole);
@@ -99,6 +111,7 @@ export function AuthProvider({ children }) {
       setIsAuthenticated(true);
       setTokens(authTokens);
       writeTokens(authTokens);
+      sessionStorage.removeItem(SESSION_EXPIRED_FLAG_KEY);
 
       writeStoredSession(
         { isAuthenticated: true, userRole: role, user: userData, profile: profileData },
@@ -158,6 +171,38 @@ export function AuthProvider({ children }) {
     setTokens({ access: null, refresh: null });
     clearStoredSession();
   }, []);
+
+  const expireSession = useCallback(() => {
+    sessionStorage.setItem(SESSION_EXPIRED_FLAG_KEY, "1");
+    logout();
+  }, [logout]);
+
+  useEffect(() => onSessionExpired(expireSession), [expireSession]);
+
+  /* log out as soon as the session's tokens expire, even if no request is made */
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+
+    const check = () => {
+      if (isSessionExpired(readStoredTokens())) expireSession();
+    };
+    const expiry = getSessionExpiry(readStoredTokens());
+    const timer =
+      expiry === null
+        ? null
+        : setTimeout(check, Math.min(Math.max(expiry - Date.now() + 1000, 0), MAX_TIMEOUT_MS));
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") check();
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", check);
+    return () => {
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", check);
+    };
+  }, [isAuthenticated, tokens, expireSession]);
 
   const value = useMemo(
     () => ({

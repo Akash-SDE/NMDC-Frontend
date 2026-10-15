@@ -5,6 +5,8 @@ import {
   uniformInputClass,
   uniformPrimaryButtonClass,
 } from "../../../components/shared/UniformUi";
+import { useColumnFilters } from "../../../hooks/useColumnFilters";
+import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 
 const initialRows = [
   {
@@ -69,6 +71,31 @@ export default function EditRakeTimingPage() {
     if (!appliedDate) return rows;
     return rows.filter((row) => row.completionDate === appliedDate);
   }, [rows, appliedDate]);
+
+  // Timing filters match the saved values so a row doesn't disappear while its inputs are being edited.
+  const filterColumns = useMemo(
+    () => [
+      { key: "id", label: "Sl No" },
+      { key: "rakeNumber", label: "Rake Number" },
+      { key: "customer", label: "Customer", type: "select", className: "hidden lg:table-cell" },
+      { key: "destination", label: "Destination", type: "select", className: "hidden lg:table-cell" },
+      {
+        key: "offerTime",
+        label: "Offer Time",
+        getValue: (row) => formatDateTime(savedRows[row.id]?.offerTime ?? row.offerTime),
+      },
+      {
+        key: "completionTime",
+        label: "Completion Time",
+        getValue: (row) => formatDateTime(savedRows[row.id]?.completionTime ?? row.completionTime),
+      },
+      { key: "action", type: "none" },
+    ],
+    [savedRows],
+  );
+  const columnFilters = useColumnFilters(filterColumns);
+  const { applyFilters } = columnFilters;
+  const columnFilteredRows = useMemo(() => applyFilters(filteredRows), [applyFilters, filteredRows]);
 
   function handleSearch(event) {
     event.preventDefault();
@@ -140,10 +167,11 @@ export default function EditRakeTimingPage() {
                 <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Completion Time</th>
                 <th className="px-5 py-3.5 text-right text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Action</th>
               </tr>
+              <ColumnFilterRow {...columnFilters.filterRowProps} rows={filteredRows} />
             </thead>
             <tbody>
-              {filteredRows.length > 0 ? (
-                filteredRows.map((row) => {
+              {columnFilteredRows.length > 0 ? (
+                columnFilteredRows.map((row) => {
                   const dirty = isRowDirty(row);
 
                   return (
@@ -205,7 +233,7 @@ export default function EditRakeTimingPage() {
               ) : (
                 <tr>
                   <td colSpan={7} className="px-5 py-12 text-center text-[14px] text-slate-500">
-                    No Records Found
+                    {columnFilters.isFiltering ? "No records match the column filters." : "No Records Found"}
                   </td>
                 </tr>
               )}

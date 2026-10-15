@@ -15,3 +15,10 @@ export function createDelayRecord(data) {
     body: JSON.stringify(data),
   });
 }
+
+export function updateDelayRecord(id, data) {
+  return apiRequest(`${BASE}/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
