@@ -230,6 +230,7 @@ export default function RakeUpcomingView({
           </p>
           <div className="mt-3 flex flex-nowrap items-center gap-2 overflow-x-auto pb-0.5">
             <button
+              data-write
               type="button"
               onClick={handleAddUpcomingRow}
               disabled={moving}
@@ -239,6 +240,7 @@ export default function RakeUpcomingView({
               Add row
             </button>
             <button
+              data-write
               type="button"
               onClick={onClearUpcomingRakes}
               disabled={moving || upcomingRows.length === 0}
@@ -248,6 +250,7 @@ export default function RakeUpcomingView({
               Clear all
             </button>
             <button
+              data-write
               type="button"
               onClick={onSaveUpcomingRakes}
               disabled={moving || upcomingStats.readyCount === 0}
@@ -319,11 +322,13 @@ export default function RakeUpcomingView({
 
                 return (
                   <tr
+                    data-write
                     key={row.id}
                     className={`transition-colors ${ready ? "bg-white" : "bg-amber-50/20"}`}
                   >
                     <td className="sticky left-0 z-10 border-r border-slate-100 bg-inherit px-4 py-3">
                       <button
+                        data-write
                         type="button"
                         onClick={() => onRemoveUpcomingRow(row.id)}
                         disabled={moving}

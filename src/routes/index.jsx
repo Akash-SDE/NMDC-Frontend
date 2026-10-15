@@ -92,7 +92,7 @@ export function AppRoutes() {
         </Route>
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={[USER_ROLES.ADMIN]} />}>
+      <Route element={<ProtectedRoute allowedRoles={[USER_ROLES.ADMIN, ...RAILWAY_ROLES]} />}>
         <Route element={<AdminLayout />}>
           <Route path="/" element={<Navigate to={ROUTES.ADMIN.DASHBOARD} replace />} />
           <Route
@@ -135,38 +135,40 @@ export function AppRoutes() {
               </Lazy>
             }
           />
-          <Route
-            path={`${ROUTES.ADMIN.USERS}/*`}
-            element={
-              <Lazy>
-                <AdminUsersPage />
-              </Lazy>
-            }
-          />
-          <Route
-            path={`${ROUTES.ADMIN.REPORTS}/*`}
-            element={
-              <Lazy>
-                <ReportsRoutes />
-              </Lazy>
-            }
-          />
-          <Route
-            path={`${ROUTES.ADMIN.MASTER_DATA}/*`}
-            element={
-              <Lazy>
-                <MasterDataRoutes />
-              </Lazy>
-            }
-          />
-          <Route
-            path="/admin/tools/*"
-            element={
-              <Lazy>
-                <AdminToolsRoutes />
-              </Lazy>
-            }
-          />
+          <Route element={<ProtectedRoute allowedRoles={[USER_ROLES.ADMIN]} />}>
+            <Route
+              path={`${ROUTES.ADMIN.USERS}/*`}
+              element={
+                <Lazy>
+                  <AdminUsersPage />
+                </Lazy>
+              }
+            />
+            <Route
+              path={`${ROUTES.ADMIN.REPORTS}/*`}
+              element={
+                <Lazy>
+                  <ReportsRoutes />
+                </Lazy>
+              }
+            />
+            <Route
+              path={`${ROUTES.ADMIN.MASTER_DATA}/*`}
+              element={
+                <Lazy>
+                  <MasterDataRoutes />
+                </Lazy>
+              }
+            />
+            <Route
+              path="/admin/tools/*"
+              element={
+                <Lazy>
+                  <AdminToolsRoutes />
+                </Lazy>
+              }
+            />
+          </Route>
           <Route
             path={`${ROUTES.ADMIN.RAILWAY_APPROVALS}/*`}
             element={

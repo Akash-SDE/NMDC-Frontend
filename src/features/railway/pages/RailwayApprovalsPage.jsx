@@ -32,7 +32,7 @@ import {
   wagonListFromInput,
 } from "../../../utils/wagonInspectionUtils";
 import { useAuth } from "../../../context/AuthContext";
-import { USER_ROLES } from "../../../constants/roles";
+import { RAILWAY_DEPARTMENT_BY_ROLE, USER_ROLES } from "../../../constants/roles";
 import {
   APPROVAL_DEPARTMENTS,
   APPROVAL_STATUS,
@@ -74,13 +74,6 @@ const DEPARTMENT_TABS = [
   { id: APPROVAL_DEPARTMENTS.COMMERCIAL, label: "Railway Commercial" },
   { id: APPROVAL_DEPARTMENTS.CW, label: "Railway C&W" },
 ];
-
-function resolveDefaultDepartment(userRole) {
-  if (userRole === USER_ROLES.ADMIN) return ADMIN_ALL_TAB;
-  if (userRole === USER_ROLES.COMMERCIAL) return APPROVAL_DEPARTMENTS.COMMERCIAL;
-  if (userRole === USER_ROLES.CW_INSPECTOR) return APPROVAL_DEPARTMENTS.CW;
-  return APPROVAL_DEPARTMENTS.OPERATIONS;
-}
 
 function buildDecisionActor(user, department, isAdminProxy) {
   const baseName = user?.name || user?.email || "User";
@@ -140,13 +133,15 @@ export default function RailwayApprovalsPage() {
   const approvalError = useSelector((state) => state.approvals.error);
   const [loadingItems, setLoadingItems] = useState([]);
 
-  const isAdminProxy = userRole === USER_ROLES.ADMIN;
+  const isAdminProxy = userRole === USER_ROLES.ADMIN || userRole === USER_ROLES.SUPERADMIN;
+  const ownDepartment = isAdminProxy
+    ? null
+    : RAILWAY_DEPARTMENT_BY_ROLE[userRole] ?? APPROVAL_DEPARTMENTS.OPERATIONS;
   const visibleTabs = isAdminProxy
     ? [{ id: ADMIN_ALL_TAB, label: "All Pending" }, ...DEPARTMENT_TABS]
-    : DEPARTMENT_TABS;
+    : DEPARTMENT_TABS.filter((tab) => tab.id === ownDepartment);
 
-  const activeDepartment =
-    searchParams.get("dept") || resolveDefaultDepartment(userRole);
+  const activeDepartment = ownDepartment ?? (searchParams.get("dept") || ADMIN_ALL_TAB);
   const focusedLoadingId = searchParams.get("loadingId");
   const [search, setSearch] = useState("");
   const [selectedApproval, setSelectedApproval] = useState(null);
@@ -182,7 +177,11 @@ export default function RailwayApprovalsPage() {
 
   const visibleQueueItems = useMemo(() => {
     if (focusedLoadingId) {
-      return approvals.filter((approval) => String(approval.loadingId) === String(focusedLoadingId));
+      return approvals.filter(
+        (approval) =>
+          String(approval.loadingId) === String(focusedLoadingId) &&
+          (isAdminProxy || canDepartmentAct(approval, activeDepartment)),
+      );
     }
     return isAdminProxy && activeDepartment === ADMIN_ALL_TAB
       ? approvals.filter(isApprovalAwaitingAction)

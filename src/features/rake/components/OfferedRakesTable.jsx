@@ -21,6 +21,7 @@ import { useClientPagination } from "../../../hooks/useClientPagination";
 import { useColumnFilters } from "../../../hooks/useColumnFilters";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 import ColumnSettingsMenu from "../../../components/shared/ColumnSettingsMenu";
+import SearchableSelect from "../../../components/shared/SearchableSelect";
 import { useColumnVisibility } from "../../../hooks/useColumnVisibility";
 
 const getOfferedRakeStatusLabel = (row) =>
@@ -226,7 +227,7 @@ export default function OfferedRakesTable({
               <ColumnFilterRow {...columnFilters.filterRowProps} rows={sortedRows} />
             </thead>
             <tbody className="divide-y divide-slate-100">
-              <tr className="bg-blue-50/50 align-top [&>td]:py-4">
+              <tr data-write className="bg-blue-50/50 align-top [&>td]:py-4">
                 <td className="sticky left-0 z-20 border-r border-slate-200/70 bg-blue-50 px-5 py-3">
                   <div className="flex flex-col items-center gap-2">
                     {inlineActionMode !== "add" ? (
@@ -392,10 +393,10 @@ export default function OfferedRakesTable({
                   />
                 </td>
                 <td className="px-5 py-3">
-                  <input
-                    type="text"
+                  <SearchableSelect
                     value={offeringForm.fNote}
-                    onChange={(event) => updateOffering("fNote", event.target.value)}
+                    onChange={(fNote) => updateOffering("fNote", fNote)}
+                    options={[...new Set([offeringForm.fNote, ...(lookupOptions.fNotes ?? [])])].filter(Boolean)}
                     placeholder="F-Note"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
@@ -498,6 +499,7 @@ export default function OfferedRakesTable({
                       >
                         <div className="flex items-center justify-center gap-2 opacity-60 transition-opacity group-hover:opacity-100">
                           <button
+                            data-write
                             type="button"
                             onClick={() => onEditOffered(row)}
                             disabled={row.isDisabled}
@@ -512,6 +514,7 @@ export default function OfferedRakesTable({
                           </button>
 
                           <button
+                            data-write
                             type="button"
                             onClick={() => onOpenAdjustment(row)}
                             disabled={row.isDisabled}
@@ -527,6 +530,7 @@ export default function OfferedRakesTable({
                           </button>
 
                           <button
+                            data-write
                             type="button"
                             onClick={() => onLoadRedirect(row)}
                             disabled={row.isDisabled}
@@ -542,6 +546,7 @@ export default function OfferedRakesTable({
                           </button>
 
                           <button
+                            data-write
                             type="button"
                             onClick={() => onRequestStatusToggle(row.rakeId)}
                             className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${

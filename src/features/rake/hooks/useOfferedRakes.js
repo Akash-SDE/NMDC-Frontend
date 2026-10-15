@@ -6,6 +6,7 @@ import { createRake, listRakes, updateRake } from "../../../services/rakeManagem
 import { fetchRoutes } from "../../../services/routeService";
 import { fetchSidings } from "../../../services/sidingService";
 import { fetchWagonTypes } from "../../../services/wagonTypeService";
+import { listEDemands } from "../../../services/edemandService";
 
 const RAKE_STATUS_DRAFT = 5;
 const RAKE_STATUS_CANCELLED = 50;
@@ -17,6 +18,7 @@ const emptyLookupOptions = {
   customers: [],
   destinations: [],
   wagonTypes: [],
+  fNotes: [],
 };
 
 function asResults(response) {
@@ -111,7 +113,7 @@ export function useOfferedRakes() {
 
     async function loadLookupOptions() {
       try {
-        const [sidings, routes, oreTypes, customers, destinations, wagonTypes] =
+        const [sidings, routes, oreTypes, customers, destinations, wagonTypes, demands] =
           await Promise.all([
             fetchSidings({ page_size: 1000 }),
             fetchRoutes({ page_size: 1000 }),
@@ -119,6 +121,7 @@ export function useOfferedRakes() {
             fetchCustomers({ page_size: 1000 }),
             fetchDestinations({ page_size: 1000 }),
             fetchWagonTypes({ page_size: 1000 }),
+            listEDemands().catch(() => []),
           ]);
 
         if (cancelled) return;
@@ -139,6 +142,7 @@ export function useOfferedRakes() {
             (item) => item.destination_name,
           ),
           wagonTypes: toLookupOptions(asResults(wagonTypes), (item) => item.wagon_type),
+          fNotes: [...new Set(demands.map((demand) => demand.fNote).filter(Boolean))].sort(),
         });
       } catch (err) {
         console.error("Failed to load rake form options:", err);

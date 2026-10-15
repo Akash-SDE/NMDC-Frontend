@@ -505,6 +505,7 @@ function RoleFormModal({ isOpen, onClose, onSuccess, editRole }) {
             Cancel
           </button>
           <button
+            data-write
             type="submit"
             disabled={submitting}
             className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-700 to-blue-600 px-5 py-2 text-[13px] font-semibold text-white shadow-sm hover:from-blue-800 hover:to-blue-700 disabled:opacity-60"
@@ -641,6 +642,7 @@ export default function RoleManagementPage() {
               </div>
             )}
             <button
+              data-write
               type="button"
               onClick={openCreate}
               className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-700 to-blue-600 px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm hover:from-blue-800 hover:to-blue-700 transition-all"
@@ -747,6 +749,7 @@ export default function RoleManagementPage() {
                       </td>
                       <td className="sticky right-0 z-10 w-[80px] border-l border-slate-200/70 bg-white px-4 py-4 text-center shadow-[-4px_0_8px_-4px_rgba(15,23,42,0.08)] group-hover:bg-blue-50/30">
                         <button
+                          data-write
                           type="button"
                           onClick={() => openEdit(role)}
                           title="Edit role"

@@ -76,7 +76,6 @@ function compareValues(a, b, order) {
 
 const DEMAND_FILTER_COLUMNS = [
   { key: "actions", type: "none", className: "sticky left-0 z-30 border-r border-slate-200/70 bg-white" },
-  { key: "id", label: "Sl No", type: "none" },
   { key: "fNote", label: "F-Note" },
   { key: "date", label: "Date", getValue: (row) => formatDate(row.date) },
   { key: "customer", label: "Customer", type: "select" },
@@ -568,6 +567,7 @@ export default function EDemandManagementPage() {
                             />
                             {isPermitNumberDirty ? (
                               <button
+                                data-write
                                 type="button"
                                 onClick={() => handleSavePermitNumber(row.id)}
                                 className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
@@ -653,15 +653,6 @@ export default function EDemandManagementPage() {
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   <SortHeaderButton
-                    label="Sl No"
-                    field="id"
-                    sortBy={demandSortBy}
-                    sortOrder={demandSortOrder}
-                    onSort={handleDemandSort}
-                  />
-                </th>
-                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
-                  <SortHeaderButton
                     label="F-Note"
                     field="fNote"
                     sortBy={demandSortBy}
@@ -719,7 +710,7 @@ export default function EDemandManagementPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {/* Inline Action Row */}
-              <tr className="bg-blue-50/50 align-top [&>td]:py-4">
+              <tr data-write className="bg-blue-50/50 align-top [&>td]:py-4">
                 <td className="sticky left-0 z-20 border-r border-slate-200/70 bg-blue-50 px-5 py-3">
                   <div className="flex flex-col items-center gap-2">
                     {inlineActionMode === "edit" ? (
@@ -750,12 +741,6 @@ export default function EDemandManagementPage() {
                         <ClearIcon />
                       </button>
                     </div>
-                  </div>
-                </td>
-                <td className="px-5 py-3">
-                  {/* Sl No - auto managed */}
-                  <div className="h-8 flex items-center text-[11px] text-slate-400 italic">
-                    {inlineActionMode === "edit" ? activeInlineDemandId : "Auto"}
                   </div>
                 </td>
                 <td className="px-5 py-3">
@@ -836,7 +821,7 @@ export default function EDemandManagementPage() {
               {demandsLoading ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="px-5 py-12 text-center text-[14px] text-slate-500"
                   >
                     Loading E-Demand records…
@@ -855,6 +840,7 @@ export default function EDemandManagementPage() {
                     <td className="px-5 py-3.5 sticky left-0 z-10 border-r border-slate-200/50 bg-white group-hover:bg-slate-50">
                       <div className="flex items-center justify-center gap-2">
                         <button
+                          data-write
                           type="button"
                           onClick={() => handleEditDemand(row)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
@@ -863,6 +849,7 @@ export default function EDemandManagementPage() {
                           <EditIcon />
                         </button>
                         <button
+                          data-write
                           type="button"
                           onClick={() => requestDemandDelete(row)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
@@ -871,9 +858,6 @@ export default function EDemandManagementPage() {
                           <DeleteIcon />
                         </button>
                       </div>
-                    </td>
-                    <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700">
-                      {row.id}
                     </td>
                     <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-slate-800">
                       {row.fNote}
@@ -898,7 +882,7 @@ export default function EDemandManagementPage() {
               ) : (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="px-5 py-12 text-center text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500"
                   >
                     {isDemandListNarrowed

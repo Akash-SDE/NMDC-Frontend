@@ -152,19 +152,12 @@ const adminSidebarSections = [
   },
 ];
 
-const railwaySidebarSections = [
-  {
-    id: "main",
-    items: [
-      {
-        id: "railway-approvals",
-        label: "Railway Approvals",
-        icon: "rake",
-        active: true,
-      },
-    ],
-  },
-];
+const ADMIN_ONLY_ITEMS = new Set(["master-data", "reports"]);
+
+const railwaySidebarSections = adminSidebarSections.map((section) => ({
+  ...section,
+  items: section.items.filter((item) => !ADMIN_ONLY_ITEMS.has(item.id)),
+}));
 
 export function getSidebarSections(userRole) {
   if (userRole === "station_master" || userRole === "commercial" || userRole === "cw_inspector") {

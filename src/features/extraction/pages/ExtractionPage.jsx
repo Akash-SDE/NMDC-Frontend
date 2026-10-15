@@ -342,6 +342,7 @@ function DetailDrawer({ record, onClose, onReprocess, reprocessing }) {
           <div className="flex items-center gap-2">
             <StatusBadge status={record.status} />
             <button
+              data-write
               type="button"
               onClick={() => onReprocess(record)}
               disabled={reprocessing}
@@ -833,8 +834,8 @@ export default function ExtractionPage() {
             />
           </div>
           <ColumnSettingsMenu {...columnVisibility.menuProps} />
-          <input ref={fileInputRef} type="file" accept="application/pdf" multiple className="hidden" onChange={handleFilePick} />
-          <button type="button" disabled={uploadState.length > 0} onClick={() => fileInputRef.current?.click()}
+          <input data-write ref={fileInputRef} type="file" accept="application/pdf" multiple className="hidden" onChange={handleFilePick} />
+          <button data-write type="button" disabled={uploadState.length > 0} onClick={() => fileInputRef.current?.click()}
             className={`${ICON_BUTTON_CLASS} disabled:cursor-not-allowed disabled:opacity-60`}
             title={uploadState.length > 0 ? "Uploading…" : "Upload PDFs (multiple allowed)"}>
             <Upload size={18} />

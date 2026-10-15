@@ -945,7 +945,7 @@ export default function LoadingManagementPage() {
                 <ColumnFilterRow {...columnFilters.filterRowProps} rows={rows} />
               </thead>
               <tbody className="divide-y divide-slate-100">
-                <tr className="bg-blue-50/50 align-top [&>td]:py-4">
+                <tr data-write className="bg-blue-50/50 align-top [&>td]:py-4">
                   <td className="sticky left-0 z-20 border-r border-slate-200/70 bg-blue-50 px-5 py-3">
                     <div className="flex flex-col items-center gap-2">
                       {inlineActionMode !== "add" ? (
@@ -1258,6 +1258,7 @@ export default function LoadingManagementPage() {
                         >
                           <div className="flex items-center justify-center gap-2 opacity-60 transition-opacity group-hover:opacity-100">
                             <button
+                              data-write
                               type="button"
                               onClick={() => handleEditRow(row)}
                               disabled={row.isDisabled || row.isSubmitted}
@@ -1278,6 +1279,7 @@ export default function LoadingManagementPage() {
                             </button>
 
                             <button
+                              data-write
                               type="button"
                               onClick={() => handleOpenAdjustment(row)}
                               disabled={row.isDisabled}
@@ -1309,6 +1311,7 @@ export default function LoadingManagementPage() {
                             </button>
 
                             <button
+                              data-write
                               type="button"
                               onClick={() => requestRakeStatusToggle(row.id)}
                               className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
@@ -1323,6 +1326,7 @@ export default function LoadingManagementPage() {
 
                             {canFinalSubmit ? (
                               <button
+                                data-write
                                 type="button"
                                 onClick={() => setFinalSubmitTarget(loadingId)}
                                 className="inline-flex h-8 items-center rounded-lg border border-violet-300 bg-violet-50 px-2 text-[10px] font-bold uppercase tracking-[0.04em] text-violet-700 transition-colors hover:bg-violet-100"

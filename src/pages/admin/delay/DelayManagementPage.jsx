@@ -938,7 +938,7 @@ export default function DelayManagementPage() {
                 <ColumnFilterRow {...columnFilters.filterRowProps} rows={registerRows} />
               </thead>
               <tbody className="divide-y divide-slate-100">
-                <tr className="bg-blue-50/50 align-top [&>td]:py-4">
+                <tr data-write className="bg-blue-50/50 align-top [&>td]:py-4">
                   <td className="sticky left-0 z-20 border-r border-slate-200/70 bg-blue-50 px-5 py-3">
                     <div className="flex flex-col items-center gap-2">
                       {inlineActionMode !== "add" ? (
@@ -1172,6 +1172,7 @@ export default function DelayManagementPage() {
                         >
                           <div className="flex items-center justify-center gap-2 opacity-60 transition-opacity group-hover:opacity-100">
                             <button
+                              data-write
                               type="button"
                               onClick={() => handleEditRow(row)}
                               disabled={row.isDisabled || row.isReadOnly}
@@ -1186,6 +1187,7 @@ export default function DelayManagementPage() {
                             </button>
 
                             <button
+                              data-write
                               type="button"
                               onClick={() => handleOpenAdjustment(row)}
                               disabled={row.isDisabled || row.isReadOnly}
@@ -1233,6 +1235,7 @@ export default function DelayManagementPage() {
 
                             {!row.isReadOnly ? (
                               <button
+                                data-write
                                 type="button"
                                 onClick={() => requestLogStatusToggle(row.id)}
                                 className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${

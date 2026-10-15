@@ -12,7 +12,7 @@ import {
   SESSION_EXPIRED_FLAG_KEY,
   TOKEN_STORAGE_KEY,
 } from "../constants/storageKeys";
-import { USER_ROLES, DEFAULT_ROUTE_BY_ROLE } from "../constants/roles";
+import { USER_ROLES, DEFAULT_ROUTE_BY_ROLE, resolveRoleFromProfile } from "../constants/roles";
 import { loginWithOtp, sendLoginOtp } from "../services/auth/authService";
 import { fetchProfile } from "../services/profileService";
 import { writeTokens } from "../api/axiosClient";
@@ -53,30 +53,6 @@ function clearStoredSession() {
   localStorage.removeItem(AUTH_STORAGE_KEY);
   sessionStorage.removeItem(AUTH_TAB_SESSION_KEY);
   localStorage.removeItem(TOKEN_STORAGE_KEY);
-}
-
-/* ── role resolution ─────────────────────────────────────────── */
-/**
- * Derive the app role from the profile API response.
- * Priority: is_superuser → role array → fallback to ADMIN
- */
-function resolveRoleFromProfile(profile) {
-  if (!profile) return USER_ROLES.ADMIN;
-  if (profile.is_superuser) return USER_ROLES.SUPERADMIN;
-
-  const roleNames = (profile.role ?? []).map((r) =>
-    (r.role_name ?? r).toLowerCase()
-  );
-
-  if (roleNames.some((n) => n.includes("superadmin"))) return USER_ROLES.SUPERADMIN;
-  if (roleNames.some((n) => n.includes("operator")))    return USER_ROLES.OPERATOR;
-  if (roleNames.some((n) => n.includes("station") || n.includes("operations")))
-    return USER_ROLES.STATION_MASTER;
-  if (roleNames.some((n) => n.includes("commercial")))  return USER_ROLES.COMMERCIAL;
-  if (roleNames.some((n) => n.includes("cw") || n.includes("wagon")))
-    return USER_ROLES.CW_INSPECTOR;
-
-  return USER_ROLES.ADMIN;
 }
 
 /* ── provider ────────────────────────────────────────────────── */
@@ -227,9 +203,9 @@ export function AuthProvider({ children }) {
 function resolveRoleFromEmail(email) {
   const v = email.toLowerCase();
   if (v.includes("superadmin"))                        return USER_ROLES.SUPERADMIN;
-  if (v.includes("station") || v.includes("operations")) return USER_ROLES.STATION_MASTER;
+  if (v.includes("station") || v.includes("operation")) return USER_ROLES.STATION_MASTER;
   if (v.includes("commercial"))                        return USER_ROLES.COMMERCIAL;
-  if (v.includes("cw") || v.includes("wagon"))         return USER_ROLES.CW_INSPECTOR;
+  if (v.includes("cnw") || v.includes("cw") || v.includes("wagon")) return USER_ROLES.CW_INSPECTOR;
   if (v.includes("operator"))                          return USER_ROLES.OPERATOR;
   return USER_ROLES.ADMIN;
 }
