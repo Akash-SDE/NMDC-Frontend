@@ -5,6 +5,7 @@ export const ROUTES = {
   ADMIN: {
     ROOT: "/admin",
     DASHBOARD: "/admin/dashboard",
+    OPERATIONS_COCKPIT: "/admin/dashboard/operations-cockpit",
     EDEMAND: "/admin/e-demand",
     EDEMAND_MANAGE: "/admin/e-demand/manage",
     EDEMAND_MANAGE_ADD: "/admin/e-demand/manage/add",
@@ -81,6 +82,8 @@ export const ROUTES = {
 export const LEGACY_ROUTE_TO_PATH = {
   login: ROUTES.LOGIN,
   dashboard: ROUTES.ADMIN.DASHBOARD,
+  "dashboard-overview": ROUTES.ADMIN.DASHBOARD,
+  "operations-cockpit": ROUTES.ADMIN.OPERATIONS_COCKPIT,
   "e-demand": ROUTES.ADMIN.EDEMAND,
   "manage-e-demand": ROUTES.ADMIN.EDEMAND_MANAGE,
   "manage-e-demand-add": ROUTES.ADMIN.EDEMAND_MANAGE_ADD,
@@ -192,6 +195,10 @@ export function pathToLegacyRoute(pathname) {
   if (pathname.startsWith("/admin/railway")) return "railway-approvals";
   if (pathname.startsWith("/railway/approvals")) return "railway-approvals";
   if (pathname.startsWith("/railway")) return "railway-approvals";
+  if (pathname.startsWith("/admin/dashboard/operations-cockpit")) return "operations-cockpit";
+  if (pathname === ROUTES.ADMIN.DASHBOARD || pathname.startsWith(`${ROUTES.ADMIN.DASHBOARD}/`)) {
+    return "dashboard-overview";
+  }
   if (pathname.startsWith("/admin/extraction")) return "extraction";
   if (pathname.startsWith("/admin/user-management")) return "user-management";
   if (pathname.startsWith("/admin/role-management")) return "role-management";

@@ -1,4 +1,5 @@
 import { apiRequest } from "./apiClient";
+import { parseApiError } from "../api/apiError";
 import { APPROVAL_DEPARTMENTS, APPROVAL_STATUS } from "../constants/approval";
 import { applyApprovalDecision } from "../types/approvalTransforms";
 import {
@@ -83,4 +84,23 @@ export async function submitRailwayDecision(approval, department, decision, targ
   }
 
   return saveRailwayApproval(approval.id, payload);
+}
+
+export async function sendRailwayApprovalMemo(approval, options = {}) {
+  const {
+    buildRailwayMemoApiPayload,
+    formatRailwayApprovalMemo,
+  } = await import("../features/railway/utils/railwayApprovalMemo");
+
+  const memoText = formatRailwayApprovalMemo({ approval, ...options });
+  const body = buildRailwayMemoApiPayload({ approval, ...options, memoText });
+
+  try {
+    return await apiRequest(`${BASE}/${approval.id}/send_memo`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    throw parseApiError(error);
+  }
 }

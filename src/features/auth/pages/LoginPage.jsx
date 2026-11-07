@@ -9,10 +9,48 @@ const LOGIN_HERO_IMAGE =
   "https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=1600&q=80";
 const REMEMBER_USERNAME_KEY = "nmdc_remembered_username";
 
+function EyeIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  );
+}
+
 export default function LoginPage() {
-  const { login, requestOtp } = useAuth();
+  const { login, loginWithPassword, requestOtp } = useAuth();
   const navigate = useNavigate();
-  const [step, setStep] = useState("email"); // "email" | "otp"
+  const [authMethod, setAuthMethod] = useState("otp"); // "otp" | "password"
+  const [step, setStep] = useState("email"); // "email" | "otp" (OTP flow only)
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState(() =>
     sessionStorage.getItem(SESSION_EXPIRED_FLAG_KEY)
@@ -22,6 +60,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
+    password: "",
     otp: "",
     remember: false,
   });
@@ -40,8 +79,26 @@ export default function LoginPage() {
     if (info) setInfo("");
   }
 
+  function switchAuthMethod(method) {
+    if (method === authMethod) return;
+    setAuthMethod(method);
+    setStep("email");
+    setError("");
+    setInfo("");
+    setShowPassword(false);
+    setFormData((prev) => ({ ...prev, password: "", otp: "" }));
+  }
+
+  function persistRememberedEmail(email) {
+    if (formData.remember) {
+      localStorage.setItem(REMEMBER_USERNAME_KEY, email);
+    } else {
+      localStorage.removeItem(REMEMBER_USERNAME_KEY);
+    }
+  }
+
   async function handleSendOtp(e) {
-    e.preventDefault();
+    e?.preventDefault?.();
     setError("");
     setInfo("");
     const email = formData.email.trim();
@@ -86,11 +143,7 @@ export default function LoginPage() {
         remember,
       });
 
-      if (remember) {
-        localStorage.setItem(REMEMBER_USERNAME_KEY, email.trim());
-      } else {
-        localStorage.removeItem(REMEMBER_USERNAME_KEY);
-      }
+      persistRememberedEmail(email.trim());
 
       navigate(DEFAULT_ROUTE_BY_ROLE[result.role] ?? "/admin/dashboard", {
         replace: true,
@@ -102,12 +155,53 @@ export default function LoginPage() {
     }
   }
 
+  async function handlePasswordLogin(e) {
+    e.preventDefault();
+    setError("");
+    const { email, password, remember } = formData;
+
+    if (!email.trim()) {
+      setError("Please enter your email.");
+      return;
+    }
+    if (!password.trim()) {
+      setError("Please enter your password.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await loginWithPassword({
+        email: email.trim(),
+        password,
+        remember,
+      });
+
+      persistRememberedEmail(email.trim());
+
+      navigate(DEFAULT_ROUTE_BY_ROLE[result.role] ?? "/admin/dashboard", {
+        replace: true,
+      });
+    } catch (err) {
+      setError(err.message || "Invalid email or password.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function handleChangeEmail() {
     setStep("email");
     setFormData((prev) => ({ ...prev, otp: "" }));
     setError("");
     setInfo("");
   }
+
+  const subtitle =
+    authMethod === "password"
+      ? "Sign in with your email and password."
+      : step === "email"
+        ? "Sign in with your email. We'll send a one-time password."
+        : `Enter the OTP sent to ${formData.email.trim()}.`;
 
   return (
     <div className="flex min-h-screen w-full bg-white">
@@ -134,10 +228,42 @@ export default function LoginPage() {
             Welcome back
           </h1>
           <p className="mt-2 text-[14px] sm:text-[15px] 3xl:text-[18px] text-slate-500">
-            {step === "email"
-              ? "Sign in with your email. We’ll send a one-time password."
-              : `Enter the OTP sent to ${formData.email.trim()}.`}
+            {subtitle}
           </p>
+
+          {/* Sign-in method toggle */}
+          <div
+            className="mt-6 flex rounded-lg border border-slate-200 bg-slate-50 p-1"
+            role="tablist"
+            aria-label="Sign-in method"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={authMethod === "otp"}
+              onClick={() => switchAuthMethod("otp")}
+              className={`flex-1 rounded-md px-3 py-2.5 text-[13px] sm:text-[14px] 3xl:text-[16px] font-semibold transition-all ${
+                authMethod === "otp"
+                  ? "bg-white text-brand-700 shadow-sm"
+                  : "text-slate-600 hover:text-brand-700"
+              }`}
+            >
+              Email & OTP
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={authMethod === "password"}
+              onClick={() => switchAuthMethod("password")}
+              className={`flex-1 rounded-md px-3 py-2.5 text-[13px] sm:text-[14px] 3xl:text-[16px] font-semibold transition-all ${
+                authMethod === "password"
+                  ? "bg-white text-brand-700 shadow-sm"
+                  : "text-slate-600 hover:text-brand-700"
+              }`}
+            >
+              Email & Password
+            </button>
+          </div>
 
           {/* Error / info banners */}
           {error && (
@@ -151,8 +277,82 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Step 1: Email */}
-          {step === "email" && (
+          {/* Password sign-in */}
+          {authMethod === "password" && (
+            <form onSubmit={handlePasswordLogin} className="mt-8 space-y-5 3xl:space-y-7" noValidate>
+              <div>
+                <label htmlFor="login-email-password"
+                  className="block text-[13px] sm:text-[14px] 3xl:text-[17px] font-semibold text-brand-900 mb-2">
+                  Email
+                </label>
+                <input
+                  id="login-email-password"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={(e) => handleChange("email", e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 3xl:py-4 text-[14px] 3xl:text-[17px] text-brand-900 placeholder-slate-400 outline-none transition-all focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="login-password"
+                  className="block text-[13px] sm:text-[14px] 3xl:text-[17px] font-semibold text-brand-900 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="login-password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    placeholder="Enter your password"
+                    value={formData.password}
+                    onChange={(e) => handleChange("password", e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 pr-12 3xl:py-4 text-[14px] 3xl:text-[17px] text-brand-900 placeholder-slate-400 outline-none transition-all focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={formData.remember}
+                    onChange={(e) => handleChange("remember", e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                  />
+                  <span className="text-[13px] 3xl:text-[16px] text-slate-600">Remember me</span>
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-lg bg-brand-600 px-6 py-3.5 3xl:py-4 text-[15px] 3xl:text-[18px] font-semibold text-white shadow-sm transition-all hover:bg-brand-700 hover:shadow-md active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
+                    </svg>
+                    Signing in…
+                  </span>
+                ) : "Sign In"}
+              </button>
+            </form>
+          )}
+
+          {/* OTP flow — Step 1: Email */}
+          {authMethod === "otp" && step === "email" && (
             <form onSubmit={handleSendOtp} className="mt-8 space-y-5 3xl:space-y-7" noValidate>
               <div>
                 <label htmlFor="login-email"
@@ -199,8 +399,8 @@ export default function LoginPage() {
             </form>
           )}
 
-          {/* Step 2: OTP */}
-          {step === "otp" && (
+          {/* OTP flow — Step 2: OTP */}
+          {authMethod === "otp" && step === "otp" && (
             <form onSubmit={handleVerifyOtp} className="mt-8 space-y-5 3xl:space-y-7" noValidate>
               <div>
                 <label htmlFor="login-otp"

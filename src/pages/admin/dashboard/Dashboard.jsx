@@ -1,150 +1,9 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  CheckCircle2,
-  ClipboardList,
-  Clock,
-  Gauge,
-  Package,
-  Scale,
-  Timer,
-  Truck,
-} from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
-import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
+import { Link } from "react-router-dom";
+import { ROUTES } from "../../../constants/routes";
 import ApiErrorState from "../../../components/common/ApiErrorState";
-import { countPendingApprovals } from "../../../constants/approval";
-import { fetchApprovalRequests } from "../../../store/slices/approvalSlice";
 import { useDashboardData } from "../../../features/dashboard/hooks/useDashboardData";
-
-const METRIC_TONE_STYLES = {
-  navy: {
-    border: "border-l-[#102a57]",
-    iconBg: "bg-blue-50",
-    iconText: "text-blue-700",
-    valueText: "text-[#102a57]",
-  },
-  green: {
-    border: "border-l-emerald-500",
-    iconBg: "bg-emerald-50",
-    iconText: "text-emerald-700",
-    valueText: "text-emerald-700",
-  },
-  sky: {
-    border: "border-l-blue-500",
-    iconBg: "bg-sky-50",
-    iconText: "text-sky-700",
-    valueText: "text-sky-700",
-  },
-  rose: {
-    border: "border-l-rose-500",
-    iconBg: "bg-rose-50",
-    iconText: "text-rose-700",
-    valueText: "text-rose-700",
-  },
-  amber: {
-    border: "border-l-amber-500",
-    iconBg: "bg-amber-50",
-    iconText: "text-amber-700",
-    valueText: "text-amber-700",
-  },
-  slate: {
-    border: "border-l-slate-400",
-    iconBg: "bg-slate-100",
-    iconText: "text-slate-600",
-    valueText: "text-slate-700",
-  },
-  indigo: {
-    border: "border-l-indigo-600",
-    iconBg: "bg-indigo-50",
-    iconText: "text-indigo-700",
-    valueText: "text-indigo-700",
-  },
-};
-
-const METRIC_ICONS = {
-  received: Package,
-  loaded: CheckCircle2,
-  loading: Truck,
-  adjustment: Gauge,
-  demurrage: Clock,
-  hours: Timer,
-  pending: ClipboardList,
-  dispatch: Scale,
-};
-
-const baseMetricCards = [
-  {
-    title: "Received",
-    value: "-",
-    tone: "navy",
-    icon: "received",
-  },
-  {
-    title: "Loaded",
-    value: "-",
-    tone: "green",
-    icon: "loaded",
-  },
-  {
-    title: "Under Loading",
-    value: "-",
-    tone: "sky",
-    icon: "loading",
-  },
-  {
-    title: "Load adjustment",
-    value: "-",
-    tone: "rose",
-    icon: "adjustment",
-  },
-  {
-    title: "Demurraged Hours",
-    value: "-",
-    tone: "rose",
-    icon: "demurrage",
-  },
-  {
-    title: "Gross Loading Hours",
-    value: "-",
-    tone: "amber",
-    icon: "hours",
-  },
-  {
-    title: "Pending Indents",
-    value: "-",
-    tone: "slate",
-    icon: "pending",
-  },
-  {
-    title: "Dispatch Qty",
-    value: "-",
-    unit: "T",
-    tone: "indigo",
-    icon: "dispatch",
-  },
-];
-
-const baseHourlySeries = [
-  { hour: "08:00", lump: 55, fines: 42, pellet: 28, rom: 22 },
-  { hour: "09:00", lump: 62, fines: 49, pellet: 31, rom: 24 },
-  { hour: "10:00", lump: 68, fines: 47, pellet: 34, rom: 26 },
-  { hour: "11:00", lump: 71, fines: 56, pellet: 37, rom: 29 },
-  { hour: "12:00", lump: 74, fines: 60, pellet: 39, rom: 30 },
-  { hour: "13:00", lump: 70, fines: 57, pellet: 36, rom: 28 },
-  { hour: "14:00", lump: 66, fines: 58, pellet: 35, rom: 27 },
-  { hour: "15:00", lump: 63, fines: 52, pellet: 33, rom: 25 },
-  { hour: "16:00", lump: 61, fines: 46, pellet: 31, rom: 24 },
-  { hour: "17:00", lump: 56, fines: 43, pellet: 29, rom: 22 },
-  { hour: "18:00", lump: 49, fines: 39, pellet: 26, rom: 20 },
-];
-
-const baseHourlySeriesMeta = [
-  { key: "lump", label: "LUMP WAGONS", color: "bg-[#0f2f67]" },
-  { key: "fines", label: "FINES WAGONS", color: "bg-[#1d6fb8]" },
-  { key: "pellet", label: "PELLET WAGONS", color: "bg-[#166534]" },
-  { key: "rom", label: "ROM WAGONS", color: "bg-[#d97706]" },
-];
 
 const dispatchGridHours = Array.from({ length: 24 }, (_, index) => index);
 
@@ -799,35 +658,6 @@ function LiveWagonCountCard({ rows, seriesMeta }) {
   );
 }
 
-const MetricCard = memo(function MetricCard({ card }) {
-  const tone = METRIC_TONE_STYLES[card.tone] || METRIC_TONE_STYLES.slate;
-  const Icon = METRIC_ICONS[card.icon] || Package;
-
-  return (
-    <article
-      className={`group flex items-center justify-between rounded-xl border border-slate-200 border-l-4 bg-white p-5 shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md ${tone.border}`}
-    >
-      <div className="min-w-0 flex-1 pr-3">
-        <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-          {card.title}
-        </p>
-        <div className="mt-1 flex items-baseline gap-1.5">
-          <p className={`text-2xl font-bold tracking-tight ${tone.valueText}`}>{card.value}</p>
-          {card.unit ? (
-            <span className="text-[12px] font-semibold text-slate-400">{card.unit}</span>
-          ) : null}
-        </div>
-      </div>
-
-      <div
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tone.iconBg} transition-transform duration-200 group-hover:scale-105`}
-      >
-        <Icon size={20} className={tone.iconText} strokeWidth={2} />
-      </div>
-    </article>
-  );
-});
-
 const DispatchTimelineCard = memo(function DispatchTimelineCard({ sheetRows }) {
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [hoveredCell, setHoveredCell] = useState(null);
@@ -872,59 +702,59 @@ const DispatchTimelineCard = memo(function DispatchTimelineCard({ sheetRows }) {
   }
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-      <div className="border-b border-slate-100 bg-linear-to-br from-slate-50 via-white to-blue-50/40 px-6 py-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+    <article className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+      <div className="shrink-0 border-b border-slate-100 bg-linear-to-br from-slate-50 via-white to-blue-50/40 px-4 py-3 sm:px-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                 </span>
                 Live
               </span>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
                 {gridStats.routes} routes tracked
               </span>
             </div>
-            <h3 className="mt-3 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+            <h3 className="mt-1.5 text-base font-bold tracking-tight text-slate-900 sm:text-lg">
               Real-Time Dispatch Grid
             </h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-0.5 text-[12px] text-slate-500">
               24-hour siding & route allocation timeline
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
+              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">
                 Current time
               </p>
-              <p className="mt-0.5 font-mono text-lg font-bold tabular-nums text-slate-900">
+              <p className="font-mono text-base font-bold tabular-nums text-slate-900">
                 {currentTimeLabel}
               </p>
             </div>
-            <div className="hidden gap-2 sm:flex">
-              <div className="rounded-xl border border-amber-100 bg-amber-50/60 px-3 py-2 text-center">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700/70">Loading</p>
-                <p className="text-lg font-bold text-amber-800">{gridStats.loading}h</p>
+            <div className="hidden gap-1.5 sm:flex">
+              <div className="rounded-lg border border-amber-100 bg-amber-50/60 px-2.5 py-1.5 text-center">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-amber-700/70">Loading</p>
+                <p className="text-base font-bold text-amber-800">{gridStats.loading}h</p>
               </div>
-              <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-center">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700/70">Done</p>
-                <p className="text-lg font-bold text-emerald-800">{gridStats.completed}h</p>
+              <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 px-2.5 py-1.5 text-center">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-emerald-700/70">Done</p>
+                <p className="text-base font-bold text-emerald-800">{gridStats.completed}h</p>
               </div>
-              <div className="rounded-xl border border-rose-100 bg-rose-50/60 px-3 py-2 text-center">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-700/70">Delay</p>
-                <p className="text-lg font-bold text-rose-800">{gridStats.demurrage}h</p>
+              <div className="rounded-lg border border-rose-100 bg-rose-50/60 px-2.5 py-1.5 text-center">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-rose-700/70">Delay</p>
+                <p className="text-base font-bold text-rose-800">{gridStats.demurrage}h</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-5">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4 sm:py-3">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Status
           </span>
@@ -942,7 +772,7 @@ const DispatchTimelineCard = memo(function DispatchTimelineCard({ sheetRows }) {
           })}
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-slate-50/40 p-2">
+        <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-slate-200/80 bg-slate-50/40 p-2">
           <div
             className="grid w-full min-w-[640px] gap-1"
             style={{ gridTemplateColumns: DISPATCH_GRID_COLUMNS }}
@@ -1140,116 +970,17 @@ const DispatchSummaryCard = memo(function DispatchSummaryCard({ sheetRows }) {
 });
 
 export default function Dashboard() {
-  const dispatch = useDispatch();
-  const approvalItems = useSelector((state) => state.approvals.items);
-  const [sortBy, setSortBy] = useState("rakeId");
-  const [sortOrder, setSortOrder] = useState("asc");
-  const [tablePage, setTablePage] = useState(1);
   const [dashboardDate, setDashboardDate] = useState(() => formatDashboardDate(new Date()));
-  const [activeHourlySeries, setActiveHourlySeries] = useState(
-    baseHourlySeriesMeta.reduce((acc, series) => {
-      acc[series.key] = true;
-      return acc;
-    }, {})
-  );
+  const [upcomingPage, setUpcomingPage] = useState(1);
+  const UPCOMING_PAGE_SIZE = 5;
 
   const {
     status: dashboardStatus,
     error: dashboardError,
-    metricValues,
     dispatchGrid,
     upcomingRakeRows,
     reload: reloadDashboard,
   } = useDashboardData(dashboardDate);
-
-  useEffect(() => {
-    dispatch(fetchApprovalRequests());
-  }, [dispatch]);
-
-  const hourlySeries = baseHourlySeries;
-  const hourlySeriesMeta = baseHourlySeriesMeta;
-
-  const pendingApprovalCount = useMemo(
-    () => countPendingApprovals(approvalItems),
-    [approvalItems],
-  );
-
-  const metricCards = useMemo(
-    () =>
-      baseMetricCards.map((card) => {
-        if (card.title === "Pending Indents") {
-          return { ...card, title: "Awaiting Railway Approval", value: String(pendingApprovalCount) };
-        }
-        if (dashboardStatus !== "success") return card;
-        return { ...card, value: metricValues[card.title] ?? card.value };
-      }),
-    [pendingApprovalCount, dashboardStatus, metricValues],
-  );
-
-  const handleSort = (field) => {
-    if (sortBy === field) {
-      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortBy(field);
-      setSortOrder("asc");
-    }
-    setTablePage(1);
-  };
-
-  const pageSize = 6;
-  const sortedRows = useMemo(() => {
-    return [...activeRakeRows].sort((a, b) => {
-      const aValue = String(a[sortBy] ?? "").toLowerCase();
-      const bValue = String(b[sortBy] ?? "").toLowerCase();
-      if (aValue === bValue) return 0;
-      const comparison = aValue > bValue ? 1 : -1;
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-  }, [sortBy, sortOrder]);
-  const totalPages = Math.ceil(sortedRows.length / pageSize);
-  const pagedRows = useMemo(() => {
-    const start = (tablePage - 1) * pageSize;
-    return sortedRows.slice(start, start + pageSize);
-  }, [tablePage, sortedRows]);
-
-  const hourlyChartData = useMemo(() => {
-    const activeMeta = hourlySeriesMeta.filter((series) => activeHourlySeries[series.key]);
-    const peakValue = Math.max(
-      ...hourlySeries.map((item) => {
-        return Math.max(...activeMeta.map((series) => item[series.key]));
-      }),
-      1,
-    );
-
-    const bars = hourlySeries.map((item) => {
-      const segments = activeMeta.map((series) => {
-        const value = item[series.key];
-        const height = Math.max((value / peakValue) * 128, 10);
-        return {
-          ...series,
-          value,
-          height,
-        };
-      });
-
-      return {
-        hour: item.hour,
-        segments,
-      };
-    });
-
-    const totals = hourlySeriesMeta.reduce((accumulator, series) => {
-      accumulator[series.key] = activeHourlySeries[series.key]
-        ? hourlySeries.reduce((sum, item) => sum + item[series.key], 0)
-        : 0;
-      return accumulator;
-    }, {});
-
-    return {
-      bars,
-      totals,
-    };
-  }, [activeHourlySeries, hourlySeries, hourlySeriesMeta]);
 
   const eventsByRouteId = useMemo(() => {
     return dispatchGrid.events.reduce((accumulator, event) => {
@@ -1277,25 +1008,46 @@ export default function Dashboard() {
       }),
     );
   }, [dispatchGrid.hierarchy, eventsByRouteId]);
+
+  const upcomingTotalPages = Math.max(1, Math.ceil(upcomingRakeRows.length / UPCOMING_PAGE_SIZE));
+  const upcomingPageSafe = Math.min(upcomingPage, upcomingTotalPages);
+  const upcomingPageRows = useMemo(() => {
+    const start = (upcomingPageSafe - 1) * UPCOMING_PAGE_SIZE;
+    return upcomingRakeRows.slice(start, start + UPCOMING_PAGE_SIZE);
+  }, [upcomingRakeRows, upcomingPageSafe]);
+  const upcomingFrom = upcomingPageRows.length ? (upcomingPageSafe - 1) * UPCOMING_PAGE_SIZE + 1 : 0;
+  const upcomingTo = upcomingPageRows.length ? upcomingFrom + upcomingPageRows.length - 1 : 0;
+
+  useEffect(() => {
+    setUpcomingPage(1);
+  }, [dashboardDate, upcomingRakeRows.length]);
+
   return (
-  <div className="min-h-screen bg-[#F8FAFC] p-4 lg:p-8">
-    <div className="mx-auto max-w-[1600px] space-y-4">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+  <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F8FAFC] text-slate-800">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pb-2 pt-1 md:px-3">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1600px] flex-col gap-2">
+      <header className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-[24px] font-bold tracking-tight text-slate-800 sm:text-[28px]">
-            Operations Cockpit
+          <h1 className="text-lg font-bold tracking-tight text-slate-800 sm:text-xl">
+            Daily Overview
           </h1>
-          <p className="mt-1 text-[14px] text-slate-500">
-            Daily operational overview and dispatch monitoring.
+          <p className="mt-0.5 text-[12px] text-slate-500">
+            Upcoming rakes and real-time dispatch monitoring.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to={ROUTES.ADMIN.OPERATIONS_COCKPIT}
+            className="inline-flex h-9 items-center rounded-lg border border-[#0f3460]/20 bg-[#0f3460] px-3 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#0c2d5c]"
+          >
+            Operations Cockpit
+          </Link>
           <input
             type="date"
             value={dashboardDate}
             onChange={(event) => setDashboardDate(event.target.value)}
-            className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
           />
         </div>
       </header>
@@ -1308,65 +1060,90 @@ export default function Dashboard() {
         />
       ) : null}
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metricCards.map((card) => (
-          <MetricCard key={card.title} card={card} />
-        ))}
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <DispatchTimelineCard
-          sheetRows={sheetRows}
-        />
-
-        {/*
-        <DispatchSummaryCard 
-          sheetRows={sheetRows}
-        />
-        */}
-      </section>
-
-      {/* <section>
-        <LiveWagonCountCard rows={hourlyChartData.bars} seriesMeta={hourlySeriesMeta} />
-      </section> */}
-
-      {upcomingRakeRows.length > 0 && (
-        <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/30 px-6 py-5">
-            <div>
-              <h3 className="text-lg font-black tracking-tight text-slate-900 uppercase">Upcoming Rake</h3>
-              <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">Load Correction Tracking</p>
-            </div>
+      <section className="shrink-0 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/30 px-4 py-3">
+          <div>
+            <h3 className="text-sm font-black tracking-tight text-slate-900 uppercase">Upcoming Rakes</h3>
+            <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+              Offered rakes not yet placed for loading
+            </p>
           </div>
+        </div>
 
-          <div className="overflow-x-auto">
+        {upcomingRakeRows.length === 0 ? (
+          <p className="px-4 py-5 text-center text-sm text-slate-500">No upcoming rakes for this date.</p>
+        ) : (
+          <div className="max-h-[168px] overflow-x-auto overflow-y-auto">
             <table className="w-full border-separate border-spacing-0">
-              <thead>
+              <thead className="sticky top-0 z-10 bg-slate-50/95">
                 <tr className="bg-slate-50/50">
-                  <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">SNO</th>
-                  <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">RAKE NUMBER</th>
-                  <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">ORE TYPE</th>
-                  <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">SIDING</th>
-                  <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">DESTINATION</th>
-                  <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">OFFER TIME</th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">SNO</th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">RAKE NUMBER</th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">ORE TYPE</th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">SIDING</th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">DESTINATION</th>
+                  <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">OFFER TIME</th>
                 </tr>
               </thead>
               <tbody>
-                {upcomingRakeRows.map((row, index) => (
+                {upcomingPageRows.map((row, index) => (
                   <tr key={row.rakeId} className={`border-b border-slate-200/70 ${index % 2 === 0 ? "bg-white" : "bg-[#fbfcfe]"}`}>
-                    <td className="whitespace-nowrap px-6 py-3 text-[12px] font-bold text-slate-400">{row.sno}</td>
-                    <td className="whitespace-nowrap px-6 py-3 text-[12px] font-bold text-[#155eef]">{row.rakeNumber}</td>
-                    <td className="whitespace-nowrap px-6 py-3 text-[12px] font-bold text-[#0f2f67]">{row.oreType}</td>
-                    <td className="whitespace-nowrap px-6 py-3 text-[12px] font-semibold text-slate-700">{row.siding}</td>
-                    <td className="whitespace-nowrap px-6 py-3 text-[12px] font-semibold text-slate-700">{row.destination}</td>
-                    <td className="whitespace-nowrap px-6 py-3 text-[12px] font-bold text-[#155eef]">{row.placementTime}</td>
+                    <td className="whitespace-nowrap px-4 py-2 text-[12px] font-bold text-slate-400">
+                      {(upcomingPageSafe - 1) * UPCOMING_PAGE_SIZE + index + 1}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2 text-[12px] font-bold text-[#155eef]">{row.rakeNumber}</td>
+                    <td className="whitespace-nowrap px-4 py-2 text-[12px] font-bold text-[#0f2f67]">{row.oreType}</td>
+                    <td className="whitespace-nowrap px-4 py-2 text-[12px] font-semibold text-slate-700">{row.siding}</td>
+                    <td className="whitespace-nowrap px-4 py-2 text-[12px] font-semibold text-slate-700">{row.destination}</td>
+                    <td className="whitespace-nowrap px-4 py-2 text-[12px] font-bold text-[#155eef]">{row.placementTime}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </section>
-      )}
+        )}
+        {upcomingRakeRows.length > 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-2 text-[11px] text-slate-500">
+            <span>
+              Showing {upcomingFrom} to {upcomingTo} of {upcomingRakeRows.length} upcoming rakes
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={upcomingPageSafe === 1}
+                onClick={() => setUpcomingPage((p) => Math.max(1, p - 1))}
+                className="rounded border border-slate-200 px-3 py-1 text-[11px] font-semibold disabled:opacity-40"
+              >
+                Previous
+              </button>
+              {Array.from({ length: upcomingTotalPages }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setUpcomingPage(n)}
+                  className={`rounded px-3 py-1 text-[11px] font-bold ${
+                    n === upcomingPageSafe ? "bg-blue-600 text-white" : "border border-slate-200 text-slate-600"
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+              <button
+                type="button"
+                disabled={upcomingPageSafe === upcomingTotalPages}
+                onClick={() => setUpcomingPage((p) => Math.min(upcomingTotalPages, p + 1))}
+                className="rounded border border-slate-200 px-3 py-1 text-[11px] font-semibold disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="flex min-h-0 flex-1 flex-col">
+        <DispatchTimelineCard sheetRows={sheetRows} />
+      </section>
 
       {/*
       <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
@@ -1515,6 +1292,7 @@ export default function Dashboard() {
         </div>
       </section>
       */}
+    </div>
     </div>
   </div>
 );

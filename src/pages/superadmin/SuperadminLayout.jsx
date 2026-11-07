@@ -28,7 +28,7 @@ function SuperadminLayout({ children }) {
   const email = user?.email || `${normalizedUsername}@nmdc.local`;
 
   return (
-    <div className="flex min-h-screen w-full bg-[#f3f5f8]">
+    <div className="flex h-dvh max-h-dvh min-h-0 w-full overflow-hidden bg-[#f3f5f8]">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
@@ -44,9 +44,9 @@ function SuperadminLayout({ children }) {
       />
 
       {/* Main Content Area */}
-      <div className="flex flex-1 min-w-0 flex-col lg:pl-64">
+      <div className="flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden lg:pl-64">
         {/* Header */}
-        <header className="sticky top-0 z-100 shadow-lg bg-[#F3F5F8] py-2">
+        <header className="relative z-30 shrink-0 bg-[#F3F5F8] py-2 shadow-lg">
           <div className="flex h-15.5 items-center justify-between rounded-xl px-3 sm:px-4 lg:px-5">
           {/* Left Side - Mobile Menu + Breadcrumbs */}
           <div className="flex items-center gap-4 pr-3">
@@ -103,7 +103,7 @@ function SuperadminLayout({ children }) {
           </div>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6 text-slate-900">
+        <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-5 lg:p-6 text-slate-900">
           <Breadcrumb />
           {children ?? <Outlet />}
         </main>

@@ -9,6 +9,9 @@ import SuperadminLayout from "../layouts/SuperadminLayout";
 
 const LoginPage = lazy(() => import("../features/auth/pages/LoginPage"));
 const DashboardPage = lazy(() => import("../features/dashboard/pages/DashboardPage"));
+const OperationsCockpitPage = lazy(() =>
+  import("../features/dashboard/pages/OperationsCockpitPage"),
+);
 const EDemandPage = lazy(() => import("../features/edemand/pages/EDemandPage"));
 const RakeRoutes = lazy(() => import("../features/rake/routes/RakeRoutes"));
 const LoadingPage = lazy(() => import("../features/loading/pages/LoadingPage"));
@@ -95,6 +98,14 @@ export function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={[USER_ROLES.ADMIN, ...RAILWAY_ROLES]} />}>
         <Route element={<AdminLayout />}>
           <Route path="/" element={<Navigate to={ROUTES.ADMIN.DASHBOARD} replace />} />
+          <Route
+            path={ROUTES.ADMIN.OPERATIONS_COCKPIT}
+            element={
+              <Lazy>
+                <OperationsCockpitPage />
+              </Lazy>
+            }
+          />
           <Route
             path={ROUTES.ADMIN.DASHBOARD}
             element={

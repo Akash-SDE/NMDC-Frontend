@@ -88,6 +88,8 @@ export function useDashboardData(dashboardDate) {
   return {
     status,
     error,
+    records,
+    refreshedAt,
     metricValues,
     dispatchGrid,
     upcomingRakeRows,

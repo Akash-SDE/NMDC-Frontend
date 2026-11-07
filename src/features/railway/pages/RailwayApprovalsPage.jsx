@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
+import { RefreshCw } from "lucide-react";
 import SearchBar from "../../../components/shared/SearchBar";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Pagination from "../../../components/shared/Pagination";
@@ -38,7 +40,6 @@ import {
   APPROVAL_STATUS,
   APPROVAL_STEP_LABELS,
   REVIEW_DEPARTMENTS,
-  countPendingApprovals,
 } from "../../../constants/approval";
 import {
   fetchApprovalRequests,
@@ -48,15 +49,70 @@ import {
 import { listLoadingRecords } from "../../../services/loadingManagementService";
 import { asResults, mapReportLoading } from "../../reports/utils/reportApiMappers";
 import {
-  canDepartmentAct,
-  getApprovalStatusLabel,
+  getDepartmentStepPresentation,
+  getNmdcStepPresentation,
+  getOverallStatusMessage,
   getPendingDepartmentForApproval,
   getPendingDepartmentsForApproval,
   isApprovalAwaitingAction,
+  canUserReviewDepartment,
 } from "../../../utils/approvalUtils";
+import RailwayApprovalStageCell, {
+  RailwayNmdcStageCell,
+} from "../components/RailwayApprovalStageCell";
 import { formatDateTimeForTable, getLocalDateTimeValue } from "../../../utils/dateUtils";
+import { sendRailwayApprovalMemo } from "../../../services/railwayApprovalService";
+import { formatRailwayApprovalMemo } from "../utils/railwayApprovalMemo";
+import { markNmdcMemoSent, readNmdcMemoSentFlags } from "../utils/nmdcMemoStorage";
 
-const ADMIN_ALL_TAB = "all";
+const STAGE_COLUMNS = [
+  { id: APPROVAL_DEPARTMENTS.OPERATIONS, label: "Railway Operations" },
+  { id: APPROVAL_DEPARTMENTS.CW, label: "C&W Check" },
+  { id: APPROVAL_DEPARTMENTS.COMMERCIAL, label: "Commercial Check" },
+];
+
+function buildQueueFilterColumns() {
+  return [
+    { key: "rakeNumber", label: "Rake Number" },
+    ...STAGE_COLUMNS.map((col) => ({
+      key: col.id,
+      label: col.label,
+      type: "select",
+      getValue: (approval) => {
+        const presentation = getDepartmentStepPresentation(approval, col.id);
+        if (presentation === "complete") return "Complete";
+        if (presentation === "rejected") return "Rejected";
+        if (presentation === "not_required") return "Not Required";
+        if (presentation === "actionable") return "Pending";
+        return "Pending";
+      },
+    })),
+    {
+      key: "nmdc",
+      label: "NMDC Check",
+      type: "select",
+      getValue: (approval) => {
+        const presentation = getNmdcStepPresentation(approval);
+        if (presentation === "complete") return "Complete";
+        if (presentation === "in_progress") return "In Progress";
+        if (presentation === "rejected") return "Rejected";
+        return "Pending";
+      },
+    },
+    {
+      key: "overallStatus",
+      label: "Overall Status",
+      type: "select",
+      getValue: getOverallStatusMessage,
+    },
+  ];
+}
+
+function rowIsActionableForUser(approval, { ownDepartment, isAdminProxy }) {
+  return STAGE_COLUMNS.some((col) =>
+    canUserReviewDepartment(approval, col.id, { userDepartment: ownDepartment, isAdminProxy }),
+  );
+}
 
 const WAGON_LIST_FIELDS = new Set([
   "overloaded",
@@ -68,12 +124,6 @@ const WAGON_LIST_FIELDS = new Set([
   "singleBar",
   "downsideCheck",
 ]);
-
-const DEPARTMENT_TABS = [
-  { id: APPROVAL_DEPARTMENTS.OPERATIONS, label: "Railway Operations" },
-  { id: APPROVAL_DEPARTMENTS.COMMERCIAL, label: "Railway Commercial" },
-  { id: APPROVAL_DEPARTMENTS.CW, label: "Railway C&W" },
-];
 
 function buildDecisionActor(user, department, isAdminProxy) {
   const baseName = user?.name || user?.email || "User";
@@ -90,7 +140,7 @@ function describeDecisionOutcome(action, department, updated, isAdminProxy) {
   const actingAs = isAdminProxy ? ` on behalf of ${APPROVAL_STEP_LABELS[department]}` : "";
   if (action !== "approve") return `Approval rejected${actingAs}.`;
   if (updated?.status === APPROVAL_STATUS.APPROVED) {
-    return `Approved${actingAs}. All railway approvals are complete and the loading is ready for dispatch.`;
+    return `Approved${actingAs}. Overall status is OK and the loading is ready for dispatch.`;
   }
   const waitingOn = getPendingDepartmentsForApproval(updated);
   if (waitingOn.length === 0) return `Approved${actingAs}.`;
@@ -99,35 +149,10 @@ function describeDecisionOutcome(action, department, updated, isAdminProxy) {
   return `Approved${actingAs}. ${lead} ${joinDepartmentLabels(waitingOn)}${parallel}.`;
 }
 
-function getCurrentStepLabel(approval) {
-  return (
-    joinDepartmentLabels(getPendingDepartmentsForApproval(approval)) ||
-    getApprovalStatusLabel(approval.status)
-  );
-}
-
-function buildQueueFilterColumns(loadingById) {
-  return [
-    { key: "rakeNumber", label: "Rake Number" },
-    { key: "customer", label: "Customer", type: "select" },
-    { key: "siding", label: "Siding", type: "select" },
-    {
-      key: "completion",
-      label: "Completion",
-      getValue: (approval) =>
-        formatDateTimeForTable(
-          loadingById[approval.loadingId]?.completionTime || approval.completionTime,
-        ),
-    },
-    { key: "currentStep", label: "Current Step", type: "select", getValue: getCurrentStepLabel },
-    { key: "action", type: "none" },
-  ];
-}
-
 export default function RailwayApprovalsPage() {
   const dispatch = useDispatch();
   const { user, userRole } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const approvals = useSelector((state) => state.approvals.items);
   const approvalStatus = useSelector((state) => state.approvals.status);
   const approvalError = useSelector((state) => state.approvals.error);
@@ -137,11 +162,7 @@ export default function RailwayApprovalsPage() {
   const ownDepartment = isAdminProxy
     ? null
     : RAILWAY_DEPARTMENT_BY_ROLE[userRole] ?? APPROVAL_DEPARTMENTS.OPERATIONS;
-  const visibleTabs = isAdminProxy
-    ? [{ id: ADMIN_ALL_TAB, label: "All Pending" }, ...DEPARTMENT_TABS]
-    : DEPARTMENT_TABS.filter((tab) => tab.id === ownDepartment);
 
-  const activeDepartment = ownDepartment ?? (searchParams.get("dept") || ADMIN_ALL_TAB);
   const focusedLoadingId = searchParams.get("loadingId");
   const [search, setSearch] = useState("");
   const [selectedApproval, setSelectedApproval] = useState(null);
@@ -154,6 +175,12 @@ export default function RailwayApprovalsPage() {
   const [confirmAction, setConfirmAction] = useState(null);
   const [approvalTargets, setApprovalTargets] = useState([]);
   const [message, setMessage] = useState("");
+  const [nmdcMemoSentByApprovalId, setNmdcMemoSentByApprovalId] = useState(() =>
+    readNmdcMemoSentFlags(),
+  );
+  const [memoPreviewOpen, setMemoPreviewOpen] = useState(false);
+  const [memoPreviewText, setMemoPreviewText] = useState("");
+  const [memoSending, setMemoSending] = useState(false);
 
   const reloadLoadingItems = useCallback(
     () =>
@@ -173,20 +200,14 @@ export default function RailwayApprovalsPage() {
     [loadingItems],
   );
 
-  const pendingCount = useMemo(() => countPendingApprovals(approvals), [approvals]);
-
   const visibleQueueItems = useMemo(() => {
     if (focusedLoadingId) {
       return approvals.filter(
-        (approval) =>
-          String(approval.loadingId) === String(focusedLoadingId) &&
-          (isAdminProxy || canDepartmentAct(approval, activeDepartment)),
+        (approval) => String(approval.loadingId) === String(focusedLoadingId),
       );
     }
-    return isAdminProxy && activeDepartment === ADMIN_ALL_TAB
-      ? approvals.filter(isApprovalAwaitingAction)
-      : approvals.filter((approval) => canDepartmentAct(approval, activeDepartment));
-  }, [approvals, activeDepartment, isAdminProxy, focusedLoadingId]);
+    return approvals.filter(isApprovalAwaitingAction);
+  }, [approvals, focusedLoadingId]);
 
   const searchedQueueItems = useMemo(() => {
     if (!search.trim()) return visibleQueueItems;
@@ -199,7 +220,7 @@ export default function RailwayApprovalsPage() {
     );
   }, [visibleQueueItems, search]);
 
-  const queueFilterColumns = useMemo(() => buildQueueFilterColumns(loadingById), [loadingById]);
+  const queueFilterColumns = useMemo(() => buildQueueFilterColumns(), []);
   const columnFilters = useColumnFilters(queueFilterColumns);
   const { applyFilters } = columnFilters;
   const queueItems = useMemo(
@@ -208,11 +229,18 @@ export default function RailwayApprovalsPage() {
   );
 
   const { pageItems: pagedQueueItems, paginationProps } = useClientPagination(queueItems, {
-    resetKey: `${search}|${activeDepartment}|${focusedLoadingId ?? ""}|${columnFilters.filterKey}`,
+    resetKey: `${search}|${focusedLoadingId ?? ""}|${columnFilters.filterKey}`,
   });
 
-  async function openApproval(approval) {
-    const pendingDepartment = getPendingDepartmentForApproval(approval, activeDepartment);
+  const refreshQueue = useCallback(() => {
+    dispatch(fetchApprovalRequests());
+    reloadLoadingItems();
+  }, [dispatch, reloadLoadingItems]);
+
+  const openApproval = useCallback(async (approval, preferredDepartment = null) => {
+    const pendingDepartment = getPendingDepartmentForApproval(approval, preferredDepartment);
+    if (!pendingDepartment) return;
+
     setSelectedApproval(approval);
     setReviewDepartment(pendingDepartment);
     setRemarks("");
@@ -221,18 +249,24 @@ export default function RailwayApprovalsPage() {
     setApprovalTargets(
       pendingDepartment === APPROVAL_DEPARTMENTS.OPERATIONS ? [...REVIEW_DEPARTMENTS] : [],
     );
+    setWagonManifest(null);
 
-    const apiManifest = await fetchWagonManifestByRakeNumber(approval.rakeNumber);
-    const baseManifest =
-      approval.wagonManifest ??
-      apiManifest ??
-      createEmptyWagonManifest(approval);
-    setWagonManifest(normalizeWagonManifest(baseManifest, approval));
-    if (baseManifest && pendingDepartment) {
+    try {
+      const apiManifest = await fetchWagonManifestByRakeNumber(approval.rakeNumber);
+      const baseManifest =
+        approval.wagonManifest ?? apiManifest ?? createEmptyWagonManifest(approval);
       const manifest = normalizeWagonManifest(baseManifest, approval);
+      setWagonManifest(manifest);
       setInspectionForm(buildDepartmentInspectionFromManifest(pendingDepartment, manifest));
+    } catch {
+      const fallbackManifest = normalizeWagonManifest(
+        approval.wagonManifest ?? createEmptyWagonManifest(approval),
+        approval,
+      );
+      setWagonManifest(fallbackManifest);
+      setInspectionForm(buildDepartmentInspectionFromManifest(pendingDepartment, fallbackManifest));
     }
-  }
+  }, []);
 
   function syncInspectionFromManifest(manifest, department = reviewDepartment) {
     if (!manifest || !department) return;
@@ -328,6 +362,46 @@ export default function RailwayApprovalsPage() {
     setConfirmAction(action);
   }
 
+  function openMemoPreview() {
+    if (!selectedApproval || !reviewDepartment) return;
+    if (!REVIEW_DEPARTMENTS.includes(reviewDepartment)) return;
+    setMemoPreviewText(
+      formatRailwayApprovalMemo({
+        approval: selectedApproval,
+        department: reviewDepartment,
+        actor: buildDecisionActor(user, reviewDepartment, isAdminProxy),
+        remarks,
+        loading: loadingById[selectedApproval.loadingId],
+      }),
+    );
+    setMemoPreviewOpen(true);
+  }
+
+  async function confirmSendMemo() {
+    if (!selectedApproval || !reviewDepartment) return;
+    setMemoSending(true);
+    try {
+      const result = await sendRailwayApprovalMemo(selectedApproval, {
+        department: reviewDepartment,
+        actor: buildDecisionActor(user, reviewDepartment, isAdminProxy),
+        remarks,
+        loading: loadingById[selectedApproval.loadingId],
+      });
+      setNmdcMemoSentByApprovalId(markNmdcMemoSent(selectedApproval.id));
+      setMemoPreviewOpen(false);
+      const fromLine = result?.from_email ? ` From ${result.from_email}.` : "";
+      const toLine =
+        Array.isArray(result?.recipients) && result.recipients.length
+          ? ` Delivered to ${result.recipients.join(", ")}.`
+          : "";
+      setMessage(`Memo sent to NMDC.${fromLine}${toLine}`);
+    } catch (error) {
+      setMessage(error?.message || "Unable to send memo to NMDC.");
+    } finally {
+      setMemoSending(false);
+    }
+  }
+
   async function confirmDecision() {
     if (!selectedApproval || !confirmAction || !reviewDepartment) return;
 
@@ -360,6 +434,7 @@ export default function RailwayApprovalsPage() {
         }),
       ).unwrap();
 
+      setConfirmAction(null);
       await dispatch(fetchApprovalRequests());
       await reloadLoadingItems();
       setMessage(
@@ -367,6 +442,7 @@ export default function RailwayApprovalsPage() {
       );
       closeApproval();
     } catch (error) {
+      setConfirmAction(null);
       setMessage(error?.message || "Unable to submit approval decision.");
     }
   }
@@ -388,6 +464,17 @@ export default function RailwayApprovalsPage() {
         }.`
       : "";
 
+  const canSendNmdcMemo =
+    Boolean(selectedApproval) &&
+    Boolean(reviewDepartment) &&
+    REVIEW_DEPARTMENTS.includes(reviewDepartment);
+
+  function nmdcPresentationFor(approval) {
+    return getNmdcStepPresentation(approval, {
+      memoSent: Boolean(nmdcMemoSentByApprovalId[String(approval.id)]),
+    });
+  }
+
   return (
     <>
       <div className="space-y-6 animate-fadeIn">
@@ -406,9 +493,9 @@ export default function RailwayApprovalsPage() {
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
             <p className="text-sm font-semibold text-amber-900">Administrator proxy mode</p>
             <p className="mt-1 text-[13px] text-amber-800">
-              Use <strong>All Pending</strong> to see every step waiting for approval, or switch
-              tabs to act as Railway Operations, Commercial, or C&amp;W. Each decision is recorded
-              as admin acting on behalf of that department.
+              All approval stages appear in one table. Use the <strong>Review</strong> button in the
+              active column to act on behalf of Railway Operations, Commercial, or C&amp;W. Each
+              decision is recorded as admin acting on behalf of that department.
             </p>
           </div>
         ) : null}
@@ -425,28 +512,6 @@ export default function RailwayApprovalsPage() {
           </p>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-2">
-          {visibleTabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setSearchParams({ dept: tab.id })}
-              className={`rounded-lg border px-4 py-2 text-[13px] font-semibold transition-colors ${
-                activeDepartment === tab.id
-                  ? "border-blue-600 bg-blue-600 text-white"
-                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              {tab.label}
-              {tab.id === ADMIN_ALL_TAB && pendingCount > 0 ? (
-                <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-[11px]">
-                  {pendingCount}
-                </span>
-              ) : null}
-            </button>
-          ))}
-        </div>
-
         <SearchBar
           placeholder="Search by rake number, customer, siding..."
           value={search}
@@ -456,73 +521,88 @@ export default function RailwayApprovalsPage() {
 
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-180">
+            <table className="w-full min-w-[960px]">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/60">
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Rake Number</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Customer</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Siding</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Completion</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Current Step</th>
-                  <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Action</th>
+                <tr className="border-b border-slate-200 bg-white">
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                    Rake Number
+                  </th>
+                  {STAGE_COLUMNS.map((col) => (
+                    <th
+                      key={col.id}
+                      className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400"
+                    >
+                      {col.label}
+                    </th>
+                  ))}
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                    NMDC Check
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                    Overall Status
+                  </th>
                 </tr>
                 <ColumnFilterRow
                   {...columnFilters.filterRowProps}
                   rows={visibleQueueItems}
-                  cellClassName="px-4 py-2"
+                  cellClassName="px-5 py-2"
                 />
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {approvalStatus === "loading" && queueItems.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
+                    <td colSpan={6} className="px-5 py-12 text-center text-sm text-slate-500">
                       Loading railway approvals...
                     </td>
                   </tr>
                 ) : queueItems.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
+                    <td colSpan={6} className="px-5 py-12 text-center text-sm text-slate-500">
                       {visibleQueueItems.length > 0
                         ? "No approvals match your search or column filters."
                         : focusedLoadingId
                           ? "No railway approval was found for this loading record."
-                          : isAdminProxy && activeDepartment === ADMIN_ALL_TAB
-                            ? "No loading records are awaiting railway approval."
-                            : "No pending approvals for this department."}
+                          : "No loading records are awaiting railway approval."}
                     </td>
                   </tr>
                 ) : (
                   pagedQueueItems.map((approval) => {
-                    const loading = loadingById[approval.loadingId];
-                    const completionTime = loading?.completionTime || approval.completionTime;
-                    const pendingDepartments = getPendingDepartmentsForApproval(approval);
+                    const rowActive = rowIsActionableForUser(approval, {
+                      ownDepartment,
+                      isAdminProxy,
+                    });
+                    const overallStatus = getOverallStatusMessage(approval);
                     return (
-                      <tr key={approval.id} className="hover:bg-slate-50/60">
-                        <td className="px-4 py-3 text-[13px] font-semibold text-blue-600">
+                      <tr
+                        key={approval.id}
+                        className={`transition-colors ${
+                          rowActive ? "bg-blue-50/50 hover:bg-blue-50/70" : "hover:bg-slate-50/60"
+                        }`}
+                      >
+                        <td className="whitespace-nowrap px-5 py-4 text-[14px] font-bold text-[#2563eb]">
                           {approval.rakeNumber}
                         </td>
-                        <td className="px-4 py-3 text-[13px] text-slate-700">{approval.customer}</td>
-                        <td className="px-4 py-3 text-[13px] text-slate-700">{approval.siding}</td>
-                        <td className="px-4 py-3 text-[13px] text-slate-700">
-                          {formatDateTimeForTable(completionTime)}
+                        {STAGE_COLUMNS.map((col) => (
+                          <td key={col.id} className="px-5 py-4 align-middle">
+                            <RailwayApprovalStageCell
+                              approval={approval}
+                              department={col.id}
+                              presentation={getDepartmentStepPresentation(approval, col.id)}
+                              onReview={openApproval}
+                              userDepartment={ownDepartment}
+                              isAdminProxy={isAdminProxy}
+                            />
+                          </td>
+                        ))}
+                        <td className="px-5 py-4 align-middle">
+                          <RailwayNmdcStageCell presentation={nmdcPresentationFor(approval)} />
                         </td>
-                        <td className="px-4 py-3 text-[13px] text-slate-700">
-                          {joinDepartmentLabels(pendingDepartments) ||
-                            getApprovalStatusLabel(approval.status)}
-                          {pendingDepartments.length > 1 ? (
-                            <span className="ml-2 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700">
-                              Parallel
-                            </span>
-                          ) : null}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => openApproval(approval)}
-                            className={uniformPrimaryButtonClass}
-                          >
-                            Review
-                          </button>
+                        <td
+                          className={`px-5 py-4 text-[13px] font-medium ${
+                            overallStatus === "OK" ? "font-semibold text-emerald-700" : "text-slate-700"
+                          }`}
+                        >
+                          {overallStatus}
                         </td>
                       </tr>
                     );
@@ -531,17 +611,25 @@ export default function RailwayApprovalsPage() {
               </tbody>
             </table>
           </div>
-          {queueItems.length > 0 ? (
-            <div className="px-4 pb-4">
-              <Pagination {...paginationProps} />
-            </div>
-          ) : null}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3">
+            <button
+              type="button"
+              onClick={refreshQueue}
+              disabled={approvalStatus === "loading"}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-60"
+            >
+              <RefreshCw className={`h-4 w-4 ${approvalStatus === "loading" ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+            {queueItems.length > 0 ? <Pagination {...paginationProps} /> : null}
+          </div>
         </div>
       </div>
 
-      {selectedApproval && reviewDepartment ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-5 shadow-xl">
+      {selectedApproval && reviewDepartment
+        ? createPortal(
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4">
+              <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-5 shadow-xl">
             <div className="mb-4 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-800">
@@ -705,6 +793,16 @@ export default function RailwayApprovalsPage() {
                 >
                   Reject
                 </button>
+                {canSendNmdcMemo ? (
+                  <button
+                    type="button"
+                    onClick={openMemoPreview}
+                    disabled={memoSending}
+                    className={uniformSecondaryButtonClass}
+                  >
+                    Send Memo
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => requestDecision("approve")}
@@ -716,27 +814,73 @@ export default function RailwayApprovalsPage() {
             </UniformSectionCard>
             </div>
           </div>
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
 
-      <ConfirmDialog
-        isOpen={Boolean(confirmAction)}
-        onClose={() => setConfirmAction(null)}
-        onConfirm={confirmDecision}
-        title={confirmAction === "approve" ? "Confirm Approval" : "Confirm Rejection"}
-        message={
-          confirmAction === "approve"
-            ? isAdminProxy
-              ? `Approve this step on behalf of ${reviewDepartmentLabel}?${routingNote}`
-              : `Are you sure you want to approve this railway step?${routingNote}`
-            : isAdminProxy
-              ? `Reject this step on behalf of ${reviewDepartmentLabel}?`
-              : "Are you sure you want to reject this railway approval step?"
-        }
-        itemName={selectedApproval?.rakeNumber || ""}
-        confirmLabel={confirmAction === "approve" ? "Approve" : "Reject"}
-        variant={confirmAction === "approve" ? "warning" : "danger"}
-      />
+      {memoPreviewOpen
+        ? createPortal(
+            <div className="fixed inset-0 z-[105] flex items-center justify-center bg-slate-900/40 p-4">
+              <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl bg-white p-5 shadow-xl">
+                <h3 className="text-lg font-bold text-slate-800">Send memo to NMDC</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Review the formatted memo below. It will be sent to NMDC administration for this
+                  rake.
+                </p>
+                <textarea
+                  readOnly
+                  className={`${uniformInputClass} mt-4 min-h-[320px] flex-1 font-mono text-xs leading-relaxed`}
+                  value={memoPreviewText}
+                />
+                <div className="mt-4 flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMemoPreviewOpen(false)}
+                    disabled={memoSending}
+                    className={uniformSecondaryButtonClass}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmSendMemo}
+                    disabled={memoSending}
+                    className={uniformPrimaryButtonClass}
+                  >
+                    {memoSending ? "Sending…" : "Send to NMDC"}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
+      {Boolean(confirmAction)
+        ? createPortal(
+            <ConfirmDialog
+              isOpen
+              onClose={() => setConfirmAction(null)}
+              onConfirm={confirmDecision}
+              title={confirmAction === "approve" ? "Confirm Approval" : "Confirm Rejection"}
+              message={
+                confirmAction === "approve"
+                  ? isAdminProxy
+                    ? `Approve this step on behalf of ${reviewDepartmentLabel}?${routingNote}`
+                    : `Are you sure you want to approve this railway step?${routingNote}`
+                  : isAdminProxy
+                    ? `Reject this step on behalf of ${reviewDepartmentLabel}?`
+                    : "Are you sure you want to reject this railway approval step?"
+              }
+              itemName={selectedApproval?.rakeNumber || ""}
+              confirmLabel={confirmAction === "approve" ? "Approve" : "Reject"}
+              variant={confirmAction === "approve" ? "warning" : "danger"}
+              overlayClassName="z-[110]"
+            />,
+            document.body,
+          )
+        : null}
     </>
   );
 }

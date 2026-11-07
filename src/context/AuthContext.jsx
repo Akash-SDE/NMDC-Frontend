@@ -13,7 +13,11 @@ import {
   TOKEN_STORAGE_KEY,
 } from "../constants/storageKeys";
 import { USER_ROLES, DEFAULT_ROUTE_BY_ROLE, resolveRoleFromProfile } from "../constants/roles";
-import { loginWithOtp, sendLoginOtp } from "../services/auth/authService";
+import {
+  loginWithCredentials,
+  loginWithOtp,
+  sendLoginOtp,
+} from "../services/auth/authService";
 import { fetchProfile } from "../services/profileService";
 import { writeTokens } from "../api/axiosClient";
 import { getSessionExpiry, isSessionExpired, onSessionExpired } from "../api/session";
@@ -101,17 +105,10 @@ export function AuthProvider({ children }) {
     return sendLoginOtp(email.trim());
   }, []);
 
-  const login = useCallback(
-    async ({ email, otp, remember = false }) => {
-      const trimmedEmail = email.trim();
-
-      /* 1. verify OTP → JWT tokens */
-      const authTokens = await loginWithOtp(trimmedEmail, otp);
-
-      /* 2. store tokens first so the profile request is authenticated */
+  const completeLogin = useCallback(
+    async (trimmedEmail, authTokens, remember = false) => {
       writeTokens(authTokens);
 
-      /* 3. fetch profile to get real role + user info */
       let profileData = null;
       let role = USER_ROLES.ADMIN;
 
@@ -119,7 +116,6 @@ export function AuthProvider({ children }) {
         profileData = await fetchProfile();
         role = resolveRoleFromProfile(profileData);
       } catch {
-        /* profile fetch failed (e.g. mock mode) — fall back to email heuristic */
         role = resolveRoleFromEmail(trimmedEmail);
       }
 
@@ -137,6 +133,24 @@ export function AuthProvider({ children }) {
       return { role, user: userData, profile: profileData, tokens: authTokens };
     },
     [persistSession],
+  );
+
+  const login = useCallback(
+    async ({ email, otp, remember = false }) => {
+      const trimmedEmail = email.trim();
+      const authTokens = await loginWithOtp(trimmedEmail, otp);
+      return completeLogin(trimmedEmail, authTokens, remember);
+    },
+    [completeLogin],
+  );
+
+  const loginWithPassword = useCallback(
+    async ({ email, password, remember = false }) => {
+      const trimmedEmail = email.trim();
+      const authTokens = await loginWithCredentials(trimmedEmail, password);
+      return completeLogin(trimmedEmail, authTokens, remember);
+    },
+    [completeLogin],
   );
 
   const logout = useCallback(() => {
@@ -190,10 +204,22 @@ export function AuthProvider({ children }) {
       tokens,
       requestOtp,
       login,
+      loginWithPassword,
       logout,
       defaultRoute: userRole ? DEFAULT_ROUTE_BY_ROLE[userRole] : "/login",
     }),
-    [user, profile, userRole, isAuthenticated, isLoading, tokens, requestOtp, login, logout],
+    [
+      user,
+      profile,
+      userRole,
+      isAuthenticated,
+      isLoading,
+      tokens,
+      requestOtp,
+      login,
+      loginWithPassword,
+      logout,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

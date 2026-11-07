@@ -12,6 +12,7 @@ export default function ConfirmDialog({
   confirmLabel = "Delete",
   cancelLabel = "Cancel",
   variant = "danger",
+  overlayClassName = "z-[110]",
 }) {
   const variants = {
     danger: {
@@ -30,7 +31,14 @@ export default function ConfirmDialog({
   const titleId = useId();
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="" labelledBy={titleId} size="sm">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title=""
+      labelledBy={titleId}
+      size="sm"
+      overlayClassName={overlayClassName}
+    >
       <div className="text-center">
         {/* Warning icon */}
         <div

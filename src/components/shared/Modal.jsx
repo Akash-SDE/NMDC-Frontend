@@ -9,6 +9,7 @@ export default function Modal({
   size = "md",
   showHeader = true,
   labelledBy,
+  overlayClassName = "z-100",
 }) {
   const overlayRef = useRef(null);
   const contentRef = useRef(null);
@@ -45,7 +46,7 @@ export default function Modal({
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-100 flex items-center justify-center p-4 sm:p-6"
+      className={`fixed inset-0 ${overlayClassName} flex items-center justify-center p-4 sm:p-6`}
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}

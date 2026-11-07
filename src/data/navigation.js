@@ -7,6 +7,16 @@ const adminSidebarSections = [
         label: "Dashboard",
         icon: "dashboard",
         active: true,
+        children: [
+          {
+            id: "dashboard-overview",
+            label: "Daily Overview",
+          },
+          {
+            id: "operations-cockpit",
+            label: "Operations Cockpit",
+          },
+        ],
       },
       {
         id: "e-demand",

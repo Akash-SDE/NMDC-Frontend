@@ -175,7 +175,7 @@ export default function Header({ onMenuClick }) {
   }
 
   return (
-    <header className="sticky top-0 z-100 shadow-lg bg-[#F3F5F8] py-2">
+    <header className="relative z-30 shrink-0 bg-[#F3F5F8] py-2 shadow-lg">
       <div className="flex h-15.5 items-center justify-between rounded-xl px-3 sm:px-4 lg:px-5">
 
         {/* left: mobile menu + title */}

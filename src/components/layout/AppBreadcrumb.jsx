@@ -10,7 +10,7 @@ function toTitleCaseFromRoute(route) {
     .join(" ");
 }
 
-export default function AppBreadcrumb() {
+export default function AppBreadcrumb({ compact = false }) {
   const { currentRoute, navigate, userRole } = useRouter();
 
   const crumbs = useMemo(() => {
@@ -61,7 +61,7 @@ export default function AppBreadcrumb() {
   }, [currentRoute, userRole]);
 
   return (
-    <nav className="mb-3 overflow-x-auto pb-1 scrollbar-hide">
+    <nav className={`overflow-x-auto scrollbar-hide ${compact ? "mb-0 pb-0" : "mb-3 pb-1"}`}>
       <div className="flex min-w-max items-center gap-2 text-[12px] font-semibold text-slate-600 sm:text-[13px]">
         {crumbs.map((crumb, index) => {
           const isLast = index === crumbs.length - 1;
