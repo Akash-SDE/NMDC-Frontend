@@ -290,14 +290,20 @@ function buildSidingRakeSlide(loading, records, dayWindow, now) {
   };
 }
 
+function isCockpitLoadingVisible(loading, dayWindow) {
+  const placed = toTimestamp(loading.placement_time);
+  const completed = toTimestamp(loading.completion_time);
+  if (completed == null) return true;
+  return (
+    isWithinDay(placed, dayWindow) ||
+    isWithinDay(completed, dayWindow) ||
+    (placed != null && placed < dayWindow.end && completed >= dayWindow.start)
+  );
+}
+
 export function buildCockpitSidings(records, dayWindow, now = Date.now()) {
   const loadings = activeLoadings(records.loadings || [])
-    .filter((l) => {
-      const placed = toTimestamp(l.placement_time);
-      if (placed == null || placed >= dayWindow.end) return false;
-      const completed = toTimestamp(l.completion_time);
-      return completed == null || completed >= dayWindow.start;
-    })
+    .filter((l) => isCockpitLoadingVisible(l, dayWindow))
     .sort((a, b) => (toTimestamp(a.placement_time) ?? 0) - (toTimestamp(b.placement_time) ?? 0));
 
   const bySiding = new Map();
@@ -375,15 +381,7 @@ export function buildCockpitDispatchRows(records, dayWindow, now = Date.now()) {
 
 export function buildLiveRakeRegister(records, dayWindow, now = Date.now()) {
   const loadings = activeLoadings(records.loadings || [])
-    .filter((l) => {
-      const placed = toTimestamp(l.placement_time);
-      const completed = toTimestamp(l.completion_time);
-      return (
-        isWithinDay(placed, dayWindow) ||
-        isWithinDay(completed, dayWindow) ||
-        (placed != null && placed < dayWindow.end && (completed == null || completed >= dayWindow.start))
-      );
-    })
+    .filter((l) => isCockpitLoadingVisible(l, dayWindow))
     .sort((a, b) => (toTimestamp(a.placement_time) ?? 0) - (toTimestamp(b.placement_time) ?? 0));
 
   return loadings.map((loading, index) => {
@@ -498,7 +496,10 @@ export function buildCockpitBundle(records, dateValue, now = Date.now()) {
     productDispatch: product.slices,
     productDispatchTotalMt: product.totalMt,
     sidingLoading: buildSidingLoadingChart(safe, monthWindow),
-    isEmpty: register.length === 0 && buildCockpitSidings(safe, dayWindow, now).length === 0,
+    isEmpty:
+      register.length === 0
+      && buildCockpitSidings(safe, dayWindow, now).length === 0
+      && activeLoadings(safe.loadings || []).length === 0,
     isDemo: false,
   };
 }

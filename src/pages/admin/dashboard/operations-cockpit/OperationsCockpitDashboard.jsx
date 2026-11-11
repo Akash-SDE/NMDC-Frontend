@@ -436,7 +436,7 @@ const TD = "border-b border-slate-100 px-2 py-1.5";
 
 /* ---------- page ---------- */
 export default function OperationsCockpitDashboard({ showHeader = true }) {
-  const { status, error, bundle, reload } = useOperationsCockpitData();
+  const { status, error, bundle, dataSource, reload } = useOperationsCockpitData();
   const {
     meta,
     kpis,
@@ -495,11 +495,27 @@ export default function OperationsCockpitDashboard({ showHeader = true }) {
             <ApiErrorState error={error} message="Could not load live cockpit data." onRetry={reload} />
           ) : null}
 
+          {bundle.isDemo ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+              <b className="font-bold">Sample dashboard data</b> — cockpit APIs failed and demo fallback is enabled.
+              Redeploy with <code className="rounded bg-amber-100 px-1">VITE_COCKPIT_ALLOW_DEMO=false</code> (default)
+              for production.
+            </div>
+          ) : bundle.isEmpty ? (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-700">
+              No loadings match today&apos;s cockpit window (in-progress or completed today). KPIs still reflect live
+              API data. Add <b>placement time</b> on loading records to populate siding cards and the register.
+            </div>
+          ) : null}
+
           <div className="flex justify-end">
             <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-[8px]">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
               <span className="text-slate-500">Target Ratio:</span>
               <b className="text-slate-800">{meta.targetRatio}</b>
+              {dataSource === "live" ? (
+                <span className="text-[7px] font-semibold uppercase text-emerald-600">Live</span>
+              ) : null}
             </div>
           </div>
 

@@ -116,6 +116,7 @@ export const COCKPIT_SIDINGS = [
 /* ------------------------------------------------------------------ */
 /*  KPI cards                                                          */
 /* ------------------------------------------------------------------ */
+/** Demo fallback KPIs — keep in sync with `buildCockpitKpis` (4 cards). */
 export const COCKPIT_KPIS = [
   {
     title: "Rakes Loaded (Today)",
@@ -138,19 +139,9 @@ export const COCKPIT_KPIS = [
     border: "#16a34a",
   },
   {
-    title: "Loading Completed",
-    value: "6",
-    sub: "Awaiting Release : 2",
-    subTone: "amber",
-    tone: "green",
-    shape: "circle",
-    icon: "completed",
-    border: "#0ea5e9",
-  },
-  {
-    title: "Post-loading Delay",
-    value: "2",
-    sub: "> Permitted Time",
+    title: "Demurrage Hours",
+    value: "1.8",
+    sub: "Logged delay time today",
     subTone: "danger",
     tone: "red",
     shape: "circle",
@@ -158,23 +149,12 @@ export const COCKPIT_KPIS = [
     border: "#dc2626",
   },
   {
-    title: "Rakes Loaded (This Month)",
-    value: "302",
-    sub: "Target : 320",
-    subTone: "blue",
-    progress: 94,
-    tone: "blue",
-    icon: "calendar",
-    border: "#4f46e5",
-    ring: "#10b981",
-  },
-  {
-    title: "MT (This Month)",
-    value: "1.24",
-    sub: "Avg. 4,100 t / rake",
-    subTone: "muted",
-    tone: "purple",
-    icon: "scale",
+    title: "Gross Loading Hours",
+    value: "6.4",
+    sub: "SLA: 7.0 hrs",
+    subTone: "amber",
+    tone: "amber",
+    icon: "hours",
     border: "#d97706",
   },
 ];
