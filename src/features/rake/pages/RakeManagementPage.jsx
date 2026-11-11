@@ -28,6 +28,8 @@ export default function RakeManagementPage() {
     updateOfferedRake,
     setRakeDisabled,
     lookupOptions,
+    createLookupOption,
+    createFNoteOption,
     saving,
   } = useOfferedRakes();
 
@@ -263,6 +265,7 @@ export default function RakeManagementPage() {
         onSaveUpcomingRakes={upcoming.saveUpcomingToOffered}
         onClearUpcomingRakes={upcoming.clearUpcomingRows}
         lookupOptions={lookupOptions}
+        createLookupOption={createLookupOption}
       />
     );
   }
@@ -302,6 +305,8 @@ export default function RakeManagementPage() {
         upcomingDraftCount={upcoming.stats.total}
         upcomingReadyCount={upcoming.stats.readyCount}
         lookupOptions={lookupOptions}
+        createLookupOption={createLookupOption}
+        createFNoteOption={createFNoteOption}
         formError={formError}
         formNotice={formNotice}
         saving={saving}

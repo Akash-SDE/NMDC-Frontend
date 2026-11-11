@@ -7,6 +7,8 @@ import { fetchRoutes } from "../../../services/routeService";
 import { fetchSidings } from "../../../services/sidingService";
 import { fetchWagonTypes } from "../../../services/wagonTypeService";
 import { listEDemands } from "../../../services/edemandService";
+import { quickCreateMasterData } from "../utils/masterDataQuickCreate";
+import { quickCreateFNote } from "../utils/fNoteQuickCreate";
 
 const RAKE_STATUS_DRAFT = 5;
 const RAKE_STATUS_CANCELLED = 50;
@@ -155,6 +157,69 @@ export function useOfferedRakes() {
     };
   }, []);
 
+  const addLookupOption = useCallback((lookupKey, option) => {
+    setLookupOptions((prev) => {
+      const exists = prev[lookupKey]?.some((item) => String(item.id) === String(option.id));
+      if (exists) return prev;
+      const next = [...(prev[lookupKey] ?? []), option].sort((a, b) =>
+        a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
+      );
+      return { ...prev, [lookupKey]: next };
+    });
+  }, []);
+
+  const createFNoteOption = useCallback(
+    async (label, formContext = {}) => {
+      const trimmed = String(label ?? "").trim();
+      if (!trimmed) {
+        throw new Error("Enter an F-Note value before creating.");
+      }
+
+      const existing = lookupOptions.fNotes?.find(
+        (note) => note.toLowerCase() === trimmed.toLowerCase(),
+      );
+      if (existing) {
+        return { id: existing, label: existing };
+      }
+
+      const fNote = await quickCreateFNote(trimmed, {
+        customer: formContext.customer,
+        destination: formContext.destination,
+        oreType: formContext.oreType,
+      });
+
+      setLookupOptions((prev) => ({
+        ...prev,
+        fNotes: [...new Set([...(prev.fNotes ?? []), fNote])].sort((a, b) =>
+          a.localeCompare(b, undefined, { sensitivity: "base" }),
+        ),
+      }));
+
+      return { id: fNote, label: fNote };
+    },
+    [lookupOptions.fNotes],
+  );
+
+  const createLookupOption = useCallback(
+    async (lookupKey, label) => {
+      const trimmed = String(label ?? "").trim();
+      if (!trimmed) {
+        throw new Error("Enter a value before creating master data.");
+      }
+
+      const existing = lookupOptions[lookupKey]?.find(
+        (item) => item.label.toLowerCase() === trimmed.toLowerCase(),
+      );
+      if (existing) return existing;
+
+      const created = await quickCreateMasterData(lookupKey, trimmed);
+      const option = { id: created.id, label: created.label };
+      addLookupOption(lookupKey, option);
+      return option;
+    },
+    [lookupOptions, addLookupOption],
+  );
+
   const createOfferedRake = useCallback(
     async (form, { reload = true } = {}) => {
       const payload = {
@@ -300,6 +365,8 @@ export function useOfferedRakes() {
     error,
     saving,
     lookupOptions,
+    createLookupOption,
+    createFNoteOption,
     reload: fetchRakes,
     createOfferedRake,
     updateOfferedRake,

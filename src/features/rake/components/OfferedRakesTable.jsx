@@ -21,7 +21,7 @@ import { useClientPagination } from "../../../hooks/useClientPagination";
 import { useColumnFilters } from "../../../hooks/useColumnFilters";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 import ColumnSettingsMenu from "../../../components/shared/ColumnSettingsMenu";
-import SearchableSelect from "../../../components/shared/SearchableSelect";
+import CreatableLookupSelect from "../../../components/shared/CreatableLookupSelect";
 import { useColumnVisibility } from "../../../hooks/useColumnVisibility";
 
 const getOfferedRakeStatusLabel = (row) =>
@@ -88,6 +88,8 @@ export default function OfferedRakesTable({
     destinations: [],
     wagonTypes: [],
   },
+  createLookupOption,
+  createFNoteOption,
   formError = "",
   formNotice = "",
   saving = false,
@@ -98,6 +100,14 @@ export default function OfferedRakesTable({
   });
   const { applyFilters } = columnFilters;
   const filteredRows = useMemo(() => applyFilters(sortedRows), [applyFilters, sortedRows]);
+
+  const fNoteSelectOptions = useMemo(() => {
+    const notes = [
+      offeringForm.fNote,
+      ...(lookupOptions.fNotes ?? []),
+    ].filter(Boolean);
+    return [...new Set(notes)].map((note) => ({ id: note, label: note }));
+  }, [lookupOptions.fNotes, offeringForm.fNote]);
   const { pageItems: pagedRows, paginationProps } = useClientPagination(filteredRows, {
     resetKey: `${search}|${sortBy}|${sortOrder}|${columnFilters.filterKey}`,
   });
@@ -293,94 +303,82 @@ export default function OfferedRakesTable({
                   />
                 </td>
                 <td className="px-5 py-3">
-                  <select
+                  <CreatableLookupSelect
                     value={offeringForm.siding}
-                    onChange={(event) => updateOffering("siding", event.target.value)}
+                    onChange={(id) => updateOffering("siding", id)}
+                    options={lookupOptions.sidings}
+                    placeholder="Siding"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
-                  >
-                    <option value="">Siding</option>
-                    {lookupOptions.sidings.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onCreateOption={
+                      createLookupOption ? (label) => createLookupOption("sidings", label) : undefined
+                    }
+                  />
                 </td>
                 <td className="px-5 py-3">
-                  <select
+                  <CreatableLookupSelect
                     value={offeringForm.route}
-                    onChange={(event) => updateOffering("route", event.target.value)}
+                    onChange={(id) => updateOffering("route", id)}
+                    options={lookupOptions.routes}
+                    placeholder="Route"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
-                  >
-                    <option value="">Route</option>
-                    {lookupOptions.routes.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onCreateOption={
+                      createLookupOption ? (label) => createLookupOption("routes", label) : undefined
+                    }
+                  />
                 </td>
                 <td className="px-5 py-3">
-                  <select
+                  <CreatableLookupSelect
                     value={offeringForm.oreType}
-                    onChange={(event) => updateOffering("oreType", event.target.value)}
+                    onChange={(id) => updateOffering("oreType", id)}
+                    options={lookupOptions.oreTypes}
+                    placeholder="Ore Type"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
-                  >
-                    <option value="">Ore Type</option>
-                    {lookupOptions.oreTypes.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onCreateOption={
+                      createLookupOption ? (label) => createLookupOption("oreTypes", label) : undefined
+                    }
+                  />
                 </td>
                 <td className="px-5 py-3">
-                  <select
+                  <CreatableLookupSelect
                     value={offeringForm.customer}
-                    onChange={(event) => updateOffering("customer", event.target.value)}
+                    onChange={(id) => updateOffering("customer", id)}
+                    options={lookupOptions.customers}
+                    placeholder="Customer"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
-                  >
-                    <option value="">Customer</option>
-                    {lookupOptions.customers.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onCreateOption={
+                      createLookupOption ? (label) => createLookupOption("customers", label) : undefined
+                    }
+                  />
                 </td>
                 <td className="px-5 py-3">
-                  <select
+                  <CreatableLookupSelect
                     value={offeringForm.destination}
-                    onChange={(event) => updateOffering("destination", event.target.value)}
+                    onChange={(id) => updateOffering("destination", id)}
+                    options={lookupOptions.destinations}
+                    placeholder="Destination"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
-                  >
-                    <option value="">Destination</option>
-                    {lookupOptions.destinations.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onCreateOption={
+                      createLookupOption ? (label) => createLookupOption("destinations", label) : undefined
+                    }
+                  />
                 </td>
                 <td className="px-5 py-3">
-                  <select
+                  <CreatableLookupSelect
                     value={offeringForm.wagonType}
-                    onChange={(event) => updateOffering("wagonType", event.target.value)}
+                    onChange={(id) => updateOffering("wagonType", id)}
+                    options={lookupOptions.wagonTypes}
+                    placeholder="Wagon Type"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
-                  >
-                    <option value="">Wagon Type</option>
-                    {lookupOptions.wagonTypes.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onCreateOption={
+                      createLookupOption ? (label) => createLookupOption("wagonTypes", label) : undefined
+                    }
+                  />
                 </td>
                 <td className="px-5 py-3">
                   <input
@@ -393,13 +391,23 @@ export default function OfferedRakesTable({
                   />
                 </td>
                 <td className="px-5 py-3">
-                  <SearchableSelect
+                  <CreatableLookupSelect
                     value={offeringForm.fNote}
                     onChange={(fNote) => updateOffering("fNote", fNote)}
-                    options={[...new Set([offeringForm.fNote, ...(lookupOptions.fNotes ?? [])])].filter(Boolean)}
+                    options={fNoteSelectOptions}
                     placeholder="F-Note"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
+                    onCreateOption={
+                      createFNoteOption
+                        ? (label) =>
+                            createFNoteOption(label, {
+                              customer: offeringForm.customer,
+                              destination: offeringForm.destination,
+                              oreType: offeringForm.oreType,
+                            })
+                        : undefined
+                    }
                   />
                 </td>
                 <td className="px-5 py-3">

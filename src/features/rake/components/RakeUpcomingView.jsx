@@ -11,6 +11,7 @@ import Pagination from "../../../components/shared/Pagination";
 import { useClientPagination } from "../../../hooks/useClientPagination";
 import { useColumnFilters } from "../../../hooks/useColumnFilters";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import CreatableLookupSelect from "../../../components/shared/CreatableLookupSelect";
 
 const UPCOMING_OFFERED_FILTER_COLUMNS = [
   { key: "sno", type: "none" },
@@ -58,6 +59,7 @@ export default function RakeUpcomingView({
     destinations: [],
     wagonTypes: [],
   },
+  createLookupOption,
 }) {
   const draftFilterColumns = useMemo(
     () => [
@@ -158,20 +160,18 @@ export default function RakeUpcomingView({
         ? "border-rose-200 bg-rose-50 text-rose-800"
         : "border-blue-200 bg-blue-50 text-blue-800";
 
-  const renderSelect = (row, field, placeholder, options) => (
-    <select
+  const renderCreatableSelect = (row, field, placeholder, options, lookupKey) => (
+    <CreatableLookupSelect
       value={row[field]}
-      onChange={(event) => updateUpcomingRow(row.id, field, event.target.value)}
+      onChange={(id) => updateUpcomingRow(row.id, field, id)}
+      options={options}
+      placeholder={placeholder}
       className={compactInputClass}
       disabled={moving}
-    >
-      <option value="">{placeholder}</option>
-      {options.map((option) => (
-        <option key={option.id} value={option.id}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+      onCreateOption={
+        createLookupOption ? (label) => createLookupOption(lookupKey, label) : undefined
+      }
+    />
   );
 
   return (
@@ -354,16 +354,16 @@ export default function RakeUpcomingView({
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      {renderSelect(row, "oreType", "Select ore", lookupOptions.oreTypes)}
+                      {renderCreatableSelect(row, "oreType", "Ore type", lookupOptions.oreTypes, "oreTypes")}
                     </td>
                     <td className="px-4 py-3">
-                      {renderSelect(row, "siding", "Select siding", lookupOptions.sidings)}
+                      {renderCreatableSelect(row, "siding", "Siding", lookupOptions.sidings, "sidings")}
                     </td>
                     <td className="px-4 py-3">
-                      {renderSelect(row, "destination", "Select destination", lookupOptions.destinations)}
+                      {renderCreatableSelect(row, "destination", "Destination", lookupOptions.destinations, "destinations")}
                     </td>
                     <td className="px-4 py-3">
-                      {renderSelect(row, "wagonType", "Select type", lookupOptions.wagonTypes)}
+                      {renderCreatableSelect(row, "wagonType", "Wagon type", lookupOptions.wagonTypes, "wagonTypes")}
                     </td>
                     <td className="px-4 py-3">
                       <input
@@ -378,10 +378,10 @@ export default function RakeUpcomingView({
                       />
                     </td>
                     <td className="px-4 py-3">
-                      {renderSelect(row, "route", "Select route", lookupOptions.routes)}
+                      {renderCreatableSelect(row, "route", "Route", lookupOptions.routes, "routes")}
                     </td>
                     <td className="px-4 py-3">
-                      {renderSelect(row, "customer", "Select customer", lookupOptions.customers)}
+                      {renderCreatableSelect(row, "customer", "Customer", lookupOptions.customers, "customers")}
                     </td>
                     <td className="px-4 py-3">
                       <input
