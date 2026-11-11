@@ -8,7 +8,7 @@ RUN npm ci
 
 COPY . .
 
-ARG VITE_API_BASE_URL
+ARG VITE_API_BASE_URL=https://iron-ore-backend-420604925540.asia-south1.run.app/api
 ARG VITE_APP_ENV=production
 ARG VITE_USE_MOCK_AUTH=false
 ARG VITE_COCKPIT_ALLOW_DEMO=false
