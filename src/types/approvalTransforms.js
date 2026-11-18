@@ -46,6 +46,7 @@ export function fromApprovalApiPayload(dto) {
     operations: normalizeStep(dto.operations),
     commercial: normalizeStep(dto.commercial),
     cw: normalizeStep(dto.cw),
+    nmdc: normalizeStep(dto.nmdc),
     history: Array.isArray(dto.history) ? dto.history : [],
     wagonManifest: dto.wagonManifest
       ? normalizeWagonManifest(dto.wagonManifest, dto)
@@ -70,6 +71,7 @@ export function createApprovalRequestFromLoading(loading) {
     operations: emptyStep(),
     commercial: emptyStep(),
     cw: emptyStep(),
+    nmdc: emptyStep(),
     history: [
       {
         step: "system",
@@ -174,7 +176,10 @@ export function applyApprovalDecision(approval, department, decision) {
 }
 
 export function loadingStatusAfterApproval(approval) {
-  if (approval.status === APPROVAL_STATUS.APPROVED) {
+  if (
+    approval.status === APPROVAL_STATUS.DONE ||
+    approval.status === APPROVAL_STATUS.APPROVED
+  ) {
     return LOADING_STATUS.READY_FOR_DISPATCH;
   }
   return LOADING_STATUS.AWAITING_APPROVAL;

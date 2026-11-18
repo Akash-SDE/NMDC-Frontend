@@ -12,12 +12,15 @@ export const RAILWAY_STATUS_CODE = {
   AWAITING_CW: 20,
   REJECTED: 25,
   AWAITING_COMMERCIAL_CW: 30,
+  AWAITING_NMDC: 35,
+  DONE: 40,
 };
 
 export const DEPARTMENT_CODE = {
   [APPROVAL_DEPARTMENTS.OPERATIONS]: 5,
   [APPROVAL_DEPARTMENTS.COMMERCIAL]: 10,
   [APPROVAL_DEPARTMENTS.CW]: 15,
+  [APPROVAL_DEPARTMENTS.NMDC]: 20,
 };
 
 export const STEP_STATUS_CODE = {
@@ -123,6 +126,17 @@ function mapStep(step) {
   };
 }
 
+function mapApprovalStatus(dto, stepsByDepartment) {
+  const code = dto.status;
+  if (code === RAILWAY_STATUS_CODE.APPROVED) {
+    const nmdcStep = stepsByDepartment[APPROVAL_DEPARTMENTS.NMDC];
+    const nmdcApproved =
+      STEP_STATUS_FROM_CODE[nmdcStep?.step_status] === "approved" || !nmdcStep;
+    return nmdcApproved ? APPROVAL_STATUS.DONE : APPROVAL_STATUS.AWAITING_NMDC;
+  }
+  return STATUS_FROM_CODE[code] || APPROVAL_STATUS.AWAITING_OPERATIONS;
+}
+
 export function mapRailwayApproval(dto) {
   const stepsByDepartment = Object.fromEntries(
     (dto.steps || []).map((step) => [DEPARTMENT_FROM_CODE[step.department], step]),
@@ -144,10 +158,11 @@ export function mapRailwayApproval(dto) {
     siding: dto.siding_name || "",
     tonnage: dto.tonnage ?? "",
     completionTime: dto.completion_time || null,
-    status: STATUS_FROM_CODE[dto.status] || APPROVAL_STATUS.AWAITING_OPERATIONS,
+    status: mapApprovalStatus(dto, stepsByDepartment),
     operations: mapStep(stepsByDepartment[APPROVAL_DEPARTMENTS.OPERATIONS]),
     commercial: mapStep(stepsByDepartment[APPROVAL_DEPARTMENTS.COMMERCIAL]),
     cw: mapStep(stepsByDepartment[APPROVAL_DEPARTMENTS.CW]),
+    nmdc: mapStep(stepsByDepartment[APPROVAL_DEPARTMENTS.NMDC]),
     history: (dto.history || []).map((entry) => ({
       step: DEPARTMENT_FROM_CODE[entry.department] || "system",
       action: ACTION_FROM_CODE[entry.action] || "created",

@@ -11,7 +11,10 @@ export const APPROVAL_STATUS = {
   AWAITING_COMMERCIAL: "AWAITING_COMMERCIAL",
   AWAITING_CW: "AWAITING_CW",
   AWAITING_COMMERCIAL_CW: "AWAITING_COMMERCIAL_CW",
+  AWAITING_NMDC: "AWAITING_NMDC",
+  /** @deprecated Legacy API status; prefer DONE */
   APPROVED: "APPROVED",
+  DONE: "DONE",
   REJECTED: "REJECTED",
 };
 
@@ -21,18 +24,21 @@ export const APPROVAL_DEPARTMENTS = {
   OPERATIONS: "operations",
   COMMERCIAL: "commercial",
   CW: "cw",
+  NMDC: "nmdc",
 };
 
 export const APPROVAL_STEP_ORDER = [
   APPROVAL_DEPARTMENTS.OPERATIONS,
   APPROVAL_DEPARTMENTS.COMMERCIAL,
   APPROVAL_DEPARTMENTS.CW,
+  APPROVAL_DEPARTMENTS.NMDC,
 ];
 
 export const APPROVAL_STEP_LABELS = {
   [APPROVAL_DEPARTMENTS.OPERATIONS]: "Railway Operations",
   [APPROVAL_DEPARTMENTS.COMMERCIAL]: "Railway Commercial",
   [APPROVAL_DEPARTMENTS.CW]: "Railway C&W",
+  [APPROVAL_DEPARTMENTS.NMDC]: "NMDC",
 };
 
 /** Review departments Operations can route to; when both are selected they approve in parallel. */
@@ -43,6 +49,7 @@ export const APPROVAL_STATUS_TO_DEPARTMENTS = {
   [APPROVAL_STATUS.AWAITING_COMMERCIAL]: [APPROVAL_DEPARTMENTS.COMMERCIAL],
   [APPROVAL_STATUS.AWAITING_CW]: [APPROVAL_DEPARTMENTS.CW],
   [APPROVAL_STATUS.AWAITING_COMMERCIAL_CW]: REVIEW_DEPARTMENTS,
+  [APPROVAL_STATUS.AWAITING_NMDC]: [APPROVAL_DEPARTMENTS.NMDC],
 };
 
 export function getPendingDepartments(approval) {
@@ -61,13 +68,21 @@ export function deriveApprovalStatus(approval) {
   if (awaiting.length === REVIEW_DEPARTMENTS.length) return APPROVAL_STATUS.AWAITING_COMMERCIAL_CW;
   if (awaiting.includes(APPROVAL_DEPARTMENTS.COMMERCIAL)) return APPROVAL_STATUS.AWAITING_COMMERCIAL;
   if (awaiting.includes(APPROVAL_DEPARTMENTS.CW)) return APPROVAL_STATUS.AWAITING_CW;
-  return APPROVAL_STATUS.APPROVED;
+  const nmdcStatus = approval?.nmdc?.status || "pending";
+  if (nmdcStatus === "rejected") return APPROVAL_STATUS.REJECTED;
+  if (nmdcStatus !== "approved") return APPROVAL_STATUS.AWAITING_NMDC;
+  return APPROVAL_STATUS.DONE;
 }
 
 export function deriveLoadingStatus(loading, approval) {
   if (loading?.status) return loading.status;
   if (loading?.isDisabled) return LOADING_STATUS.PENDING;
-  if (approval?.status === APPROVAL_STATUS.APPROVED) return LOADING_STATUS.READY_FOR_DISPATCH;
+  if (
+    approval?.status === APPROVAL_STATUS.DONE ||
+    approval?.status === APPROVAL_STATUS.APPROVED
+  ) {
+    return LOADING_STATUS.READY_FOR_DISPATCH;
+  }
   if (approval && approval.status !== APPROVAL_STATUS.REJECTED) {
     return LOADING_STATUS.AWAITING_APPROVAL;
   }

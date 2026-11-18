@@ -79,7 +79,7 @@ export async function submitRailwayDecision(approval, department, decision, targ
   if (routesReview) {
     payload.approval_targets = targets.map((target) => DEPARTMENT_CODE[target]);
   }
-  if (next.status === APPROVAL_STATUS.APPROVED) {
+  if (next.status === APPROVAL_STATUS.DONE || next.status === APPROVAL_STATUS.APPROVED) {
     payload.loading_status = LOADING_READY_FOR_DISPATCH;
   }
 

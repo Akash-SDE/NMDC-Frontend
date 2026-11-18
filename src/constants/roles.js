@@ -19,6 +19,7 @@ export const RAILWAY_DEPARTMENT_BY_ROLE = {
   [USER_ROLES.STATION_MASTER]: "operations",
   [USER_ROLES.COMMERCIAL]: "commercial",
   [USER_ROLES.CW_INSPECTOR]: "cw",
+  nmdc: "nmdc",
 };
 
 export function resolveRoleFromProfile(profile) {
@@ -33,6 +34,7 @@ export function resolveRoleFromProfile(profile) {
   if (has("station", "operation")) return USER_ROLES.STATION_MASTER;
   if (has("commercial")) return USER_ROLES.COMMERCIAL;
   if (has("cnw", "c&w", "cw", "wagon")) return USER_ROLES.CW_INSPECTOR;
+  if (has("nmdc")) return "nmdc";
   return USER_ROLES.ADMIN;
 }
 

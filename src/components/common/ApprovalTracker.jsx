@@ -41,6 +41,7 @@ const DEPARTMENT_ACCENTS = {
   operations: "border-l-blue-500",
   commercial: "border-l-violet-500",
   cw: "border-l-emerald-500",
+  nmdc: "border-l-amber-500",
 };
 
 export function ApprovalStatusBadge({ approval, compact = false }) {
@@ -57,7 +58,7 @@ export function ApprovalStatusBadge({ approval, compact = false }) {
   return (
     <span
       className={`inline-flex max-w-full items-center justify-start rounded-full border px-2.5 py-1 text-[11px] font-semibold leading-tight ${
-        approval.status === "APPROVED"
+        approval.status === "APPROVED" || approval.status === "DONE"
           ? stepStyles.approved
           : approval.status === "REJECTED"
             ? stepStyles.rejected

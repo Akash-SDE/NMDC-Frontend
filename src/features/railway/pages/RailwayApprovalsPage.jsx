@@ -50,16 +50,14 @@ import { listLoadingRecords } from "../../../services/loadingManagementService";
 import { asResults, mapReportLoading } from "../../reports/utils/reportApiMappers";
 import {
   getDepartmentStepPresentation,
-  getNmdcStepPresentation,
   getOverallStatusMessage,
   getPendingDepartmentForApproval,
   getPendingDepartmentsForApproval,
-  isApprovalAwaitingAction,
+  isVisibleInApprovalQueue,
   canUserReviewDepartment,
 } from "../../../utils/approvalUtils";
-import RailwayApprovalStageCell, {
-  RailwayNmdcStageCell,
-} from "../components/RailwayApprovalStageCell";
+import RailwayApprovalStageCell from "../components/RailwayApprovalStageCell";
+import NmdcApprovalOriginPanel from "../components/NmdcApprovalOriginPanel";
 import { formatDateTimeForTable, getLocalDateTimeValue } from "../../../utils/dateUtils";
 import { sendRailwayApprovalMemo } from "../../../services/railwayApprovalService";
 import { formatRailwayApprovalMemo } from "../utils/railwayApprovalMemo";
@@ -92,10 +90,11 @@ function buildQueueFilterColumns() {
       label: "NMDC Check",
       type: "select",
       getValue: (approval) => {
-        const presentation = getNmdcStepPresentation(approval);
+        const presentation = getDepartmentStepPresentation(approval, APPROVAL_DEPARTMENTS.NMDC);
         if (presentation === "complete") return "Complete";
-        if (presentation === "in_progress") return "In Progress";
         if (presentation === "rejected") return "Rejected";
+        if (presentation === "not_required") return "Not Required";
+        if (presentation === "actionable") return "Pending";
         return "Pending";
       },
     },
@@ -109,7 +108,8 @@ function buildQueueFilterColumns() {
 }
 
 function rowIsActionableForUser(approval, { ownDepartment, isAdminProxy }) {
-  return STAGE_COLUMNS.some((col) =>
+  const columns = [...STAGE_COLUMNS, { id: APPROVAL_DEPARTMENTS.NMDC }];
+  return columns.some((col) =>
     canUserReviewDepartment(approval, col.id, { userDepartment: ownDepartment, isAdminProxy }),
   );
 }
@@ -139,8 +139,11 @@ function joinDepartmentLabels(departments) {
 function describeDecisionOutcome(action, department, updated, isAdminProxy) {
   const actingAs = isAdminProxy ? ` on behalf of ${APPROVAL_STEP_LABELS[department]}` : "";
   if (action !== "approve") return `Approval rejected${actingAs}.`;
-  if (updated?.status === APPROVAL_STATUS.APPROVED) {
-    return `Approved${actingAs}. Overall status is OK and the loading is ready for dispatch.`;
+  if (updated?.status === APPROVAL_STATUS.DONE || updated?.status === APPROVAL_STATUS.APPROVED) {
+    return `Approved${actingAs}. Overall status is Done and the loading is ready for dispatch.`;
+  }
+  if (updated?.status === APPROVAL_STATUS.AWAITING_NMDC) {
+    return `Approved${actingAs}. Awaiting NMDC Check — use Review in the NMDC column.`;
   }
   const waitingOn = getPendingDepartmentsForApproval(updated);
   if (waitingOn.length === 0) return `Approved${actingAs}.`;
@@ -206,7 +209,7 @@ export default function RailwayApprovalsPage() {
         (approval) => String(approval.loadingId) === String(focusedLoadingId),
       );
     }
-    return approvals.filter(isApprovalAwaitingAction);
+    return approvals.filter(isVisibleInApprovalQueue);
   }, [approvals, focusedLoadingId]);
 
   const searchedQueueItems = useMemo(() => {
@@ -469,12 +472,6 @@ export default function RailwayApprovalsPage() {
     Boolean(reviewDepartment) &&
     REVIEW_DEPARTMENTS.includes(reviewDepartment);
 
-  function nmdcPresentationFor(approval) {
-    return getNmdcStepPresentation(approval, {
-      memoSent: Boolean(nmdcMemoSentByApprovalId[String(approval.id)]),
-    });
-  }
-
   return (
     <>
       <div className="space-y-6 animate-fadeIn">
@@ -494,8 +491,8 @@ export default function RailwayApprovalsPage() {
             <p className="text-sm font-semibold text-amber-900">Administrator proxy mode</p>
             <p className="mt-1 text-[13px] text-amber-800">
               All approval stages appear in one table. Use the <strong>Review</strong> button in the
-              active column to act on behalf of Railway Operations, Commercial, or C&amp;W. Each
-              decision is recorded as admin acting on behalf of that department.
+              active column to act on behalf of Railway Operations, Commercial, C&amp;W, or NMDC.
+              Each decision is recorded as admin acting on behalf of that department.
             </p>
           </div>
         ) : null}
@@ -595,11 +592,23 @@ export default function RailwayApprovalsPage() {
                           </td>
                         ))}
                         <td className="px-5 py-4 align-middle">
-                          <RailwayNmdcStageCell presentation={nmdcPresentationFor(approval)} />
+                          <RailwayApprovalStageCell
+                            approval={approval}
+                            department={APPROVAL_DEPARTMENTS.NMDC}
+                            presentation={getDepartmentStepPresentation(
+                              approval,
+                              APPROVAL_DEPARTMENTS.NMDC,
+                            )}
+                            onReview={openApproval}
+                            userDepartment={ownDepartment}
+                            isAdminProxy={isAdminProxy}
+                          />
                         </td>
                         <td
                           className={`px-5 py-4 text-[13px] font-medium ${
-                            overallStatus === "OK" ? "font-semibold text-emerald-700" : "text-slate-700"
+                            overallStatus === "Done"
+                              ? "font-semibold text-emerald-700"
+                              : "text-slate-700"
                           }`}
                         >
                           {overallStatus}
@@ -698,7 +707,7 @@ export default function RailwayApprovalsPage() {
               <RailwayWagonManifestPanel
                 manifest={wagonManifest}
                 loading={selectedLoading}
-                editable
+                editable={reviewDepartment !== APPROVAL_DEPARTMENTS.NMDC}
                 saving={manifestSaving}
                 onAddWagon={handleAddWagon}
                 onRemoveWagon={handleRemoveWagon}
@@ -709,6 +718,12 @@ export default function RailwayApprovalsPage() {
               <ApprovalTrackerPanel approval={selectedApproval} showHistory />
             </div>
 
+            {reviewDepartment === APPROVAL_DEPARTMENTS.NMDC ? (
+              <div className="mt-4">
+                <NmdcApprovalOriginPanel approval={selectedApproval} />
+              </div>
+            ) : null}
+
             <div className="mt-4">
               <PriorDepartmentInspections
                 approval={selectedApproval}
@@ -716,24 +731,26 @@ export default function RailwayApprovalsPage() {
               />
             </div>
 
-            <div className="mt-4">
-              <UniformSectionCard
-                title={`${reviewDepartmentLabel} Wagon Inspection`}
-                subtitle={
-                  reviewDepartment === APPROVAL_DEPARTMENTS.COMMERCIAL
-                    ? "Fields auto-fill from wagon numbers and railway flags added in the register above. You can edit before approving."
-                    : "Record wagon counts, wagon numbers, and checklist results for this department."
-                }
-              >
-                <DepartmentInspectionFields
-                  department={reviewDepartment}
-                  form={inspectionForm}
-                  onChange={handleInspectionChange}
-                  trackClearanceTime={trackClearanceTime}
-                  onTrackClearanceTimeChange={setTrackClearanceTime}
-                />
-              </UniformSectionCard>
-            </div>
+            {reviewDepartment !== APPROVAL_DEPARTMENTS.NMDC ? (
+              <div className="mt-4">
+                <UniformSectionCard
+                  title={`${reviewDepartmentLabel} Wagon Inspection`}
+                  subtitle={
+                    reviewDepartment === APPROVAL_DEPARTMENTS.COMMERCIAL
+                      ? "Fields auto-fill from wagon numbers and railway flags added in the register above. You can edit before approving."
+                      : "Record wagon counts, wagon numbers, and checklist results for this department."
+                  }
+                >
+                  <DepartmentInspectionFields
+                    department={reviewDepartment}
+                    form={inspectionForm}
+                    onChange={handleInspectionChange}
+                    trackClearanceTime={trackClearanceTime}
+                    onTrackClearanceTimeChange={setTrackClearanceTime}
+                  />
+                </UniformSectionCard>
+              </div>
+            ) : null}
 
             <div className="mt-4">
               <UniformSectionCard

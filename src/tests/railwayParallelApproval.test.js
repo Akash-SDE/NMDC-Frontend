@@ -10,6 +10,7 @@ import {
   canDepartmentAct,
   getPendingDepartmentForApproval,
   getPendingDepartmentsForApproval,
+  isVisibleInApprovalQueue,
 } from "../utils/approvalUtils";
 import { mapRailwayApproval } from "../features/railway/utils/railwayApprovalMappers";
 
@@ -18,7 +19,7 @@ vi.mock("../services/apiClient", () => ({ apiRequest: vi.fn() }));
 const { apiRequest } = await import("../services/apiClient");
 const { submitRailwayDecision } = await import("../services/railwayApprovalService");
 
-const { OPERATIONS, COMMERCIAL, CW } = APPROVAL_DEPARTMENTS;
+const { OPERATIONS, COMMERCIAL, CW, NMDC } = APPROVAL_DEPARTMENTS;
 
 function approvalDto(status, steps) {
   return {
@@ -36,13 +37,13 @@ function approvalDto(status, steps) {
   };
 }
 
-const freshApproval = () => mapRailwayApproval(approvalDto(10, { 5: 5, 10: 5, 15: 5 }));
+const freshApproval = () => mapRailwayApproval(approvalDto(10, { 5: 5, 10: 5, 15: 5, 20: 5 }));
 const approve = (approval, department, extra = {}) =>
   applyApprovalDecision(approval, department, { action: "approve", actor: "Tester", ...extra });
 
 describe("parallel Commercial / C&W approval", () => {
   it("maps the parallel status and Not Required steps from the API", () => {
-    const approval = mapRailwayApproval(approvalDto(30, { 5: 10, 10: 5, 15: 20 }));
+    const approval = mapRailwayApproval(approvalDto(30, { 5: 10, 10: 5, 15: 20, 20: 5 }));
     expect(approval.status).toBe(APPROVAL_STATUS.AWAITING_COMMERCIAL_CW);
     expect(approval.cw.status).toBe("not_required");
     expect(getApprovalStepState(approval, CW)).toBe("skipped");
@@ -61,22 +62,28 @@ describe("parallel Commercial / C&W approval", () => {
     expect(countPendingApprovals([approval])).toBe(1);
   });
 
-  it("approves only after both departments approve, in either order", () => {
+  it("moves to NMDC after both departments approve, then Done after NMDC", () => {
     const routed = approve(freshApproval(), OPERATIONS, { targets: [COMMERCIAL, CW] });
     const cwFirst = approve(routed, CW);
     expect(cwFirst.status).toBe(APPROVAL_STATUS.AWAITING_COMMERCIAL);
     expect(getPendingDepartmentsForApproval(cwFirst)).toEqual([COMMERCIAL]);
     expect(canDepartmentAct(cwFirst, CW)).toBe(false);
-    expect(approve(cwFirst, COMMERCIAL).status).toBe(APPROVAL_STATUS.APPROVED);
-    expect(approve(approve(routed, COMMERCIAL), CW).status).toBe(APPROVAL_STATUS.APPROVED);
+    const afterCommercial = approve(cwFirst, COMMERCIAL);
+    expect(afterCommercial.status).toBe(APPROVAL_STATUS.AWAITING_NMDC);
+    expect(canDepartmentAct(afterCommercial, NMDC)).toBe(true);
+    const finished = approve(afterCommercial, NMDC);
+    expect(finished.status).toBe(APPROVAL_STATUS.DONE);
+    expect(isVisibleInApprovalQueue(finished)).toBe(true);
+    expect(canDepartmentAct(finished, NMDC)).toBe(false);
   });
 
-  it("skips the unselected department", () => {
+  it("skips the unselected department and still requires NMDC", () => {
     const commercialOnly = approve(freshApproval(), OPERATIONS, { targets: [COMMERCIAL] });
     expect(commercialOnly.status).toBe(APPROVAL_STATUS.AWAITING_COMMERCIAL);
     expect(commercialOnly.cw.status).toBe("not_required");
     expect(canDepartmentAct(commercialOnly, CW)).toBe(false);
-    expect(approve(commercialOnly, COMMERCIAL).status).toBe(APPROVAL_STATUS.APPROVED);
+    const awaitingNmdc = approve(commercialOnly, COMMERCIAL);
+    expect(awaitingNmdc.status).toBe(APPROVAL_STATUS.AWAITING_NMDC);
 
     const cwOnly = approve(freshApproval(), OPERATIONS, { targets: [CW] });
     expect(cwOnly.status).toBe(APPROVAL_STATUS.AWAITING_CW);
@@ -88,6 +95,7 @@ describe("parallel Commercial / C&W approval", () => {
     const rejected = applyApprovalDecision(routed, CW, { action: "reject", actor: "Tester" });
     expect(rejected.status).toBe(APPROVAL_STATUS.REJECTED);
     expect(canDepartmentAct(rejected, COMMERCIAL)).toBe(false);
+    expect(isVisibleInApprovalQueue(rejected)).toBe(false);
   });
 });
 
@@ -95,7 +103,7 @@ describe("submitRailwayDecision payload", () => {
   beforeEach(() => {
     apiRequest.mockReset();
     apiRequest.mockImplementation((path, options) =>
-      Promise.resolve(options?.method === "PATCH" ? {} : approvalDto(30, { 5: 10, 10: 5, 15: 5 })),
+      Promise.resolve(options?.method === "PATCH" ? {} : approvalDto(30, { 5: 10, 10: 5, 15: 5, 20: 5 })),
     );
   });
 
@@ -113,12 +121,22 @@ describe("submitRailwayDecision payload", () => {
     expect(body.loading_status).toBeUndefined();
   });
 
-  it("releases the loading only on the final parallel approval", async () => {
-    const routed = mapRailwayApproval(approvalDto(20, { 5: 10, 10: 10, 15: 5 }));
+  it("awaits NMDC after the final railway department approval", async () => {
+    const routed = mapRailwayApproval(approvalDto(20, { 5: 10, 10: 10, 15: 5, 20: 5 }));
     await submitRailwayDecision(routed, CW, { action: "approve", actor: "Tester" });
     const body = JSON.parse(apiRequest.mock.calls[0][1].body);
-    expect(body.status).toBe(5);
-    expect(body.loading_status).toBe(20);
+    expect(body.status).toBe(35);
+    expect(body.loading_status).toBeUndefined();
     expect(body.approval_targets).toBeUndefined();
+  });
+
+  it("releases the loading only after NMDC approval", async () => {
+    const awaitingNmdc = mapRailwayApproval(
+      approvalDto(35, { 5: 10, 10: 10, 15: 10, 20: 5 }),
+    );
+    await submitRailwayDecision(awaitingNmdc, NMDC, { action: "approve", actor: "Tester" });
+    const body = JSON.parse(apiRequest.mock.calls[0][1].body);
+    expect(body.status).toBe(40);
+    expect(body.loading_status).toBe(20);
   });
 });

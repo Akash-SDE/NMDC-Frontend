@@ -1,4 +1,5 @@
 import {
+  APPROVAL_DEPARTMENTS,
   APPROVAL_STATUS,
   APPROVAL_STEP_LABELS,
   APPROVAL_STEP_ORDER,
@@ -56,8 +57,12 @@ export function getApprovalStatusLabel(status) {
       return "Awaiting C&W";
     case APPROVAL_STATUS.AWAITING_COMMERCIAL_CW:
       return "Awaiting Commercial & C&W";
+    case APPROVAL_STATUS.AWAITING_NMDC:
+      return "Awaiting NMDC";
+    case APPROVAL_STATUS.DONE:
+      return "Done";
     case APPROVAL_STATUS.APPROVED:
-      return "All Approved";
+      return "Done";
     case APPROVAL_STATUS.REJECTED:
       return "Rejected";
     default:
@@ -85,16 +90,11 @@ export function getPendingDepartmentForApproval(approval, preferred = null) {
 
 export function getOverallStatusMessage(approval) {
   if (!approval) return "Not Started";
-  if (approval.status === APPROVAL_STATUS.APPROVED) return "OK";
-  if (approval.status === APPROVAL_STATUS.REJECTED) return "Rejected";
-
-  if (approval.operations?.status === "approved") {
-    const required = requiredParallelReviewDepartments(approval);
-    const approvedCount = countApprovedParallelReviews(approval);
-    if (required.length > 0 && approvedCount > 0 && approvedCount < required.length) {
-      return "Awaiting NMDC Check";
-    }
+  if (approval.status === APPROVAL_STATUS.DONE || approval.status === APPROVAL_STATUS.APPROVED) {
+    return "Done";
   }
+  if (approval.status === APPROVAL_STATUS.REJECTED) return "Rejected";
+  if (approval.status === APPROVAL_STATUS.AWAITING_NMDC) return "Awaiting NMDC Check";
 
   switch (approval.status) {
     case APPROVAL_STATUS.AWAITING_OPERATIONS:
@@ -110,36 +110,11 @@ export function getOverallStatusMessage(approval) {
   }
 }
 
-function requiredParallelReviewDepartments(approval) {
-  return REVIEW_DEPARTMENTS.filter((department) => approval[department]?.status !== STEP_NOT_REQUIRED);
-}
-
-function countApprovedParallelReviews(approval) {
-  return requiredParallelReviewDepartments(approval).filter(
-    (department) => approval[department]?.status === "approved",
-  ).length;
-}
-
-export function getNmdcStepPresentation(approval, { memoSent = false } = {}) {
-  if (!approval) return "pending";
-  if (approval.status === APPROVAL_STATUS.REJECTED) return "rejected";
-  if (approval.status === APPROVAL_STATUS.APPROVED) return "complete";
-
-  if (approval.operations?.status !== "approved") return "pending";
-
-  const required = requiredParallelReviewDepartments(approval);
-  const approvedCount = countApprovedParallelReviews(approval);
-
-  if (required.length === 0) return "pending";
-  if (approvedCount === 0) return "pending";
-  if (approvedCount < required.length) return "in_progress";
-
-  if (memoSent) return "in_progress";
-  return "in_progress";
-}
-
 export function canUserReviewDepartment(approval, department, { userDepartment, isAdminProxy }) {
   if (!canDepartmentAct(approval, department)) return false;
+  if (department === APPROVAL_DEPARTMENTS.NMDC) {
+    return isAdminProxy || userDepartment === APPROVAL_DEPARTMENTS.NMDC;
+  }
   if (isAdminProxy) return true;
   return userDepartment === department;
 }
@@ -150,7 +125,31 @@ export function getDepartmentStepPresentation(approval, department) {
   if (step?.status === "rejected") return "rejected";
   if (step?.status === "not_required") return "not_required";
   if (canDepartmentAct(approval, department)) return "actionable";
+  if (
+    department === APPROVAL_DEPARTMENTS.NMDC &&
+    (approval?.status === APPROVAL_STATUS.DONE || approval?.status === APPROVAL_STATUS.APPROVED)
+  ) {
+    return "complete";
+  }
+  const reviewComplete = REVIEW_DEPARTMENTS.filter(
+    (dept) => approval?.[dept]?.status !== STEP_NOT_REQUIRED,
+  ).every((dept) => approval?.[dept]?.status === "approved");
+  if (
+    department === APPROVAL_DEPARTMENTS.NMDC &&
+    reviewComplete &&
+    approval?.operations?.status === "approved" &&
+    (step?.status || "pending") === "pending"
+  ) {
+    return "pending";
+  }
   return "pending";
+}
+
+/** Rows stay visible when done or still awaiting any step; rejected rows are hidden from the default queue. */
+export function isVisibleInApprovalQueue(approval) {
+  if (!approval) return false;
+  if (approval.status === APPROVAL_STATUS.REJECTED) return false;
+  return true;
 }
 
 export function isApprovalAwaitingAction(approval) {
@@ -165,6 +164,49 @@ export function getPriorVisibleDepartments(reviewDepartment) {
 
 export function isPriorStepSubmitted(step) {
   return step?.status === "approved" || step?.status === "rejected";
+}
+
+/** Source-of-truth summary for NMDC review: loading origin, Operations routing, completed railway checks. */
+export function getNmdcApprovalOriginSummary(approval) {
+  if (!approval) return null;
+
+  const requiredReviews = REVIEW_DEPARTMENTS.filter(
+    (department) => approval[department]?.status !== STEP_NOT_REQUIRED,
+  );
+  const skippedReviews = REVIEW_DEPARTMENTS.filter(
+    (department) => approval[department]?.status === STEP_NOT_REQUIRED,
+  );
+  const completedReviews = requiredReviews
+    .filter((department) => approval[department]?.status === "approved")
+    .map((department) => ({
+      department,
+      label: APPROVAL_STEP_LABELS[department],
+      approvedBy: approval[department]?.approvedBy,
+      approvedAt: approval[department]?.approvedAt,
+      remarks: approval[department]?.remarks || "",
+    }));
+
+  const operations = approval.operations;
+  const operationsApproved =
+    operations?.status === "approved"
+      ? {
+          approvedBy: operations.approvedBy,
+          approvedAt: operations.approvedAt,
+          trackClearanceTime:
+            operations.trackClearanceTime || operations.inspection?.trackClearanceTime,
+          remarks: operations.remarks || "",
+        }
+      : null;
+
+  return {
+    loadingId: approval.loadingId,
+    rakeNumber: approval.rakeNumber,
+    createdAt: approval.createdAt,
+    operationsApproved,
+    routedToLabels: requiredReviews.map((department) => APPROVAL_STEP_LABELS[department]),
+    skippedLabels: skippedReviews.map((department) => APPROVAL_STEP_LABELS[department]),
+    completedReviews,
+  };
 }
 
 export { APPROVAL_STEP_LABELS, APPROVAL_STEP_ORDER, deriveLoadingStatus, getApprovalStepState };
