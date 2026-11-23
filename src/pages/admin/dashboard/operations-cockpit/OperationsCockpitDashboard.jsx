@@ -12,13 +12,8 @@ const PAGE_SIZE = 5;
 
 /* ---------- lookup tables ---------- */
 const BAR_STATUS = {
-  idle: { bg: "#eef2f6", label: "Siding Idle", border: "1px solid #cbd5e1" },
-  loaded: { bg: "#0b91cf", label: "Under Loading" },
-  delayed: { bg: "#f59e0b", label: "Load Adjustment" },
-  completed: { bg: "#0e9f88", label: "Completed / Released" },
-  demurrage: { bg: "#e11d48", label: "Demurraged Rake" },
-  shutdown: { bg: "#94a3b8", label: "Under Shutdown" },
-  awaiting: { bg: "#fef3c7", label: "Awaiting Release", text: "#92400e", border: "1px solid #f59e0b", hidden: true },
+  completed: { bg: "#0e9f88", label: "Loading completed" },
+  incomplete: { bg: "#f59e0b", label: "Loading not completed", text: "#78350f" },
 };
 
 const KPI_ICONS = {
@@ -37,25 +32,20 @@ const KPI_SUB_TONES = {
 };
 const BADGE_TONES = {
   green: "bg-emerald-100 text-emerald-700",
-  amber: "bg-amber-100 text-amber-700",
-  red: "bg-rose-100 text-rose-700",
-  blue: "bg-sky-100 text-sky-700",
+  amber: "bg-amber-100 text-amber-800",
 };
 const DELAY_TONES = {
-  ok: "text-emerald-600", amber: "text-amber-600", danger: "text-rose-600", muted: "text-slate-500",
+  ok: "text-emerald-600",
+  amber: "text-amber-600",
+  muted: "text-amber-600",
 };
 const RELEASE_STYLES = {
   Pending: "bg-amber-50 text-amber-800",
-  "Awaiting Release": "bg-sky-50 text-sky-800",
+  "Awaiting Release": "bg-amber-50 text-amber-900",
   Released: "bg-emerald-50 text-emerald-800",
 };
-const PRODUCT_STYLES = {
-  "Lump Ore": "bg-emerald-50 text-emerald-700",
-  "Iron Ore Fines": "bg-sky-50 text-sky-700",
-  Slimes: "bg-orange-50 text-orange-600",
-  "Calibrated Lump": "bg-violet-50 text-violet-700",
-};
-const REMARK_TONES = { ok: "text-slate-500", warn: "text-amber-600", danger: "text-rose-600" };
+const PRODUCT_CHIP_CLASS = "bg-amber-50/60 text-slate-700";
+const REMARK_TONES = { ok: "text-emerald-600", warn: "text-amber-600" };
 
 /* ---------- shared ---------- */
 function Panel({ title, subtitle, action, children, className = "" }) {
@@ -138,6 +128,7 @@ function normalizeSiding(siding) {
         delayTone: siding.delayTone,
         state: siding.state,
         badgeTone: siding.badgeTone,
+        barColor: siding.barColor,
       },
     ],
   };
@@ -147,12 +138,13 @@ function SidingCard({ siding: rawSiding }) {
   const siding = normalizeSiding(rawSiding);
   const [index, setIndex] = useState(0);
   const rake = siding.rakes[Math.min(index, siding.rakes.length - 1)];
-  const badge = BADGE_TONES[rake.badgeTone] || BADGE_TONES.blue;
+  const badge = BADGE_TONES[rake.badgeTone] || BADGE_TONES.amber;
+  const barColor = rake.barColor || siding.barColor;
   const hasMultiple = siding.rakes.length > 1;
 
   return (
     <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-      <div className="h-[2px]" style={{ backgroundColor: siding.barColor }} />
+      <div className="h-[2px]" style={{ backgroundColor: barColor }} />
       <div className="p-2">
         <div className="flex items-center justify-between gap-1">
           <h4 className="truncate text-[9px] font-extrabold text-slate-800">
@@ -164,11 +156,11 @@ function SidingCard({ siding: rawSiding }) {
           <span className={`rounded-full px-2 py-0.5 text-[7px] font-extrabold tracking-wide ${badge}`}>{rake.state}</span>
         </div>
         <div className="mt-2 flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1.5">
-          <Train size={13} style={{ color: siding.barColor }} />
+          <Train size={13} style={{ color: barColor }} />
           <span className="text-[8px] font-bold text-slate-500">{rake.code}</span>
           <div className="ml-auto w-20">
             <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
-              <div className="h-full rounded-full" style={{ width: `${rake.progress}%`, backgroundColor: siding.barColor }} />
+              <div className="h-full rounded-full" style={{ width: `${rake.progress}%`, backgroundColor: barColor }} />
             </div>
           </div>
           <b className="text-[9px] text-slate-700">{rake.progress}%</b>
@@ -181,7 +173,7 @@ function SidingCard({ siding: rawSiding }) {
         </dl>
         <div className="mt-1.5 flex items-center justify-between gap-1 border-t border-slate-100 pt-1.5">
           <span className="text-[8px] text-slate-400">{rake.delayRowLabel}</span>
-          <span className={`truncate text-[8px] font-bold ${DELAY_TONES[rake.delayTone] || "text-slate-500"}`}>{rake.delayLabel}</span>
+          <span className={`truncate text-[8px] font-bold ${DELAY_TONES[rake.delayTone] || DELAY_TONES.amber}`}>{rake.delayLabel}</span>
         </div>
         {hasMultiple ? (
           <div className="mt-2 flex items-center justify-between gap-1">
@@ -215,7 +207,7 @@ function SidingCard({ siding: rawSiding }) {
 function DispatchGrid({ rows, nowHour, currentTime }) {
   const hour = nowHour ?? 0;
   const pct = h => `${(h / 24) * 100}%`;
-  const legend = ["idle", "loaded", "delayed", "completed", "demurrage", "shutdown"];
+  const legend = ["incomplete", "completed"];
   if (!rows?.length) {
     return (
       <p className="px-3 py-8 text-center text-[10px] text-slate-400">
@@ -254,15 +246,16 @@ function DispatchGrid({ rows, nowHour, currentTime }) {
               <div className="relative h-[42px] border-l border-slate-200"
                 style={{ backgroundImage: "repeating-linear-gradient(to right, transparent, transparent calc(100%/24 - 1px), #edf1f5 calc(100%/24 - 1px), #edf1f5 calc(100%/24))" }}>
                 {row.bars.map((bar, i) => {
-                  const st = BAR_STATUS[bar.status];
+                  const statusKey = bar.status === "completed" ? "completed" : "incomplete";
+                  const st = BAR_STATUS[statusKey];
                   return (
                     <div key={i} title={bar.label || st.label}
                       className="absolute top-[8px] flex h-[26px] items-center justify-between gap-1 overflow-hidden rounded px-1.5 text-[7px] font-bold shadow-sm"
                       style={{ left: pct(bar.start), width: `${((bar.end - bar.start) / 24) * 100}%`, background: st.bg, color: st.text || "#fff", border: st.border }}>
                       <span className="truncate">{bar.label}</span>
-                      {bar.tag && (
-                        <span className={`shrink-0 rounded-sm px-1 py-0.5 text-[6.5px] leading-tight ${bar.status === "awaiting" ? "bg-amber-500 text-white" : "bg-black/20"} ${bar.tagWrap ? "w-9 whitespace-normal" : "whitespace-nowrap"}`}>{bar.tag}</span>
-                      )}
+                      {bar.tag ? (
+                        <span className={`shrink-0 rounded-sm bg-black/15 px-1 py-0.5 text-[6.5px] leading-tight ${bar.tagWrap ? "w-9 whitespace-normal" : "whitespace-nowrap"}`}>{bar.tag}</span>
+                      ) : null}
                     </div>
                   );
                 })}
@@ -420,12 +413,13 @@ function SidingBarChart({ sidingLoading }) {
 }
 
 /* ---------- register helpers ---------- */
-function LoadedCell({ pct }) {
-  const color = pct >= 100 ? "#10b981" : pct >= 50 ? "#0ea5e9" : "#f59e0b";
+function LoadedCell({ pct, completed }) {
+  const done = Boolean(completed) || pct >= 100;
+  const color = done ? "#0e9f88" : "#f59e0b";
   return (
     <div className="w-12">
       <div className="flex items-center gap-1 text-[9px] font-extrabold" style={{ color }}>
-        {pct}%{pct < 100 && <i className="h-1 w-1 rounded-full bg-blue-500" />}
+        {pct}%
       </div>
       <div className="mt-0.5 h-[3px] overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} /></div>
     </div>
@@ -575,15 +569,15 @@ export default function OperationsCockpitDashboard({ showHeader = true }) {
                       <td className={`${TD} font-extrabold text-sky-700`}>{row.rakeNo}</td>
                       <td className={`${TD} font-semibold`}>{row.siding}</td>
                       <td className={`${TD} max-w-[90px]`}>{row.customer}</td>
-                      <td className={TD}><span className={`inline-block max-w-[54px] rounded px-1.5 py-1 font-semibold leading-tight ${PRODUCT_STYLES[row.product] || "bg-sky-50 text-sky-700"}`}>{row.product}</span></td>
+                      <td className={TD}><span className={`inline-block max-w-[54px] rounded px-1.5 py-1 font-semibold leading-tight ${PRODUCT_CHIP_CLASS}`}>{row.product}</span></td>
                       <td className={`${TD} tabular-nums leading-tight`}><div>{row.placementDate}</div><div>{row.placement}</div></td>
                       <td className={`${TD} tabular-nums`}>{row.start}</td>
-                      <td className={`${TD} tabular-nums ${row.complete !== "—" ? "font-bold text-emerald-600" : ""}`}>{row.complete}</td>
-                      <td className={TD}><LoadedCell pct={row.loadedPct} /></td>
+                      <td className={`${TD} tabular-nums font-semibold ${row.loadingComplete ? "text-emerald-600" : "text-amber-600"}`}>{row.complete}</td>
+                      <td className={TD}><LoadedCell pct={row.loadedPct} completed={row.loadingComplete} /></td>
                       <td className={`${TD} tabular-nums`}>{row.permitH}</td>
                       <td className={`${TD} font-bold tabular-nums`}>{row.actualH}</td>
-                      <td className={`${TD} font-extrabold tabular-nums ${row.delayMin ? "text-rose-600" : "text-emerald-600"}`}>{row.delayMin}</td>
-                      <td className={TD}><span className={`inline-block rounded px-2 py-1 text-center text-[8px] font-bold leading-tight ${row.release === "Awaiting Release" ? "max-w-[54px]" : "whitespace-nowrap"} ${RELEASE_STYLES[row.release] || "bg-slate-100 text-slate-600"}`}>{row.release}</span></td>
+                      <td className={`${TD} font-extrabold tabular-nums ${row.loadingComplete ? "text-emerald-600" : "text-amber-600"}`}>{row.delayMin}</td>
+                      <td className={TD}><span className={`inline-block rounded px-2 py-1 text-center text-[8px] font-bold leading-tight ${row.release === "Awaiting Release" ? "max-w-[54px]" : "whitespace-nowrap"} ${RELEASE_STYLES[row.release] || "bg-amber-50 text-amber-800"}`}>{row.release}</span></td>
                       <td className={`${TD} tabular-nums`}>{row.dept}</td>
                       <td className={`${TD} max-w-[140px] whitespace-pre-line leading-tight ${REMARK_TONES[row.remarkTone] || "text-slate-500"}`}>{row.remarks}</td>
                     </tr>

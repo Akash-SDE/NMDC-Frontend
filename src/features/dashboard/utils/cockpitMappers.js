@@ -12,7 +12,16 @@ import {
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
-const BAR_COLORS = ["#16a34a", "#f59e0b", "#e11d48", "#0b91cf", "#6366f1"];
+
+/** Operations cockpit: green = loading completed, yellow = not completed. */
+export const COCKPIT_LOADING_COMPLETE_COLOR = "#0e9f88";
+export const COCKPIT_LOADING_INCOMPLETE_COLOR = "#f59e0b";
+
+function loadingBarColor(loading) {
+  return toTimestamp(loading.completion_time) != null
+    ? COCKPIT_LOADING_COMPLETE_COLOR
+    : COCKPIT_LOADING_INCOMPLETE_COLOR;
+}
 
 function toTimestamp(value) {
   if (!value) return null;
@@ -119,10 +128,8 @@ function releaseStatus(loading) {
   return "Pending";
 }
 
-function remarkTone(delayMin, complete) {
-  if (delayMin >= 45) return "danger";
-  if (delayMin > 0) return "warn";
-  return "ok";
+function remarkTone(_delayMin, complete) {
+  return complete ? "ok" : "warn";
 }
 
 function buildRemarks(loading, delayMin) {
@@ -135,12 +142,8 @@ function buildRemarks(loading, delayMin) {
   return "Loading in progress\n• Normal";
 }
 
-function mapGridStatus(eventStatus, hasDelay) {
-  if (eventStatus === "demurrage") return "demurrage";
-  if (eventStatus === "completed") return "completed";
-  if (hasDelay) return "delayed";
-  if (eventStatus === "loading") return "loaded";
-  return "idle";
+function mapGridStatus(eventStatus) {
+  return eventStatus === "completed" ? "completed" : "incomplete";
 }
 
 export function buildCockpitMeta(records, dayWindow, now = Date.now()) {
@@ -257,7 +260,7 @@ function buildSidingRakeSlide(loading, records, dayWindow, now) {
   const progress = estimateLoadedPct(loading, now);
   const complete = toTimestamp(loading.completion_time);
   const state = complete ? "COMPLETED" : delayMin > 0 ? "DELAYED" : "LOADING";
-  const badgeTone = complete ? "green" : delayMin > 0 ? (delayMin >= 45 ? "red" : "amber") : "blue";
+  const badgeTone = complete ? "green" : "amber";
   const estEnd = complete
     ? formatTimeLabel(loading.completion_time)
     : formatTimeLabel(toTimestamp(loading.placement_time) + COCKPIT_PERMIT_HOURS * HOUR_MS);
@@ -278,15 +281,10 @@ function buildSidingRakeSlide(loading, records, dayWindow, now) {
       : delayMin > 0
         ? `+${delayMin} min`
         : "0 min (On-Time)",
-    delayTone: complete
-      ? releaseStatus(loading) === "Awaiting Release"
-        ? "danger"
-        : "ok"
-      : delayMin > 0
-        ? "amber"
-        : "ok",
+    delayTone: complete ? "ok" : "amber",
     state,
     badgeTone,
+    barColor: loadingBarColor(loading),
   };
 }
 
@@ -316,14 +314,14 @@ export function buildCockpitSidings(records, dayWindow, now = Date.now()) {
   return [...bySiding.entries()].slice(0, 5).map(([name, sidingLoadings], index) => {
     const rakes = sidingLoadings.map((loading) => buildSidingRakeSlide(loading, records, dayWindow, now));
     const primary = rakes[0];
-    const barColor = BAR_COLORS[index % BAR_COLORS.length];
-    const headerState = rakes.some((r) => r.state === "DELAYED")
-      ? "DELAYED"
-      : rakes.every((r) => r.state === "COMPLETED")
-        ? "COMPLETED"
+    const allCompleted = rakes.every((r) => r.state === "COMPLETED");
+    const barColor = allCompleted ? COCKPIT_LOADING_COMPLETE_COLOR : COCKPIT_LOADING_INCOMPLETE_COLOR;
+    const headerState = allCompleted
+      ? "COMPLETED"
+      : rakes.some((r) => r.state === "DELAYED")
+        ? "DELAYED"
         : "LOADING";
-    const headerBadge =
-      headerState === "COMPLETED" ? "green" : headerState === "DELAYED" ? "amber" : "blue";
+    const headerBadge = allCompleted ? "green" : "amber";
 
     return {
       id: index + 1,
@@ -363,11 +361,10 @@ export function buildCockpitDispatchRows(records, dayWindow, now = Date.now()) {
       siding: sidingName,
       subtitle: `${idx}. ${rakeLabel}`,
       bars: events.map((event) => {
-        const delayMin = delayMinutesForRake(event.label, records.delays || [], dayWindow);
         return {
           start: event.start,
           end: event.end,
-          status: mapGridStatus(event.status, delayMin > 0),
+          status: mapGridStatus(event.status),
           label: event.label,
           tag: event.status === "completed" ? "Done" : undefined,
         };
@@ -412,6 +409,7 @@ export function buildLiveRakeRegister(records, dayWindow, now = Date.now()) {
         : "—",
       remarks: buildRemarks(loading, delayMin),
       remarkTone: remarkTone(delayMin, Boolean(completed)),
+      loadingComplete: Boolean(completed),
     };
   });
 }

@@ -591,13 +591,12 @@ export default function LoadingManagementPage() {
     if (!isAdjustmentMode) {
       const missing = [];
       if (!String(inlineForm.rakeId || "").trim()) missing.push("rake");
-      if (!String(inlineForm.operatorFtp || "").trim()) missing.push("operator FTP");
-      if (!String(inlineForm.tonnage || "").trim()) missing.push("tonnage");
-      if (!String(inlineForm.stockpile || "").trim()) missing.push("stockpile");
+      if (!String(inlineForm.placementTime || "").trim()) missing.push("placement time");
       if (missing.length) {
         return `Fill ${missing.join(", ")} before saving.`;
       }
-      if (Number(inlineForm.tonnage) <= 0) {
+      const tonnageText = String(inlineForm.tonnage ?? "").trim();
+      if (tonnageText && Number(inlineForm.tonnage) <= 0) {
         return "Tonnage must be greater than zero.";
       }
     }
@@ -765,12 +764,9 @@ export default function LoadingManagementPage() {
     }
   }
 
-  const requiredInlineMissing = [
-    inlineForm.rakeId,
-    inlineForm.operatorFtp,
-    inlineForm.tonnage,
-    inlineForm.stockpile,
-  ].some((field) => !String(field || "").trim());
+  const requiredInlineMissing = [inlineForm.rakeId, inlineForm.placementTime].some(
+    (field) => !String(field || "").trim(),
+  );
 
   const isInlineAdjustmentMode = inlineActionMode === "adjust";
   const isInlineEditMode = inlineActionMode === "edit";

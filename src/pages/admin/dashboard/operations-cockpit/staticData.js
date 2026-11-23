@@ -40,8 +40,8 @@ export const COCKPIT_SIDINGS = [
     delayLabel: "0 min (On-Time)",
     delayTone: "ok",
     state: "LOADING",
-    badgeTone: "green",
-    barColor: "#16a34a",
+    badgeTone: "amber",
+    barColor: "#f59e0b",
   },
   {
     id: 2,
@@ -72,10 +72,10 @@ export const COCKPIT_SIDINGS = [
     estComplete: "13:00 (Today)",
     delayRowLabel: "Delay:",
     delayLabel: "+65 min (Demurrage)",
-    delayTone: "danger",
+    delayTone: "amber",
     state: "DELAYED",
-    badgeTone: "red",
-    barColor: "#e11d48",
+    badgeTone: "amber",
+    barColor: "#f59e0b",
   },
   {
     id: 4,
@@ -89,10 +89,10 @@ export const COCKPIT_SIDINGS = [
     estComplete: "04:50 (Today)",
     delayRowLabel: "Post-loading:",
     delayLabel: "Awaiting Release",
-    delayTone: "danger",
+    delayTone: "ok",
     state: "COMPLETED",
     badgeTone: "green",
-    barColor: "#16a34a",
+    barColor: "#0e9f88",
   },
   {
     id: 5,
@@ -108,8 +108,8 @@ export const COCKPIT_SIDINGS = [
     delayLabel: "0 min (Smooth)",
     delayTone: "ok",
     state: "LOADING",
-    badgeTone: "blue",
-    barColor: "#0b91cf",
+    badgeTone: "amber",
+    barColor: "#f59e0b",
   },
 ];
 
@@ -174,7 +174,7 @@ export const DISPATCH_GRID_ROWS = [
     siding: "SDG-BCH-1A",
     subtitle: "1. Lump • Rake BHL25145",
     bars: [
-      { start: 4.8, end: 12.1, status: "completed", label: "BHL25145 (Tata Steel) - 62% Loaded", tag: "ETA 13:00" },
+      { start: 4.8, end: 12.1, status: "incomplete", label: "BHL25145 (Tata Steel) - 62% Loaded", tag: "ETA 13:00" },
     ],
     notes: [
       { at: 1.7, text: "Track Idle" },
@@ -185,7 +185,7 @@ export const DISPATCH_GRID_ROWS = [
     siding: "SDG-BCH-2B",
     subtitle: "2. Fine • Rake BHL25146",
     bars: [
-      { start: 1.0, end: 12.1, status: "delayed", label: "BHL25146 (JSW Steel) - 37% [Delayed +42m]", tag: "Chute Stoppage" },
+      { start: 1.0, end: 12.1, status: "incomplete", label: "BHL25146 (JSW Steel) - 37% [Delayed +42m]", tag: "Chute Stoppage" },
     ],
     notes: [{ at: 12.5, text: "Awaiting Clearance" }],
   },
@@ -193,7 +193,7 @@ export const DISPATCH_GRID_ROWS = [
     siding: "SDG-BCH-3",
     subtitle: "3. New • Rake BHL25147",
     bars: [
-      { start: 0.1, end: 7.4, status: "demurrage", label: "BHL25147 (Jindal) - 48% [Demurraged +...", tag: "Conveyor Fix", tagWrap: true },
+      { start: 0.1, end: 7.4, status: "incomplete", label: "BHL25147 (Jindal) - 48% [Demurraged +...", tag: "Conveyor Fix", tagWrap: true },
     ],
     notes: [{ at: 7.7, text: "Reserved for ESSAR Rake" }],
   },
@@ -202,7 +202,7 @@ export const DISPATCH_GRID_ROWS = [
     subtitle: "4. RGBL/RYD-5 • BHL25148",
     bars: [
       { start: 2.8, end: 4.5, status: "completed", label: "BHL251..." },
-      { start: 4.6, end: 9.5, status: "awaiting", label: "Awaiting Railway Release", tag: "Audit" },
+      { start: 4.6, end: 9.5, status: "incomplete", label: "Awaiting Railway Release", tag: "Audit" },
     ],
     notes: [{ at: 9.6, text: "Track Ready for Next", wrap: true }],
   },
@@ -210,7 +210,7 @@ export const DISPATCH_GRID_ROWS = [
     siding: "SDG-BCH-5",
     subtitle: "5. Siding 5 • BHL25149",
     bars: [
-      { start: 3.9, end: 13.1, status: "loaded", label: "BHL25149 (NMDC Dom) - 22% [In Progress]", tag: "14:00 Target" },
+      { start: 3.9, end: 13.1, status: "incomplete", label: "BHL25149 (NMDC Dom) - 22% [In Progress]", tag: "14:00 Target" },
     ],
     notes: [{ at: 13.4, text: "Idle / Night Shift Allocation" }],
   },
