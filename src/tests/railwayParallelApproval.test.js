@@ -62,11 +62,24 @@ describe("parallel Commercial / C&W approval", () => {
     expect(countPendingApprovals([approval])).toBe(1);
   });
 
+  it("allows NMDC review once any required railway check approves", () => {
+    const routed = approve(freshApproval(), OPERATIONS, { targets: [COMMERCIAL, CW] });
+    const cwFirst = approve(routed, CW);
+    expect(cwFirst.status).toBe(APPROVAL_STATUS.AWAITING_COMMERCIAL);
+    expect(getPendingDepartmentsForApproval(cwFirst)).toEqual(
+      expect.arrayContaining([COMMERCIAL, NMDC]),
+    );
+    expect(canDepartmentAct(cwFirst, CW)).toBe(false);
+    expect(canDepartmentAct(cwFirst, NMDC)).toBe(true);
+  });
+
   it("moves to NMDC after both departments approve, then Done after NMDC", () => {
     const routed = approve(freshApproval(), OPERATIONS, { targets: [COMMERCIAL, CW] });
     const cwFirst = approve(routed, CW);
     expect(cwFirst.status).toBe(APPROVAL_STATUS.AWAITING_COMMERCIAL);
-    expect(getPendingDepartmentsForApproval(cwFirst)).toEqual([COMMERCIAL]);
+    expect(getPendingDepartmentsForApproval(cwFirst)).toEqual(
+      expect.arrayContaining([COMMERCIAL, NMDC]),
+    );
     expect(canDepartmentAct(cwFirst, CW)).toBe(false);
     const afterCommercial = approve(cwFirst, COMMERCIAL);
     expect(afterCommercial.status).toBe(APPROVAL_STATUS.AWAITING_NMDC);

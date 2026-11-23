@@ -70,11 +70,31 @@ export function getApprovalStatusLabel(status) {
   }
 }
 
+function canNmdcActInParallel(approval) {
+  if (!approval) return false;
+  if ((approval.nmdc?.status || "pending") !== "pending") return false;
+  if (approval.operations?.status !== "approved") return false;
+
+  const requiredReviews = REVIEW_DEPARTMENTS.filter(
+    (department) => approval[department]?.status !== STEP_NOT_REQUIRED,
+  );
+  if (requiredReviews.length === 0) return false;
+
+  return requiredReviews.some((department) => approval[department]?.status === "approved");
+}
+
 export function getPendingDepartmentsForApproval(approval) {
   if (!approval) return [];
-  return getPendingDepartments(approval).filter(
+  const pending = getPendingDepartments(approval).filter(
     (department) => (approval[department]?.status || "pending") === "pending",
   );
+  if (
+    canNmdcActInParallel(approval) &&
+    !pending.includes(APPROVAL_DEPARTMENTS.NMDC)
+  ) {
+    return [...pending, APPROVAL_DEPARTMENTS.NMDC];
+  }
+  return pending;
 }
 
 export function canDepartmentAct(approval, department) {

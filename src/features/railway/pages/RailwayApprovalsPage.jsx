@@ -58,10 +58,13 @@ import {
   canUserReviewDepartment,
 } from "../../../utils/approvalUtils";
 import RailwayApprovalStageCell from "../components/RailwayApprovalStageCell";
-import NmdcApprovalOriginPanel from "../components/NmdcApprovalOriginPanel";
+import NmdcRailwayChecksPanel from "../components/NmdcRailwayChecksPanel";
 import { formatDateTimeForTable, getLocalDateTimeValue } from "../../../utils/dateUtils";
 import { sendRailwayApprovalMemo } from "../../../services/railwayApprovalService";
-import { formatRailwayApprovalMemo } from "../utils/railwayApprovalMemo";
+import {
+  formatRailwayApprovalMemo,
+  resolveWagonManifestForMemo,
+} from "../utils/railwayApprovalMemo";
 import { markNmdcMemoSent, readNmdcMemoSentFlags } from "../utils/nmdcMemoStorage";
 
 const STAGE_COLUMNS = [
@@ -357,6 +360,7 @@ export default function RailwayApprovalsPage() {
   function openMemoPreview() {
     if (!selectedApproval || !reviewDepartment) return;
     if (!REVIEW_DEPARTMENTS.includes(reviewDepartment)) return;
+    const manifestForMemo = resolveWagonManifestForMemo(wagonManifest, selectedApproval);
     setMemoPreviewText(
       formatRailwayApprovalMemo({
         approval: selectedApproval,
@@ -364,6 +368,7 @@ export default function RailwayApprovalsPage() {
         actor: buildDecisionActor(user, reviewDepartment, isAdminProxy),
         remarks,
         loading: loadingById[selectedApproval.loadingId],
+        wagonManifest: manifestForMemo,
       }),
     );
     setMemoPreviewOpen(true);
@@ -373,11 +378,13 @@ export default function RailwayApprovalsPage() {
     if (!selectedApproval || !reviewDepartment) return;
     setMemoSending(true);
     try {
+      const manifestForMemo = resolveWagonManifestForMemo(wagonManifest, selectedApproval);
       const result = await sendRailwayApprovalMemo(selectedApproval, {
         department: reviewDepartment,
         actor: buildDecisionActor(user, reviewDepartment, isAdminProxy),
         remarks,
         loading: loadingById[selectedApproval.loadingId],
+        wagonManifest: manifestForMemo,
       });
       setNmdcMemoSentByApprovalId(markNmdcMemoSent(selectedApproval.id));
       setMemoPreviewOpen(false);
@@ -460,6 +467,14 @@ export default function RailwayApprovalsPage() {
     Boolean(selectedApproval) &&
     Boolean(reviewDepartment) &&
     REVIEW_DEPARTMENTS.includes(reviewDepartment);
+
+  const isOperationsReview = reviewDepartment === APPROVAL_DEPARTMENTS.OPERATIONS;
+  const isNmdcReview = reviewDepartment === APPROVAL_DEPARTMENTS.NMDC;
+  const isCwOrCommercialReview =
+    reviewDepartment === APPROVAL_DEPARTMENTS.CW ||
+    reviewDepartment === APPROVAL_DEPARTMENTS.COMMERCIAL;
+  const showWagonRegister = isOperationsReview || isCwOrCommercialReview;
+  const primaryDecisionLabel = isNmdcReview ? "Attended" : "Approve";
 
   return (
   <PageFrame>
@@ -687,43 +702,45 @@ export default function RailwayApprovalsPage() {
               </div>
             </UniformSectionCard>
 
-            <div className="mt-4">
-              <RailwayWagonManifestPanel
-                manifest={wagonManifest}
-                loading={selectedLoading}
-                editable={reviewDepartment !== APPROVAL_DEPARTMENTS.NMDC}
-                saving={manifestSaving}
-                onAddWagon={handleAddWagon}
-                onRemoveWagon={handleRemoveWagon}
-              />
-            </div>
-
-            <div className="mt-4">
-              <ApprovalTrackerPanel approval={selectedApproval} showHistory />
-            </div>
-
-            {reviewDepartment === APPROVAL_DEPARTMENTS.NMDC ? (
+            {showWagonRegister ? (
               <div className="mt-4">
-                <NmdcApprovalOriginPanel approval={selectedApproval} />
+                <RailwayWagonManifestPanel
+                  manifest={wagonManifest}
+                  loading={selectedLoading}
+                  editable
+                  saving={manifestSaving}
+                  onAddWagon={handleAddWagon}
+                  onRemoveWagon={handleRemoveWagon}
+                />
               </div>
             ) : null}
 
-            <div className="mt-4">
-              <PriorDepartmentInspections
-                approval={selectedApproval}
-                reviewDepartment={reviewDepartment}
-              />
-            </div>
+            {isOperationsReview ? (
+              <div className="mt-4">
+                <ApprovalTrackerPanel approval={selectedApproval} showHistory />
+              </div>
+            ) : null}
 
-            {reviewDepartment !== APPROVAL_DEPARTMENTS.NMDC ? (
+            {isOperationsReview ? (
+              <div className="mt-4">
+                <PriorDepartmentInspections
+                  approval={selectedApproval}
+                  reviewDepartment={reviewDepartment}
+                />
+              </div>
+            ) : null}
+
+            {isNmdcReview ? (
+              <div className="mt-4">
+                <NmdcRailwayChecksPanel approval={selectedApproval} />
+              </div>
+            ) : null}
+
+            {isOperationsReview ? (
               <div className="mt-4">
                 <UniformSectionCard
                   title={`${reviewDepartmentLabel} Wagon Inspection`}
-                  subtitle={
-                    reviewDepartment === APPROVAL_DEPARTMENTS.COMMERCIAL
-                      ? "Fields auto-fill from wagon numbers and railway flags added in the register above. You can edit before approving."
-                      : "Record wagon counts, wagon numbers, and checklist results for this department."
-                  }
+                  subtitle="Record track clearance, safety checklists, and wagon observations for railway operations."
                 >
                   <DepartmentInspectionFields
                     department={reviewDepartment}
@@ -809,7 +826,7 @@ export default function RailwayApprovalsPage() {
                   onClick={() => requestDecision("approve")}
                   className={uniformPrimaryButtonClass}
                 >
-                  Approve
+                  {primaryDecisionLabel}
                 </button>
               </div>
             </UniformSectionCard>
@@ -864,18 +881,28 @@ export default function RailwayApprovalsPage() {
               isOpen
               onClose={() => setConfirmAction(null)}
               onConfirm={confirmDecision}
-              title={confirmAction === "approve" ? "Confirm Approval" : "Confirm Rejection"}
+              title={
+                confirmAction === "approve"
+                  ? isNmdcReview
+                    ? "Confirm attendance"
+                    : "Confirm Approval"
+                  : "Confirm Rejection"
+              }
               message={
                 confirmAction === "approve"
-                  ? isAdminProxy
-                    ? `Approve this step on behalf of ${reviewDepartmentLabel}?${routingNote}`
-                    : `Are you sure you want to approve this railway step?${routingNote}`
+                  ? isNmdcReview
+                    ? isAdminProxy
+                      ? `Mark NMDC attendance on behalf of ${reviewDepartmentLabel}?`
+                      : "Mark this rake as attended by NMDC?"
+                    : isAdminProxy
+                      ? `Approve this step on behalf of ${reviewDepartmentLabel}?${routingNote}`
+                      : `Are you sure you want to approve this railway step?${routingNote}`
                   : isAdminProxy
                     ? `Reject this step on behalf of ${reviewDepartmentLabel}?`
                     : "Are you sure you want to reject this railway approval step?"
               }
               itemName={selectedApproval?.rakeNumber || ""}
-              confirmLabel={confirmAction === "approve" ? "Approve" : "Reject"}
+              confirmLabel={confirmAction === "approve" ? primaryDecisionLabel : "Reject"}
               variant={confirmAction === "approve" ? "warning" : "danger"}
               overlayClassName="z-[110]"
             />,
