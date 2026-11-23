@@ -9,7 +9,7 @@ export default function Layout({ children }) {
   const location = useLocation();
   const isOperationsCockpit = location.pathname.startsWith(ROUTES.ADMIN.OPERATIONS_COCKPIT);
   const isDailyOverview = location.pathname === ROUTES.ADMIN.DASHBOARD;
-  const isFixedViewportPage = isOperationsCockpit || isDailyOverview;
+  const isDashboardArea = isOperationsCockpit || isDailyOverview;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -45,21 +45,15 @@ export default function Layout({ children }) {
           sidebarCollapsed ? "lg:pl-20" : "lg:pl-61.5"
         }`}
       >
-        <Header onMenuClick={handleOpenSidebar} />
-        <div
-          className={
-            isFixedViewportPage
-              ? "shrink-0 px-2 pt-1.5 pb-0 sm:px-3 lg:px-3"
-              : "shrink-0 px-3 pt-3 sm:px-5 lg:px-6"
-          }
-        >
-          <AppBreadcrumb compact={isFixedViewportPage} />
+        <Header onMenuClick={handleOpenSidebar} compact={!isDashboardArea} />
+        <div className="shrink-0 px-2 pt-1 pb-0 sm:px-3">
+          <AppBreadcrumb compact />
         </div>
         <main
           className={
-            isFixedViewportPage
+            isDashboardArea
               ? "flex min-h-0 flex-1 flex-col overflow-hidden p-0"
-              : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 lg:p-6"
+              : "flex min-h-0 flex-1 flex-col overflow-hidden px-2 pb-2 pt-0 sm:px-3"
           }
         >
           {children}

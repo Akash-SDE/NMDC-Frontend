@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { sidingsMeta } from "../../../data/adminmasterdatafiles/sidings";
-import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
+import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Toast from "../../../components/shared/Toast";
 import { PlusIcon } from "../../../components/icons";
@@ -210,7 +210,6 @@ export default function SidingMaster() {
   const [sidings, setSidings] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("code");
   const [sortOrder, setSortOrder] = useState("asc");
   const [loading, setLoading] = useState(false);
@@ -244,7 +243,7 @@ export default function SidingMaster() {
         sortBy,
         sortOrder,
         sortFieldMap: SORT_FIELD_MAP,
-        filters: search.trim() ? { siding_code: search.trim() } : {},
+        filters: {},
       });
       const res = await fetchSidings(filters);
       const results = res?.results ?? res ?? [];
@@ -255,7 +254,7 @@ export default function SidingMaster() {
     } finally {
       setLoading(false);
     }
-  }, [search, serverPage, serverPageSize, sortBy, sortOrder]);
+  }, [serverPage, serverPageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     if (!isAddPage && !isEditPage) loadSidings();
@@ -343,7 +342,8 @@ export default function SidingMaster() {
   // Add / Edit form
   if (isAddPage || isEditPage) {
     return (
-      <div className="space-y-6 3xl:space-y-8">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
         <Toast toast={toast} />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -367,15 +367,18 @@ export default function SidingMaster() {
           />
         </div>
       </div>
+    </div>
     );
   }
 
   // List
   return (
-    <div className="space-y-6 3xl:space-y-8">
-      <Toast toast={toast} />
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
+        <Toast toast={toast} />
+      </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex shrink-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] font-bold text-slate-800">
             {sidingsMeta.title}
@@ -389,17 +392,21 @@ export default function SidingMaster() {
         </button>
       </div>
 
-      <SearchBar
-        placeholder={sidingsMeta.searchPlaceholder}
-        value={search}
-        onChange={(v) => { setSearch(v); setCurrentPage(1); }}
-        showFilter={false}
-      />
-
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+      <DataTablePanel
+          className="min-h-0 flex-1"
+          footer={
+            <Pagination
+              embedded
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={columnFilters.count}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+            />
+          }
+        >
           <table className="w-full" data-print-table>
-            <thead>
+            <thead className={STICKY_TABLE_HEAD_CLASS}>
               <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   {renderSortButton("Siding Code", "code")}
@@ -476,17 +483,7 @@ export default function SidingMaster() {
               )}
             </tbody>
           </table>
-        </div>
-        <div className="px-5 py-4 3xl:px-6 3xl:py-5">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalCount={columnFilters.count}
-            pageSize={PAGE_SIZE}
-            onPageChange={setCurrentPage}
-          />
-        </div>
-      </div>
+        </DataTablePanel>
 
       <ConfirmDialog
         isOpen={isStatusToggleOpen}

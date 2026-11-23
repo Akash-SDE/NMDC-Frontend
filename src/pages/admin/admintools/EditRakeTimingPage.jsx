@@ -7,6 +7,9 @@ import {
 } from "../../../components/shared/UniformUi";
 import { useColumnFilters } from "../../../hooks/useColumnFilters";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import DateOnlyInput from "../../../components/shared/DateOnlyInput";
+import DateTimeInput from "../../../components/shared/DateTimeInput";
+import { formatDateTimeForTable, formatTableDateOnly } from "../../../utils/dateUtils";
 
 const initialRows = [
   {
@@ -54,11 +57,8 @@ function toSavedSnapshot(rows) {
 }
 
 function formatDateTime(value) {
-  if (!value) return "-";
-  const [date, time = ""] = String(value).split("T");
-  const [year, month, day] = date.split("-");
-  if (!year || !month || !day) return value;
-  return `${day}/${month}/${year} ${time}`.trim();
+  const formatted = formatDateTimeForTable(value);
+  return formatted || "-";
 }
 
 export default function EditRakeTimingPage() {
@@ -82,11 +82,13 @@ export default function EditRakeTimingPage() {
       {
         key: "offerTime",
         label: "Offer Time",
+        filterType: "datetime",
         getValue: (row) => formatDateTime(savedRows[row.id]?.offerTime ?? row.offerTime),
       },
       {
         key: "completionTime",
         label: "Completion Time",
+        filterType: "datetime",
         getValue: (row) => formatDateTime(savedRows[row.id]?.completionTime ?? row.completionTime),
       },
       { key: "action", type: "none" },
@@ -140,12 +142,7 @@ export default function EditRakeTimingPage() {
       <UniformSectionCard title="Search Datewise" subtitle="Filter records before updating timing values.">
         <form onSubmit={handleSearch} className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,320px)_max-content] sm:items-end">
           <UniformFormField label="Completion Date">
-            <input
-              type="date"
-              value={draftDate}
-              onChange={(event) => setDraftDate(event.target.value)}
-              className={uniformInputClass}
-            />
+            <DateOnlyInput value={draftDate} onChange={setDraftDate} className={uniformInputClass} />
           </UniformFormField>
 
           <button type="submit" className={`${uniformPrimaryButtonClass} h-10 sm:min-w-28`}>
@@ -179,23 +176,23 @@ export default function EditRakeTimingPage() {
                       <td className="px-5 py-3.5 text-[13px] text-slate-700">{row.id}</td>
                       <td className="px-5 py-3.5 text-[13px] font-semibold text-slate-800">
                         <p>{row.rakeNumber}</p>
-                        <p className="text-[11px] font-medium text-slate-500">Date: {formatDateTime(`${row.completionDate}T00:00`).split(" ")[0]}</p>
+                        <p className="text-[11px] font-medium text-slate-500">
+                          Date: {formatTableDateOnly(row.completionDate)}
+                        </p>
                       </td>
                       <td className="px-5 py-3.5 text-[13px] text-slate-700 hidden lg:table-cell">{row.customer}</td>
                       <td className="px-5 py-3.5 text-[13px] text-slate-700 hidden lg:table-cell">{row.destination}</td>
                       <td className="px-5 py-3.5">
-                        <input
-                          type="datetime-local"
+                        <DateTimeInput
                           value={row.offerTime}
-                          onChange={(event) => handleTimingChange(row.id, "offerTime", event.target.value)}
+                          onChange={(next) => handleTimingChange(row.id, "offerTime", next)}
                           className={`${uniformInputClass} h-9 text-[12px]`}
                         />
                       </td>
                       <td className="px-5 py-3.5">
-                        <input
-                          type="datetime-local"
+                        <DateTimeInput
                           value={row.completionTime}
-                          onChange={(event) => handleTimingChange(row.id, "completionTime", event.target.value)}
+                          onChange={(next) => handleTimingChange(row.id, "completionTime", next)}
                           className={`${uniformInputClass} h-9 text-[12px]`}
                         />
                       </td>

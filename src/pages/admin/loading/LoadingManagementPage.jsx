@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   uniformInputClass,
 } from "../../../components/shared/UniformUi";
-import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import {
@@ -18,6 +17,7 @@ import {
   EnableIcon,
 } from "../../../components/icons";
 import { formatDateTimeForTable } from "../../../utils/dateUtils";
+import DateTimeInput from "../../../components/shared/DateTimeInput";
 import { useRouter } from "../../../context/RouterContext";
 import { delayPathForLoading, ROUTES } from "../../../constants/routes";
 import { LOADING_STATUS } from "../../../constants/approval";
@@ -43,6 +43,8 @@ import { useClientPagination } from "../../../hooks/useClientPagination";
 import { useColumnFilters } from "../../../hooks/useColumnFilters";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 import ColumnSettingsMenu from "../../../components/shared/ColumnSettingsMenu";
+import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
+import PageFrame from "../../../components/layout/PageFrame";
 import { useColumnVisibility } from "../../../hooks/useColumnVisibility";
 
 const LOADING_STATUS_CODE = {
@@ -51,11 +53,7 @@ const LOADING_STATUS_CODE = {
   AWAITING_APPROVAL: 15,
 };
 
-const WAGON_SICK_NO = "5";
-const wagonSickOptions = [
-  { value: WAGON_SICK_NO, label: "No" },
-  { value: "10", label: "Yes" },
-];
+const DEFAULT_WAGON_SICK_COUNT = "0";
 const manualLoadingTrackOptions = [
   { value: "", label: "None" },
   { value: "5", label: "Manual R3" },
@@ -74,7 +72,7 @@ const initialInlineForm = {
   placementTime: "",
   offerTime: "",
   operatorFtp: "",
-  wagonSick: WAGON_SICK_NO,
+  wagonSick: DEFAULT_WAGON_SICK_COUNT,
   manualLoadingTrack: "",
   tonnage: "",
   stockpile: "",
@@ -133,8 +131,10 @@ function mapApiLoading(item) {
     placementTime: toDateTimeLocalValue(item.placement_time),
     offerTime: toDateTimeLocalValue(item.offertime),
     operatorFtp: item.operator_ftp || "",
-    wagonSick: item.wagon_sick_name || "No",
-    wagonSickCode: item.wagon_sick == null ? WAGON_SICK_NO : String(item.wagon_sick),
+    wagonSick:
+      item.wagon_sick == null || item.wagon_sick === ""
+        ? 0
+        : Number(item.wagon_sick),
     manualLoadingTrack: track?.label && track.value ? track.label : "",
     manualLoadingTrackCode: item.manual_loading_track == null ? "" : String(item.manual_loading_track),
     tonnage: item.tonnage ?? "",
@@ -172,7 +172,7 @@ function loadingFieldsFromForm(form) {
   return {
     placement_time: toIsoOrNull(form.placementTime),
     operator_ftp: String(form.operatorFtp || "").trim(),
-    wagon_sick: Number(form.wagonSick || WAGON_SICK_NO),
+    wagon_sick: Math.max(0, Number(form.wagonSick ?? DEFAULT_WAGON_SICK_COUNT) || 0),
     manual_loading_track: Number.isFinite(track) ? track : null,
     tonnage: form.tonnage === "" ? null : form.tonnage,
     stockpile: Number.isFinite(stockpile) ? stockpile : null,
@@ -222,8 +222,6 @@ function resolveLoadingId(row) {
   return row.id || (row.rakeId ? `LD-${row.rakeId.replace("RK-", "")}` : null);
 }
 
-const pinnedFilterShadowClass = "border-l border-slate-200/70 bg-white shadow-[-4px_0_8px_-4px_rgba(15,23,42,0.08)]";
-
 const LOADING_HIDDEN_COLS_KEY = "nmdc_loading_hidden_columns";
 
 function buildLoadingFilterColumns(approvalByLoadingId) {
@@ -237,10 +235,24 @@ function buildLoadingFilterColumns(approvalByLoadingId) {
     { key: "customer", label: "Customer", type: "select", getValue: (row) => row.customer || "-" },
     { key: "destination", label: "Destination", type: "select", getValue: (row) => row.destination || "-" },
     { key: "fNote", label: "F-Note", getValue: (row) => row.fNote || "-" },
-    { key: "placementTime", label: "Placement Time", getValue: (row) => formatDateTimeForTable(row.placementTime) },
-    { key: "offerTime", label: "Offer Time", getValue: (row) => formatDateTimeForTable(row.offerTime) },
+    {
+      key: "placementTime",
+      label: "Placement Time",
+      filterType: "datetime",
+      getValue: (row) => formatDateTimeForTable(row.placementTime),
+    },
+    {
+      key: "offerTime",
+      label: "Offer Time",
+      filterType: "datetime",
+      getValue: (row) => formatDateTimeForTable(row.offerTime),
+    },
     { key: "operatorFtp", label: "Operator FTP", getValue: (row) => row.operatorFtp || "-" },
-    { key: "wagonSick", label: "Wagon Sick", type: "select", getValue: (row) => row.wagonSick || "No" },
+    {
+      key: "wagonSick",
+      label: "Wagon Sick",
+      getValue: (row) => (row.wagonSick == null || row.wagonSick === "" ? "0" : String(row.wagonSick)),
+    },
     {
       key: "manualLoadingTrack",
       label: "Manual Track",
@@ -250,15 +262,24 @@ function buildLoadingFilterColumns(approvalByLoadingId) {
     },
     { key: "tonnage", label: "Tonnage", getValue: (row) => row.tonnage || "-" },
     { key: "stockpile", label: "Stockpile", type: "select", getValue: (row) => row.stockpile || "-" },
-    { key: "completionTime", label: "Completion Time", getValue: (row) => formatDateTimeForTable(row.completionTime) },
-    { key: "clearanceTime", label: "Clearance Time", getValue: (row) => formatDateTimeForTable(row.clearanceTime) },
+    {
+      key: "completionTime",
+      label: "Completion Time",
+      filterType: "datetime",
+      getValue: (row) => formatDateTimeForTable(row.completionTime),
+    },
+    {
+      key: "clearanceTime",
+      label: "Clearance Time",
+      filterType: "datetime",
+      getValue: (row) => formatDateTimeForTable(row.clearanceTime),
+    },
     { key: "overloadedWagons", label: "No. of Overloaded Wagons", getValue: (row) => row.overloadedWagons ?? "-" },
     { key: "weightRemoved", label: "Weight Removed", getValue: (row) => row.weightRemoved ?? "-" },
     {
       key: "railwayApproval",
       label: "Railway Approval",
       type: "select",
-      className: `sticky right-[142px] z-30 w-[186px] min-w-[186px] max-w-[186px] ${pinnedFilterShadowClass}`,
       getValue: (row) => {
         const approval = approvalByLoadingId[resolveLoadingId(row)];
         return approval ? getApprovalStatusLabel(approval.status) : "Not submitted";
@@ -268,7 +289,6 @@ function buildLoadingFilterColumns(approvalByLoadingId) {
       key: "status",
       label: "Status",
       type: "select",
-      className: `sticky right-0 z-30 w-[142px] min-w-[142px] max-w-[142px] ${pinnedFilterShadowClass}`,
       getValue: (row) => getRowStatusMeta(row).label,
     },
   ];
@@ -311,12 +331,6 @@ export default function LoadingManagementPage() {
     : null;
 
   const compactInputClass = `${uniformInputClass} h-8 px-2 text-[11px]`;
-  const pinnedStatusWidthClass = "w-[142px] min-w-[142px] max-w-[142px]";
-  const pinnedApprovalWidthClass = "w-[186px] min-w-[186px] max-w-[186px]";
-  const stickyStatusHeaderClass = `sticky right-0 z-30 ${pinnedStatusWidthClass} border-l border-slate-200/70 bg-slate-50 px-4 py-3.5 text-left align-middle text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500 shadow-[-4px_0_8px_-4px_rgba(15,23,42,0.08)]`;
-  const stickyApprovalHeaderClass = `sticky right-[142px] z-30 ${pinnedApprovalWidthClass} border-l border-slate-200/70 bg-slate-50 px-4 py-3.5 text-left align-middle text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500 shadow-[-4px_0_8px_-4px_rgba(15,23,42,0.08)]`;
-  const stickyStatusCellBase = `sticky right-0 z-20 ${pinnedStatusWidthClass} border-l border-slate-200/70 px-4 align-middle shadow-[-4px_0_8px_-4px_rgba(15,23,42,0.08)]`;
-  const stickyApprovalCellBase = `sticky right-[142px] z-20 ${pinnedApprovalWidthClass} border-l border-slate-200/70 px-4 align-middle shadow-[-4px_0_8px_-4px_rgba(15,23,42,0.08)]`;
 
   useEffect(() => {
     dispatch(fetchApprovalRequests());
@@ -432,7 +446,10 @@ export default function LoadingManagementPage() {
       placementTime: row.placementTime,
       offerTime: row.offerTime,
       operatorFtp: row.operatorFtp || "",
-      wagonSick: row.wagonSickCode || WAGON_SICK_NO,
+      wagonSick:
+        row.wagonSick == null || row.wagonSick === ""
+          ? DEFAULT_WAGON_SICK_COUNT
+          : String(row.wagonSick),
       manualLoadingTrack: row.manualLoadingTrackCode || "",
       tonnage: row.tonnage || "",
       stockpile: row.stockpileId || "",
@@ -490,7 +507,6 @@ export default function LoadingManagementPage() {
   );
   const columnFilters = useColumnFilters(loadingFilterColumns);
   const columnVisibility = useColumnVisibility(LOADING_HIDDEN_COLS_KEY, loadingFilterColumns, {
-    pinned: ["railwayApproval", "status"],
     onHide: (keys) => keys.forEach((k) => columnFilters.setFilter(k, "")),
   });
   const { applyFilters } = columnFilters;
@@ -508,7 +524,12 @@ export default function LoadingManagementPage() {
         return Number.isNaN(time) ? 0 : time;
       }
 
-      if (field === "tonnage" || field === "overloadedWagons" || field === "weightRemoved") {
+      if (
+        field === "tonnage" ||
+        field === "wagonSick" ||
+        field === "overloadedWagons" ||
+        field === "weightRemoved"
+      ) {
         const parsed = Number(row[field]);
         return Number.isNaN(parsed) ? 0 : parsed;
       }
@@ -699,7 +720,10 @@ export default function LoadingManagementPage() {
       placementTime: row.placementTime,
       offerTime: row.offerTime,
       operatorFtp: row.operatorFtp || "",
-      wagonSick: row.wagonSickCode || WAGON_SICK_NO,
+      wagonSick:
+        row.wagonSick == null || row.wagonSick === ""
+          ? DEFAULT_WAGON_SICK_COUNT
+          : String(row.wagonSick),
       manualLoadingTrack: row.manualLoadingTrackCode || "",
       tonnage: row.tonnage || "",
       stockpile: row.stockpileId || "",
@@ -775,25 +799,23 @@ export default function LoadingManagementPage() {
       : "Draft";
 
   return (
-    <>
-      <div className="space-y-6 3xl:space-y-8 5xl:space-y-12 animate-fadeIn">
-        <div>
-          <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
-            Loading Management
-          </h2>
-          <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
+    <PageFrame>
+      <div className="flex min-h-0 flex-1 flex-col gap-2 animate-fadeIn">
+        <div className="shrink-0">
+          <h2 className="text-[18px] font-bold text-slate-800 sm:text-[20px]">Loading Management</h2>
+          <p className="text-[12px] text-slate-500">
             Update loading operations using an inline worksheet aligned with the Rake Management workflow.
           </p>
         </div>
 
         {message ? (
-          <p className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
+          <p className="shrink-0 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
             {message}
           </p>
         ) : null}
 
         {pendingApprovalCount > 0 ? (
-          <div className="rounded-lg border border-violet-200 bg-violet-50 px-4 py-3">
+          <div className="shrink-0 rounded-lg border border-violet-200 bg-violet-50 px-4 py-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-violet-800">
@@ -813,7 +835,7 @@ export default function LoadingManagementPage() {
             </div>
           </div>
         ) : (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-[13px] text-slate-600">
                 After final submit, use Railway Approvals to complete Operations → Commercial → C&amp;W steps.
@@ -829,26 +851,16 @@ export default function LoadingManagementPage() {
           </div>
         )}
 
-        <div className="flex items-center gap-3">
-          <div className="flex-1">
-            <SearchBar
-              placeholder="Search by rake, route, customer, stockpile, or status..."
-              value={tableSearch}
-              onChange={setTableSearch}
-              showFilter={false}
-            />
-          </div>
+        <div className="flex shrink-0 items-center justify-end gap-3">
           <ColumnSettingsMenu {...columnVisibility.menuProps} />
         </div>
         <style>{columnVisibility.css}</style>
 
-        <p className="text-[13px] text-slate-500">
-          Railway Approval and Status stay pinned on the right while you scroll the table horizontally.
-        </p>
-
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table data-colset={LOADING_HIDDEN_COLS_KEY} className="w-full min-w-[1400px] border-separate border-spacing-0 whitespace-nowrap">
+        <DataTablePanel
+          className="min-h-0 flex-1"
+          footer={<Pagination embedded {...paginationProps} />}
+        >
+          <table data-colset={LOADING_HIDDEN_COLS_KEY} className="w-full min-w-[1400px] border-separate border-spacing-0 whitespace-nowrap">
               <colgroup>
                 <col className="w-[108px]" />
                 <col />
@@ -869,10 +881,9 @@ export default function LoadingManagementPage() {
                 <col />
                 <col />
                 <col />
-                <col className="w-[186px]" />
-                <col className="w-[142px]" />
+                <col />
               </colgroup>
-              <thead>
+              <thead className={STICKY_TABLE_HEAD_CLASS}>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
                   <th className="sticky left-0 z-30 border-r border-slate-200/70 bg-slate-50 px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     Actions
@@ -934,11 +945,10 @@ export default function LoadingManagementPage() {
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     <SortHeaderButton label="Weight Removed" field="weightRemoved" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className={stickyApprovalHeaderClass}>
-                    <span className="block leading-snug">Railway</span>
-                    <span className="block leading-snug">Approval</span>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    Railway Approval
                   </th>
-                  <th className={stickyStatusHeaderClass}>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
                 </tr>
@@ -1066,19 +1076,16 @@ export default function LoadingManagementPage() {
                     />
                   </td>
                   <td className="px-5 py-3">
-                    <input
-                      type="datetime-local"
+                    <DateTimeInput
                       value={inlineForm.placementTime}
-                      onChange={(event) => updateInline("placementTime", event.target.value)}
+                      onChange={(next) => updateInline("placementTime", next)}
                       className={compactInputClass}
                       disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
-                    <input
-                      type="datetime-local"
+                    <DateTimeInput
                       value={inlineForm.offerTime}
-                      placeholder="Offer Time"
                       className={`${compactInputClass} cursor-not-allowed bg-slate-100 text-slate-500`}
                       readOnly
                     />
@@ -1094,18 +1101,16 @@ export default function LoadingManagementPage() {
                     />
                   </td>
                   <td className="px-5 py-3">
-                    <select
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
                       value={inlineForm.wagonSick}
                       onChange={(event) => updateInline("wagonSick", event.target.value)}
+                      placeholder="0"
                       className={compactInputClass}
                       disabled={!areMainFieldsEditable}
-                    >
-                      {wagonSickOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </td>
                   <td className="px-5 py-3 hidden xl:table-cell">
                     <select
@@ -1148,20 +1153,17 @@ export default function LoadingManagementPage() {
                     </select>
                   </td>
                   <td className="px-5 py-3">
-                    <input
-                      type="datetime-local"
+                    <DateTimeInput
                       value={inlineForm.completionTime}
-                      onChange={(event) => updateInline("completionTime", event.target.value)}
+                      onChange={(next) => updateInline("completionTime", next)}
                       className={compactInputClass}
                       disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
-                    <input
-                      type="datetime-local"
+                    <DateTimeInput
                       value={inlineForm.clearanceTime}
                       readOnly
-                      placeholder="Set by Railway Ops"
                       className={`${compactInputClass} cursor-not-allowed bg-slate-100 text-slate-500`}
                       title="Track clearance is recorded during Railway Operations approval"
                     />
@@ -1187,12 +1189,12 @@ export default function LoadingManagementPage() {
                       disabled={!areAdjustmentFieldsEditable}
                     />
                   </td>
-                  <td className={`${stickyApprovalCellBase} bg-blue-50 py-4`}>
+                  <td className="bg-blue-50 px-5 py-4">
                     <div className="flex min-h-[36px] items-center">
                       <span className="text-[11px] text-slate-400">—</span>
                     </div>
                   </td>
-                  <td className={`${stickyStatusCellBase} bg-blue-50 py-4`}>
+                  <td className="bg-blue-50 px-5 py-4">
                     <div className="flex min-h-[36px] items-center">
                       <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
                         {inlineStatusLabel}
@@ -1241,11 +1243,6 @@ export default function LoadingManagementPage() {
                       row.id === activeInlineId
                         ? "bg-amber-50"
                         : "bg-white group-hover:bg-slate-50";
-                    const pinnedCellClass =
-                      row.id === activeInlineId
-                        ? "bg-amber-50"
-                        : "bg-white group-hover:bg-slate-50";
-
                     return (
                       <tr
                         key={row.id}
@@ -1350,7 +1347,9 @@ export default function LoadingManagementPage() {
                         <td className="px-5 py-4 text-[13px] text-slate-700">{formatDateTimeForTable(row.placementTime)}</td>
                         <td className="px-5 py-4 text-[13px] text-slate-700">{formatDateTimeForTable(row.offerTime)}</td>
                         <td className="px-5 py-4 text-[13px] text-slate-700">{row.operatorFtp || "-"}</td>
-                        <td className="px-5 py-4 text-[13px] text-slate-700">{row.wagonSick || "No"}</td>
+                        <td className="px-5 py-4 text-[13px] text-slate-700">
+                          {row.wagonSick == null || row.wagonSick === "" ? 0 : row.wagonSick}
+                        </td>
                         <td className="px-5 py-4 text-[13px] text-slate-700 hidden xl:table-cell">
                           {row.manualLoadingTrack || "-"}
                         </td>
@@ -1368,7 +1367,7 @@ export default function LoadingManagementPage() {
                             {row.weightRemoved ?? "-"}
                           </span>
                         </td>
-                        <td className={`${stickyApprovalCellBase} py-4 ${pinnedCellClass}`}>
+                        <td className="px-5 py-4">
                           <div className="flex min-h-[36px] flex-col justify-center gap-1.5">
                             <ApprovalStatusBadge approval={approval} compact />
                             {approval ? (
@@ -1380,7 +1379,7 @@ export default function LoadingManagementPage() {
                             ) : null}
                           </div>
                         </td>
-                        <td className={`${stickyStatusCellBase} py-4 ${pinnedCellClass}`}>
+                        <td className="px-5 py-4">
                           <div className="flex min-h-[36px] items-center">
                             <span
                               className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold leading-none ${statusMeta.badgeClass}`}
@@ -1396,12 +1395,7 @@ export default function LoadingManagementPage() {
                 )}
               </tbody>
             </table>
-          </div>
-
-          <div className="px-5 pb-4">
-            <Pagination {...paginationProps} />
-          </div>
-        </div>
+        </DataTablePanel>
       </div>
 
       <ConfirmDialog
@@ -1435,6 +1429,6 @@ export default function LoadingManagementPage() {
         isOpen={Boolean(selectedApprovalDetail)}
         onClose={() => setApprovalDetailId(null)}
       />
-    </>
+    </PageFrame>
   );
 }

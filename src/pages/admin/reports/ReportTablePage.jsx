@@ -12,6 +12,7 @@ import {
   UniformSectionCard,
   uniformInputClass,
 } from "../../../components/shared/UniformUi";
+import DateOnlyInput from "../../../components/shared/DateOnlyInput";
 import { reportActionIconMap, ConfigIcon } from "../../../components/icons";
 import ApiErrorState from "../../../components/common/ApiErrorState";
 import { useRouter } from "../../../context/RouterContext";
@@ -118,11 +119,21 @@ function displayCellText(column, row) {
 const SELECT_FILTER_FIELD_PATTERN =
   /status$|^siding$|^oreType$|^wagonType$|^alertLevel$|^processStage$|^salesType$|^customer$|^destination$|^stockpile$|^category$|^shift$/i;
 
+function inferColumnFilterPlaceholderType(column) {
+  if (column.filterPlaceholderType) return column.filterPlaceholderType;
+  const field = String(column.field ?? "");
+  if (/time$/i.test(field)) return "datetime";
+  if (/date$/i.test(field) || field === "completedOn") return "date";
+  return undefined;
+}
+
 function buildColumnFilter(column) {
+  const selectType = SELECT_FILTER_FIELD_PATTERN.test(column.field) ? "select" : "text";
   return {
     key: column.field,
     label: column.label,
-    type: column.filterType ?? (SELECT_FILTER_FIELD_PATTERN.test(column.field) ? "select" : "text"),
+    type: column.filterType ?? selectType,
+    filterType: inferColumnFilterPlaceholderType(column),
     getValue: (row) => displayCellText(column, row),
     className: column.className,
   };
@@ -302,6 +313,13 @@ export default function ReportTablePage({
     updateFilterValues((previous) => ({
       ...previous,
       [name]: type === "checkbox" ? checked : value,
+    }));
+  }
+
+  function handleDateFilterChange(filterId, value) {
+    updateFilterValues((previous) => ({
+      ...previous,
+      [filterId]: value,
     }));
   }
 
@@ -528,9 +546,15 @@ export default function ReportTablePage({
                       />
                       {filter.checkboxLabel || "Enable"}
                     </label>
+                  ) : filter.type === "date" ? (
+                    <DateOnlyInput
+                      value={filterValues[filter.id]}
+                      onChange={(next) => handleDateFilterChange(filter.id, next)}
+                      className={uniformInputClass}
+                    />
                   ) : (
                     <input
-                      type={filter.type || "text"}
+                      type="text"
                       name={filter.id}
                       value={filterValues[filter.id]}
                       onChange={handleFilterChange}

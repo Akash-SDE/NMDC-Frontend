@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import {
   PlusIcon,
@@ -14,13 +13,15 @@ import {
   uniformInputClass,
   uniformSecondaryButtonClass,
 } from "../../../components/shared/UniformUi";
-import { formatDateTimeForTable } from "../../../utils/dateUtils";
+import { formatDateTimeForTable, formatTableDateOnly } from "../../../utils/dateUtils";
+import DateTimeInput from "../../../components/shared/DateTimeInput";
 import { adjustmentReasonOptions } from "../constants/rakeConstants";
 import Pagination from "../../../components/shared/Pagination";
 import { useClientPagination } from "../../../hooks/useClientPagination";
 import { useColumnFilters } from "../../../hooks/useColumnFilters";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 import ColumnSettingsMenu from "../../../components/shared/ColumnSettingsMenu";
+import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
 import CreatableLookupSelect from "../../../components/shared/CreatableLookupSelect";
 import { useColumnVisibility } from "../../../hooks/useColumnVisibility";
 
@@ -32,7 +33,6 @@ const getOfferedRakeStatusLabel = (row) =>
 const RAKE_HIDDEN_COLS_KEY = "nmdc_rake_hidden_columns";
 const OFFERED_RAKE_FILTER_COLUMNS = [
   { key: "actions", type: "none", className: "sticky left-0 z-30 border-r border-slate-200/70 bg-white" },
-  { key: "rakeId", label: "Rake ID" },
   { key: "rakeNumber", label: "Rake Number", getValue: (row) => row.rakeNumber || "-" },
   { key: "siding", label: "Siding", type: "select", getValue: (row) => row.siding || "-" },
   { key: "route", label: "Route", type: "select", getValue: (row) => row.route || "-" },
@@ -51,6 +51,7 @@ const OFFERED_RAKE_FILTER_COLUMNS = [
   {
     key: "offerTime",
     label: "Offer Time",
+    filterType: "datetime",
     getValue: (row) => formatDateTimeForTable(row.offerTime) || String(row.offerTime || "-"),
   },
   { key: "status", label: "Status", type: "select", getValue: getOfferedRakeStatusLabel },
@@ -58,8 +59,6 @@ const OFFERED_RAKE_FILTER_COLUMNS = [
 
 export default function OfferedRakesTable({
   sortedRows,
-  search,
-  setSearch,
   sortBy,
   sortOrder,
   handleSort,
@@ -88,7 +87,6 @@ export default function OfferedRakesTable({
     destinations: [],
     wagonTypes: [],
   },
-  createLookupOption,
   createFNoteOption,
   formError = "",
   formNotice = "",
@@ -109,7 +107,7 @@ export default function OfferedRakesTable({
     return [...new Set(notes)].map((note) => ({ id: note, label: note }));
   }, [lookupOptions.fNotes, offeringForm.fNote]);
   const { pageItems: pagedRows, paginationProps } = useClientPagination(filteredRows, {
-    resetKey: `${search}|${sortBy}|${sortOrder}|${columnFilters.filterKey}`,
+    resetKey: `${sortBy}|${sortOrder}|${columnFilters.filterKey}`,
   });
   const inputClass = uniformInputClass;
   const compactInputClass = `${inputClass} h-8 px-2 text-[11px]`;
@@ -135,14 +133,12 @@ export default function OfferedRakesTable({
   const isOfferTimeEditable = !isInlineEditMode;
 
   return (
-    <div className="space-y-6 3xl:space-y-8 5xl:space-y-12 animate-fadeIn">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex min-h-0 flex-1 flex-col gap-2 animate-fadeIn">
+      <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
-            Rake Management
-          </h2>
-          <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
-            Manage and monitor all offered rakes across routes, sidings, and destinations.
+          <h2 className="text-[18px] font-bold text-slate-800 sm:text-[20px]">Rake Management</h2>
+          <p className="text-[12px] text-slate-500">
+            Manage offered rakes across routes, sidings, and destinations.
           </p>
         </div>
         <button
@@ -162,15 +158,7 @@ export default function OfferedRakesTable({
         </button>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
-          <SearchBar
-            placeholder="Search by rake id, number, route or customer..."
-            value={search}
-            onChange={setSearch}
-            showFilter={false}
-          />
-        </div>
+      <div className="flex shrink-0 items-center justify-end">
         <ColumnSettingsMenu {...columnVisibility.menuProps} />
       </div>
       <style>{columnVisibility.css}</style>
@@ -186,16 +174,15 @@ export default function OfferedRakesTable({
         </p>
       ) : null}
 
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table data-colset={RAKE_HIDDEN_COLS_KEY} className="w-full min-w-475 whitespace-nowrap">
-            <thead>
+      <DataTablePanel
+        className="min-h-0 flex-1"
+        footer={<Pagination embedded {...paginationProps} />}
+      >
+          <table data-colset={RAKE_HIDDEN_COLS_KEY} className="w-full min-w-[880px] whitespace-nowrap">
+            <thead className={STICKY_TABLE_HEAD_CLASS}>
               <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th className="sticky left-0 z-30 border-r border-slate-200/70 bg-slate-50 px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                   Actions
-                </th>
-                <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                  <SortHeaderButton label="Rake ID" field="rakeId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                   <SortHeaderButton label="Rake Number" field="rakeNumber" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
@@ -285,16 +272,6 @@ export default function OfferedRakesTable({
                 <td className="px-5 py-3">
                   <input
                     type="text"
-                    value={inlineActionMode === "add" ? "" : offeringForm.rakeId}
-                    onChange={(event) => updateOffering("rakeId", event.target.value)}
-                    placeholder={inlineActionMode === "add" ? "Assigned on save" : "Rake ID"}
-                    className={compactInputClass}
-                    disabled={inlineActionMode === "add" || !areMainFieldsEditable}
-                  />
-                </td>
-                <td className="px-5 py-3">
-                  <input
-                    type="text"
                     value={offeringForm.rakeNumber}
                     onChange={(event) => updateOffering("rakeNumber", event.target.value)}
                     placeholder="Rake Number"
@@ -310,9 +287,6 @@ export default function OfferedRakesTable({
                     placeholder="Siding"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
-                    onCreateOption={
-                      createLookupOption ? (label) => createLookupOption("sidings", label) : undefined
-                    }
                   />
                 </td>
                 <td className="px-5 py-3">
@@ -323,9 +297,6 @@ export default function OfferedRakesTable({
                     placeholder="Route"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
-                    onCreateOption={
-                      createLookupOption ? (label) => createLookupOption("routes", label) : undefined
-                    }
                   />
                 </td>
                 <td className="px-5 py-3">
@@ -336,9 +307,6 @@ export default function OfferedRakesTable({
                     placeholder="Ore Type"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
-                    onCreateOption={
-                      createLookupOption ? (label) => createLookupOption("oreTypes", label) : undefined
-                    }
                   />
                 </td>
                 <td className="px-5 py-3">
@@ -349,9 +317,6 @@ export default function OfferedRakesTable({
                     placeholder="Customer"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
-                    onCreateOption={
-                      createLookupOption ? (label) => createLookupOption("customers", label) : undefined
-                    }
                   />
                 </td>
                 <td className="px-5 py-3">
@@ -362,9 +327,6 @@ export default function OfferedRakesTable({
                     placeholder="Destination"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
-                    onCreateOption={
-                      createLookupOption ? (label) => createLookupOption("destinations", label) : undefined
-                    }
                   />
                 </td>
                 <td className="px-5 py-3">
@@ -375,9 +337,6 @@ export default function OfferedRakesTable({
                     placeholder="Wagon Type"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
-                    onCreateOption={
-                      createLookupOption ? (label) => createLookupOption("wagonTypes", label) : undefined
-                    }
                   />
                 </td>
                 <td className="px-5 py-3">
@@ -436,15 +395,14 @@ export default function OfferedRakesTable({
                   ) : null}
                 </td>
                 <td className="px-5 py-3">
-                  <input
-                    type="datetime-local"
+                  <DateTimeInput
                     value={isInlineAdjustmentMode ? adjustOfferTime : offeringForm.offerTime}
-                    onChange={(event) => {
+                    onChange={(next) => {
                       if (isInlineAdjustmentMode) {
-                        setAdjustOfferTime(event.target.value);
+                        setAdjustOfferTime(next);
                         return;
                       }
-                      updateOffering("offerTime", event.target.value);
+                      updateOffering("offerTime", next);
                     }}
                     className={compactInputClass}
                     disabled={!isOfferTimeEditable}
@@ -459,7 +417,7 @@ export default function OfferedRakesTable({
 
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={14} className="px-5 py-12 text-center">
+                  <td colSpan={13} className="px-5 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <svg
                         width="40"
@@ -476,17 +434,19 @@ export default function OfferedRakesTable({
                       <p className="text-[15px] font-semibold text-slate-400">
                         No rakes found
                       </p>
-                      <p className="text-[13px] text-slate-400">
-                        Try adjusting your search keyword or column filters.
-                      </p>
+                      <p className="text-[13px] text-slate-400">Try adjusting your column filters.</p>
                     </div>
                   </td>
                 </tr>
               ) : (
                 pagedRows.map((row) => {
-                  const formattedOfferTime =
-                    formatDateTimeForTable(row.offerTime) || String(row.offerTime || "-");
-                  const [offerDate = "-", offerClock = "-"] = formattedOfferTime.split(" ");
+                  const offerDate = formatTableDateOnly(row.offerTime) || "-";
+                  const offerClock = (() => {
+                    const full = formatDateTimeForTable(row.offerTime);
+                    if (!full) return "";
+                    const parts = full.split(" ");
+                    return parts.length > 1 ? parts.slice(1).join(" ") : "";
+                  })();
                   const oreType = row.oreType || "-";
                   const customer = row.customer || "-";
                   const offeredFor = row.adjustOfferFor && row.adjustOfferFor !== "-" ? row.adjustOfferFor : "";
@@ -569,11 +529,6 @@ export default function OfferedRakesTable({
                         </div>
                       </td>
                       <td className="px-5 py-4">
-                        <span className="text-[13px] font-semibold text-blue-600">
-                          {row.rakeId}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
                         <span className="text-[13px] font-semibold text-slate-800">{row.rakeNumber || "-"}</span>
                       </td>
                       <td className="px-5 py-4">
@@ -604,10 +559,10 @@ export default function OfferedRakesTable({
                         <span className="text-[13px] text-slate-700">{offeredFor}</span>
                       </td>
                       <td className="px-5 py-4">
-                        <div>
-                          <p className="text-[13px] text-slate-700">{offerDate}</p>
+                        <p className="text-[13px] text-slate-700">{offerDate}</p>
+                        {offerClock ? (
                           <p className="mt-0.5 text-[11px] text-slate-400">{offerClock}</p>
-                        </div>
+                        ) : null}
                       </td>
                       <td className="px-5 py-4">
                         <span
@@ -633,12 +588,7 @@ export default function OfferedRakesTable({
               )}
             </tbody>
           </table>
-        </div>
-
-        <div className="px-5 pb-4">
-          <Pagination {...paginationProps} />
-        </div>
-      </div>
+      </DataTablePanel>
     </div>
   );
 }

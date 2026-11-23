@@ -9,6 +9,8 @@ import {
 } from "../../../components/shared/UniformUi";
 import { useColumnFilters } from "../../../hooks/useColumnFilters";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
+import DateOnlyInput from "../../../components/shared/DateOnlyInput";
+import { formatTableDateOnly } from "../../../utils/dateUtils";
 
 const initialRows = [
   {
@@ -68,11 +70,27 @@ const DELETE_OFFERED_FILTER_COLUMNS = [
   { key: "wagonType", label: "Wagon Type", type: "select", className: "hidden lg:table-cell" },
   { key: "siding", label: "Siding", type: "select", className: "hidden lg:table-cell" },
   { key: "oreType", label: "Ore Type", type: "select", className: "hidden xl:table-cell" },
-  { key: "fNoteDate", label: "F/Note Date", className: "hidden xl:table-cell" },
+  {
+    key: "fNoteDate",
+    label: "F/Note Date",
+    className: "hidden xl:table-cell",
+    filterType: "date",
+    getValue: (row) => formatTableDateOnly(row.fNoteDate),
+  },
   { key: "customer", label: "Customer", type: "select" },
   { key: "destination", label: "Destination", type: "select", className: "hidden 2xl:table-cell" },
-  { key: "offerDate", label: "Offer Date", className: "hidden 2xl:table-cell" },
-  { key: "completionDate", label: "Completion Date", className: "hidden 2xl:table-cell" },
+  {
+    key: "offerDate",
+    label: "Offer Date",
+    className: "hidden 2xl:table-cell",
+    filterType: "date",
+  },
+  {
+    key: "completionDate",
+    label: "Completion Date",
+    className: "hidden 2xl:table-cell",
+    filterType: "date",
+  },
   { key: "action", type: "none" },
 ];
 
@@ -139,12 +157,7 @@ export default function DeleteOfferedRakesPage() {
       <UniformSectionCard title="Search Filters" subtitle="Filter the offered rake list before deleting records.">
         <form onSubmit={handleSearch} className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,280px)_max-content] sm:items-end">
           <UniformFormField label="Date">
-            <input
-              type="date"
-              value={draftDate}
-              onChange={(event) => setDraftDate(event.target.value)}
-              className={uniformInputClass}
-            />
+            <DateOnlyInput value={draftDate} onChange={setDraftDate} className={uniformInputClass} />
           </UniformFormField>
 
           <button type="submit" className={`${uniformPrimaryButtonClass} h-10 sm:min-w-28`}>

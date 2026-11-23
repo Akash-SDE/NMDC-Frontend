@@ -5,12 +5,14 @@ import {
   EditIcon,
   DeleteIcon,
 } from "../../../components/icons";
-import { formatDateTimeForTable } from "../../../utils/dateUtils";
+import { formatDateForTable, formatDateTimeForTable } from "../../../utils/dateUtils";
+import DateOnlyInput from "../../../components/shared/DateOnlyInput";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
-import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
 import Pagination from "../../../components/shared/Pagination";
+import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
+import PageFrame from "../../../components/layout/PageFrame";
 import { useClientPagination } from "../../../hooks/useClientPagination";
 import { useColumnFilters } from "../../../hooks/useColumnFilters";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
@@ -30,8 +32,11 @@ import { fetchDestinations } from "../../../services/destinationService";
 import { fetchOreTypes } from "../../../services/oreTypeService";
 import {
   SALES_TYPE_OPTIONS,
+  EDEMAND_STATUS,
+  EDEMAND_STATUS_OPTIONS,
   eDemandFormToApi,
   eDemandToForm,
+  getEDemandStatusMeta,
 } from "../../../features/edemand/utils/edemandMappers";
 
 function asResults(response) {
@@ -53,15 +58,18 @@ const initialDemandForm = {
   destination: "",
   oreType: "",
   salesType: "",
+  status: String(EDEMAND_STATUS.APPROVED),
 };
 
-const pageShellClass = "space-y-6 3xl:space-y-8 5xl:space-y-12";
+const pageShellClass = "flex min-h-0 flex-1 flex-col gap-4";
 const pageHeaderClass = "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between";
 const pageTitleClass = "text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800";
 const pageSubtitleClass = "mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500";
-const tableCardClass = "rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden";
-
 function formatDate(value) {
+  return formatDateForTable(value) || "-";
+}
+
+function formatDateTime(value) {
   return formatDateTimeForTable(value) || "-";
 }
 
@@ -77,11 +85,17 @@ function compareValues(a, b, order) {
 const DEMAND_FILTER_COLUMNS = [
   { key: "actions", type: "none", className: "sticky left-0 z-30 border-r border-slate-200/70 bg-white" },
   { key: "fNote", label: "F-Note" },
-  { key: "date", label: "Date", getValue: (row) => formatDate(row.date) },
+  { key: "date", label: "Date", filterType: "date", getValue: (row) => formatDate(row.date) },
   { key: "customer", label: "Customer", type: "select" },
   { key: "destination", label: "Destination", type: "select" },
   { key: "oreType", label: "Ore Type", type: "select", className: "hidden lg:table-cell" },
   { key: "salesType", label: "Sales Type", type: "select", className: "hidden xl:table-cell" },
+  {
+    key: "status",
+    label: "Status",
+    type: "select",
+    getValue: (row) => getEDemandStatusMeta(row).label,
+  },
 ];
 
 const PERMIT_FILTER_COLUMNS = [
@@ -99,7 +113,8 @@ const PERMIT_FILTER_COLUMNS = [
     key: "completedOn",
     label: "Completed On",
     className: "hidden 2xl:table-cell",
-    getValue: (row) => formatDate(row.completedOn),
+    filterType: "datetime",
+    getValue: (row) => formatDateTime(row.completedOn),
   },
   { key: "ePermitNumber", label: "E-Permit Number" },
   {
@@ -215,6 +230,7 @@ export default function EDemandManagementPage() {
         row.destination,
         row.oreType,
         row.salesType,
+        getEDemandStatusMeta(row).label,
       ]
         .join(" ")
         .toLowerCase()
@@ -227,9 +243,13 @@ export default function EDemandManagementPage() {
 
   const demandRows = useMemo(
     () =>
-      [...applyDemandFilters(demandSearchRows)].sort((a, b) =>
-        compareValues(a[demandSortBy], b[demandSortBy], demandSortOrder),
-      ),
+      [...applyDemandFilters(demandSearchRows)].sort((a, b) => {
+        const av =
+          demandSortBy === "status" ? getEDemandStatusMeta(a).label : a[demandSortBy];
+        const bv =
+          demandSortBy === "status" ? getEDemandStatusMeta(b).label : b[demandSortBy];
+        return compareValues(av, bv, demandSortOrder);
+      }),
     [applyDemandFilters, demandSearchRows, demandSortBy, demandSortOrder],
   );
 
@@ -429,8 +449,9 @@ export default function EDemandManagementPage() {
 
   if (isPermitRoute) {
     return (
+      <PageFrame>
       <div className={pageShellClass}>
-        <div className={pageHeaderClass}>
+        <div className={`${pageHeaderClass} shrink-0`}>
           <div>
             <h2 className={pageTitleClass}>Manage E-Permit</h2>
             <p className={pageSubtitleClass}>
@@ -440,18 +461,16 @@ export default function EDemandManagementPage() {
         </div>
 
         {messageBanner}
-
-        <SearchBar
-          placeholder="Search rack, customer, stockpile or permit number"
-          value={permitSearch}
-          onChange={setPermitSearch}
-          showFilter={false}
-        />
-
-        <div className={tableCardClass}>
-          <div className="overflow-x-auto">
+        <DataTablePanel
+          className="min-h-0 flex-1"
+          footer={
+            permitRows.length > 0 ? (
+              <Pagination embedded {...permitPaging.paginationProps} />
+            ) : null
+          }
+        >
             <table className="w-full" data-print-table>
-              <thead>
+              <thead className={STICKY_TABLE_HEAD_CLASS}>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
                   <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                     <SortHeaderButton
@@ -554,7 +573,7 @@ export default function EDemandManagementPage() {
                           {row.quantity.toFixed(2)}
                         </td>
                         <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700 hidden 2xl:table-cell">
-                          {formatDate(row.completedOn)}
+                          {formatDateTime(row.completedOn)}
                         </td>
                         <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700">
                           <div className="relative">
@@ -612,20 +631,16 @@ export default function EDemandManagementPage() {
                 )}
               </tbody>
             </table>
-          </div>
-          {permitRows.length > 0 ? (
-            <div className="px-5 pb-4">
-              <Pagination {...permitPaging.paginationProps} />
-            </div>
-          ) : null}
-        </div>
+        </DataTablePanel>
       </div>
+      </PageFrame>
     );
   }
 
   return (
+    <PageFrame>
     <div className={pageShellClass}>
-      <div className={pageHeaderClass}>
+      <div className={`${pageHeaderClass} shrink-0`}>
         <div>
           <h2 className={pageTitleClass}>Manage E-Demand</h2>
           <p className={pageSubtitleClass}>
@@ -635,18 +650,16 @@ export default function EDemandManagementPage() {
       </div>
 
       {messageBanner}
-
-      <SearchBar
-        placeholder="Search by f-note, customer, destination, ore type or sales type"
-        value={demandSearch}
-        onChange={setDemandSearch}
-        showFilter={false}
-      />
-
-      <div className={tableCardClass}>
-        <div className="overflow-x-auto">
+      <DataTablePanel
+        className="min-h-0 flex-1"
+        footer={
+          demandRows.length > 0 ? (
+            <Pagination embedded {...demandPaging.paginationProps} />
+          ) : null
+        }
+      >
           <table className="w-full" data-print-table>
-            <thead>
+            <thead className={STICKY_TABLE_HEAD_CLASS}>
               <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th className="sticky left-0 z-30 border-r border-slate-200/70 bg-slate-50 px-5 py-3.5 text-center text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   Actions
@@ -705,6 +718,15 @@ export default function EDemandManagementPage() {
                     onSort={handleDemandSort}
                   />
                 </th>
+                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                  <SortHeaderButton
+                    label="Status"
+                    field="status"
+                    sortBy={demandSortBy}
+                    sortOrder={demandSortOrder}
+                    onSort={handleDemandSort}
+                  />
+                </th>
               </tr>
               <ColumnFilterRow {...demandColumnFilters.filterRowProps} rows={demands} />
             </thead>
@@ -753,10 +775,9 @@ export default function EDemandManagementPage() {
                   />
                 </td>
                 <td className="px-5 py-3">
-                  <input
-                    type="date"
+                  <DateOnlyInput
                     value={demandForm.date}
-                    onChange={(e) => updateDemandField("date", e.target.value)}
+                    onChange={(next) => updateDemandField("date", next)}
                     className={compactInputClass}
                   />
                 </td>
@@ -816,12 +837,26 @@ export default function EDemandManagementPage() {
                     ))}
                   </ThemedSelect>
                 </td>
+                <td className="px-5 py-3">
+                  <ThemedSelect
+                    value={demandForm.status}
+                    onChange={(e) => updateDemandField("status", e.target.value)}
+                    className={compactInputClass}
+                    aria-label="E-Demand status"
+                  >
+                    {EDEMAND_STATUS_OPTIONS.map((opt) => (
+                      <option key={opt.id} value={String(opt.id)}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </ThemedSelect>
+                </td>
               </tr>
 
               {demandsLoading ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-5 py-12 text-center text-[14px] text-slate-500"
                   >
                     Loading E-Demand records…
@@ -877,12 +912,25 @@ export default function EDemandManagementPage() {
                     <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] text-slate-700 hidden xl:table-cell">
                       {row.salesType}
                     </td>
+                    <td className="px-5 py-3.5">
+                      {(() => {
+                        const meta = getEDemandStatusMeta(row);
+                        return (
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold ${meta.badgeClass}`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full ${meta.dotClass}`} />
+                            {meta.label}
+                          </span>
+                        );
+                      })()}
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-5 py-12 text-center text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500"
                   >
                     {isDemandListNarrowed
@@ -893,13 +941,7 @@ export default function EDemandManagementPage() {
               )}
             </tbody>
           </table>
-        </div>
-        {demandRows.length > 0 ? (
-          <div className="px-5 pb-4">
-            <Pagination {...demandPaging.paginationProps} />
-          </div>
-        ) : null}
-      </div>
+      </DataTablePanel>
 
       <ConfirmDialog
         isOpen={Boolean(deleteTarget)}
@@ -910,6 +952,7 @@ export default function EDemandManagementPage() {
         itemName={deleteTarget ? `F-Note ${deleteTarget.fNote} - ${deleteTarget.customer}` : ""}
       />
     </div>
+    </PageFrame>
   );
 }
 

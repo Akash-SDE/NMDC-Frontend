@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchRoles, createRole, updateRole, fetchPrivileges } from "../../../services/roleService";
 import { RolesIcon, PlusIcon, EditIcon } from "../../../components/icons";
 import Modal from "../../../components/shared/Modal";
-import SearchBar from "../../../components/shared/SearchBar";
 import Pagination from "../../../components/shared/Pagination";
+import { formatDateTimeForTable } from "../../../utils/dateUtils";
+import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
+import PageFrame from "../../../components/layout/PageFrame";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 import { useServerColumnFilters } from "../../../hooks/useColumnFilters";
@@ -19,10 +21,8 @@ const PAGE_SIZE = 10;
 ───────────────────────────────────────────────────────────────── */
 function formatDate(iso) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("en-IN", {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit", hour12: true,
-  });
+  const formatted = formatDateTimeForTable(iso);
+  return formatted || "—";
 }
 
 const createdByLabel = (role) => role.created_by_name || `ID: ${role.created_by}`;
@@ -33,7 +33,12 @@ const ROLE_FILTER_COLUMNS = [
   { key: "role_description", label: "Description", getValue: (role) => role.role_description || "—" },
   { key: "privilege_names", label: "Privileges" },
   { key: "created_by_name", label: "Created By", getValue: createdByLabel },
-  { key: "created_on", label: "Created On", getValue: (role) => formatDate(role.created_on) },
+  {
+    key: "created_on",
+    label: "Created On",
+    filterType: "datetime",
+    getValue: (role) => formatDate(role.created_on),
+  },
   { key: "actions", type: "none", className: "sticky right-0 z-20 border-l border-slate-200/70 bg-white" },
 ];
 
@@ -538,8 +543,6 @@ export default function RoleManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("created_on");
   const [sortOrder, setSortOrder] = useState("desc");
@@ -547,12 +550,6 @@ export default function RoleManagementPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
   const [toast, setToast] = useState("");
-
-  /* debounce search */
-  useEffect(() => {
-    const t = setTimeout(() => { setDebouncedSearch(search); setCurrentPage(1); }, 350);
-    return () => clearTimeout(t);
-  }, [search]);
 
   const sorted = useMemo(() => {
     return [...roles].sort((a, b) => {
@@ -582,7 +579,6 @@ export default function RoleManagementPage() {
       const data = await fetchRoles({
         page: serverPage,
         page_size: serverPageSize,
-        ...(debouncedSearch ? { search: debouncedSearch } : {}),
       });
       setRoles(data.results ?? []);
       setTotalCount(data.count ?? 0);
@@ -592,7 +588,7 @@ export default function RoleManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [serverPage, serverPageSize, debouncedSearch]);
+  }, [serverPage, serverPageSize]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -619,10 +615,11 @@ export default function RoleManagementPage() {
 
   return (
     <>
-      <div className="space-y-6 animate-fadeIn">
+      <PageFrame>
+      <div className="flex min-h-0 flex-1 flex-col gap-4 animate-fadeIn">
 
         {/* ── Header ── */}
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600">
               <RolesIcon size={20} />
@@ -655,14 +652,14 @@ export default function RoleManagementPage() {
 
         {/* ── Toast ── */}
         {toast && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[13px] font-medium text-emerald-700">
+          <div className="shrink-0 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[13px] font-medium text-emerald-700">
             ✓ {toast}
           </div>
         )}
 
         {/* ── Error banner ── */}
         {error && (
-          <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+          <div className="flex shrink-0 items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3">
             <p className="text-[13px] font-medium text-red-700">{error}</p>
             <button type="button" onClick={load}
               className="ml-4 shrink-0 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-red-600 hover:bg-red-50"
@@ -673,18 +670,24 @@ export default function RoleManagementPage() {
         )}
 
         {/* ── Search ── */}
-        <SearchBar
-          placeholder="Search by role name or description…"
-          value={search}
-          onChange={setSearch}
-          showFilter={false}
-        />
-
         {/* ── Table ── */}
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+        <DataTablePanel
+          className="min-h-0 flex-1"
+          footer={
+            !loading && !error && columnFilters.count > 0 ? (
+              <Pagination
+                embedded
+                currentPage={currentPage}
+                totalPages={columnFilters.totalPages}
+                totalCount={columnFilters.count}
+                pageSize={PAGE_SIZE}
+                onPageChange={setCurrentPage}
+              />
+            ) : null
+          }
+        >
             <table className="w-full border-separate border-spacing-0 text-[13px]">
-              <thead>
+              <thead className={STICKY_TABLE_HEAD_CLASS}>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
                   <th className="w-[52px] px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">#</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
@@ -713,7 +716,7 @@ export default function RoleManagementPage() {
                 {loading ? (
                   <SkeletonRows cols={COL_COUNT} />
                 ) : pageRows.length === 0 ? (
-                  <EmptyState search={debouncedSearch} filtering={columnFilters.isFiltering} colSpan={COL_COUNT} />
+                  <EmptyState search={false} filtering={columnFilters.isFiltering} colSpan={COL_COUNT} />
                 ) : (
                   pageRows.map((role, idx) => (
                     <tr key={role.id} className="group transition-colors hover:bg-blue-50/30">
@@ -763,21 +766,9 @@ export default function RoleManagementPage() {
                 )}
               </tbody>
             </table>
-          </div>
-
-          {!loading && !error && columnFilters.count > 0 && (
-            <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-3">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={columnFilters.totalPages}
-                totalCount={columnFilters.count}
-                pageSize={PAGE_SIZE}
-                onPageChange={setCurrentPage}
-              />
-            </div>
-          )}
-        </div>
+        </DataTablePanel>
       </div>
+      </PageFrame>
 
       <RoleFormModal
         isOpen={modalOpen}

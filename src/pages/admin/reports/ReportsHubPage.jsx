@@ -11,27 +11,11 @@ const categoryTone = {
 
 export default function ReportsHubPage() {
   const { navigate } = useRouter();
-  const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
 
   const filteredReports = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return REPORTS.filter((report) => {
-      const matchesCategory = category === "all" || report.category === category;
-      if (!matchesCategory) return false;
-      if (!query) return true;
-
-      const haystack = [
-        report.config.title,
-        report.config.subtitle,
-        getCategoryLabel(report.category),
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(query);
-    });
-  }, [search, category]);
+    return REPORTS.filter((report) => category === "all" || report.category === category);
+  }, [category]);
 
   return (
     <div className="space-y-6 3xl:space-y-8">
@@ -51,15 +35,6 @@ export default function ReportsHubPage() {
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="relative max-w-xl flex-1">
-            <input
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search reports by name or purpose…"
-              className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-4 pr-4 text-sm font-medium text-slate-700 outline-none transition-all focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
           <div className="flex flex-wrap gap-2">
             {REPORT_CATEGORIES.map((item) => {
               const isActive = category === item.id;

@@ -7,7 +7,6 @@ import { fetchRoutes } from "../../../services/routeService";
 import { fetchSidings } from "../../../services/sidingService";
 import { fetchWagonTypes } from "../../../services/wagonTypeService";
 import { listEDemands } from "../../../services/edemandService";
-import { quickCreateMasterData } from "../utils/masterDataQuickCreate";
 import { quickCreateFNote } from "../utils/fNoteQuickCreate";
 
 const RAKE_STATUS_DRAFT = 5;
@@ -48,11 +47,11 @@ export function useOfferedRakes() {
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
 
-  const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("sno");
   const [sortOrder, setSortOrder] = useState("asc");
   const [saving, setSaving] = useState(false);
   const [lookupOptions, setLookupOptions] = useState(emptyLookupOptions);
+  const [edemandByFNote, setEdemandByFNote] = useState({});
 
   const fetchRakes = useCallback(async ({ silent = false } = {}) => {
     try {
@@ -123,10 +122,20 @@ export function useOfferedRakes() {
             fetchCustomers({ page_size: 1000 }),
             fetchDestinations({ page_size: 1000 }),
             fetchWagonTypes({ page_size: 1000 }),
-            listEDemands().catch(() => []),
+            listEDemands().catch(() => ({ results: [] })),
           ]);
 
         if (cancelled) return;
+
+        const demandRows = Array.isArray(demands) ? demands : asResults(demands);
+        const fNoteIndex = {};
+        for (const demand of demandRows) {
+          const key = String(demand.fNote || "").trim().toLowerCase();
+          if (key && !fNoteIndex[key]) {
+            fNoteIndex[key] = demand;
+          }
+        }
+        setEdemandByFNote(fNoteIndex);
 
         setLookupOptions({
           sidings: toLookupOptions(
@@ -144,7 +153,7 @@ export function useOfferedRakes() {
             (item) => item.destination_name,
           ),
           wagonTypes: toLookupOptions(asResults(wagonTypes), (item) => item.wagon_type),
-          fNotes: [...new Set(demands.map((demand) => demand.fNote).filter(Boolean))].sort(),
+          fNotes: [...new Set(demandRows.map((demand) => demand.fNote).filter(Boolean))].sort(),
         });
       } catch (err) {
         console.error("Failed to load rake form options:", err);
@@ -155,17 +164,6 @@ export function useOfferedRakes() {
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const addLookupOption = useCallback((lookupKey, option) => {
-    setLookupOptions((prev) => {
-      const exists = prev[lookupKey]?.some((item) => String(item.id) === String(option.id));
-      if (exists) return prev;
-      const next = [...(prev[lookupKey] ?? []), option].sort((a, b) =>
-        a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
-      );
-      return { ...prev, [lookupKey]: next };
-    });
   }, []);
 
   const createFNoteOption = useCallback(
@@ -200,24 +198,12 @@ export function useOfferedRakes() {
     [lookupOptions.fNotes],
   );
 
-  const createLookupOption = useCallback(
-    async (lookupKey, label) => {
-      const trimmed = String(label ?? "").trim();
-      if (!trimmed) {
-        throw new Error("Enter a value before creating master data.");
-      }
-
-      const existing = lookupOptions[lookupKey]?.find(
-        (item) => item.label.toLowerCase() === trimmed.toLowerCase(),
-      );
-      if (existing) return existing;
-
-      const created = await quickCreateMasterData(lookupKey, trimmed);
-      const option = { id: created.id, label: created.label };
-      addLookupOption(lookupKey, option);
-      return option;
+  const getEdemandForFNote = useCallback(
+    (fNote) => {
+      const key = String(fNote ?? "").trim().toLowerCase();
+      return key ? edemandByFNote[key] ?? null : null;
     },
-    [lookupOptions, addLookupOption],
+    [edemandByFNote],
   );
 
   const createOfferedRake = useCallback(
@@ -279,26 +265,6 @@ export function useOfferedRakes() {
   const sortedRows = useMemo(() => {
     let rows = [...uiRows];
 
-    if (search.trim()) {
-      const searchValue = search.toLowerCase();
-
-      rows = rows.filter((row) =>
-        [
-          row.rakeId,
-          row.rakeNumber,
-          row.siding,
-          row.route,
-          row.oreType,
-          row.customer,
-          row.destination,
-          row.wagonType,
-          row.statusDescription,
-        ].some((value) =>
-          String(value ?? "").toLowerCase().includes(searchValue)
-        )
-      );
-    }
-
     rows.sort((a, b) => {
       const firstNumber = Number(a[sortBy]);
       const secondNumber = Number(b[sortBy]);
@@ -320,7 +286,7 @@ export function useOfferedRakes() {
     });
 
     return rows;
-  }, [uiRows, search, sortBy, sortOrder]);
+  }, [uiRows, sortBy, sortOrder]);
 
   const handleSort = useCallback((column) => {
     setSortBy((currentColumn) => {
@@ -354,9 +320,6 @@ export function useOfferedRakes() {
     uiRows,
     sortedRows,
 
-    search,
-    setSearch,
-
     sortBy,
     sortOrder,
     handleSort,
@@ -365,7 +328,7 @@ export function useOfferedRakes() {
     error,
     saving,
     lookupOptions,
-    createLookupOption,
+    getEdemandForFNote,
     createFNoteOption,
     reload: fetchRakes,
     createOfferedRake,

@@ -8,16 +8,16 @@ import { getErrorMessage } from "../../../api/apiError";
 import { useOfferedRakes } from "../hooks/useOfferedRakes";
 import { useRakeOfferingForm } from "../hooks/useRakeOfferingForm";
 import { useUpcomingRakes } from "../hooks/useUpcomingRakes";
+import PageFrame from "../../../components/layout/PageFrame";
 import OfferedRakesTable from "../components/OfferedRakesTable";
 import RakeUpcomingView from "../components/RakeUpcomingView";
+import { apiDateToDateTimeLocal } from "../../../utils/dateUtils";
 
 export default function RakeManagementPage() {
   const { navigate, currentRoute } = useRouter();
   const {
     uiRows,
     sortedRows,
-    search,
-    setSearch,
     sortBy,
     sortOrder,
     handleSort,
@@ -28,7 +28,7 @@ export default function RakeManagementPage() {
     updateOfferedRake,
     setRakeDisabled,
     lookupOptions,
-    createLookupOption,
+    getEdemandForFNote,
     createFNoteOption,
     saving,
   } = useOfferedRakes();
@@ -42,6 +42,7 @@ export default function RakeManagementPage() {
     setAdjustOfferFor,
     setAdjustOfferTime,
     updateOffering,
+    patchOffering,
     resetOfferingForm,
     loadRowForEdit,
     loadRowForAdjustment,
@@ -83,6 +84,26 @@ export default function RakeManagementPage() {
   const handleNavigateToUpcoming = useCallback(
     () => navigate("rake-upcoming"),
     [navigate],
+  );
+
+  const handleUpdateOffering = useCallback(
+    (field, value) => {
+      if (field === "fNote") {
+        const demand = getEdemandForFNote(value);
+        const patch = { fNote: value };
+        if (demand) {
+          if (demand.customerId != null) patch.customer = String(demand.customerId);
+          if (demand.destinationId != null) patch.destination = String(demand.destinationId);
+          if (demand.oreTypeId != null) patch.oreType = String(demand.oreTypeId);
+          const offerFromDemand = apiDateToDateTimeLocal(demand.date);
+          if (offerFromDemand) patch.offerTime = offerFromDemand;
+        }
+        patchOffering(patch);
+        return;
+      }
+      updateOffering(field, value);
+    },
+    [getEdemandForFNote, patchOffering, updateOffering],
   );
   const handleCloseStatusConfirm = useCallback(() => setStatusConfirmRakeId(""), []);
 
@@ -265,7 +286,6 @@ export default function RakeManagementPage() {
         onSaveUpcomingRakes={upcoming.saveUpcomingToOffered}
         onClearUpcomingRakes={upcoming.clearUpcomingRows}
         lookupOptions={lookupOptions}
-        createLookupOption={createLookupOption}
       />
     );
   }
@@ -275,16 +295,14 @@ export default function RakeManagementPage() {
   }
 
   return (
-    <>
+    <PageFrame>
       <OfferedRakesTable
         sortedRows={sortedRows}
-        search={search}
-        setSearch={setSearch}
         sortBy={sortBy}
         sortOrder={sortOrder}
         handleSort={handleSort}
         offeringForm={offeringForm}
-        updateOffering={updateOffering}
+        updateOffering={handleUpdateOffering}
         adjustOfferFor={adjustOfferFor}
         setAdjustOfferFor={setAdjustOfferFor}
         adjustOfferTime={adjustOfferTime}
@@ -305,7 +323,6 @@ export default function RakeManagementPage() {
         upcomingDraftCount={upcoming.stats.total}
         upcomingReadyCount={upcoming.stats.readyCount}
         lookupOptions={lookupOptions}
-        createLookupOption={createLookupOption}
         createFNoteOption={createFNoteOption}
         formError={formError}
         formNotice={formNotice}
@@ -325,6 +342,6 @@ export default function RakeManagementPage() {
         confirmLabel={statusConfirmRake?.isDisabled ? "Enable" : "Disable"}
         variant={statusConfirmRake?.isDisabled ? "warning" : "danger"}
       />
-    </>
+    </PageFrame>
   );
 }

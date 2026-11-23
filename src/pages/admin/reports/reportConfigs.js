@@ -3,7 +3,7 @@ import {
   WIDE_TABLE_MIN_WIDTH,
   SELECT_PLACEHOLDER,
 } from "./reportDefaults";
-import { formatDateTimeForTable } from "../../../utils/dateUtils";
+import { DATE_PLACEHOLDER, formatDateTimeForTable } from "../../../utils/dateUtils";
 
 function toDateStamp(value) {
   if (!value) return null;
@@ -41,6 +41,7 @@ const dateFromFilter = {
   id: "fromDate",
   label: "From Date",
   type: "date",
+  placeholder: DATE_PLACEHOLDER,
   matcher: (row, value, allFilters) => {
     const fromStamp = toDateStamp(value);
     const rowStamp = toDateStamp(rowDate(row));
@@ -57,6 +58,7 @@ const dateToFilter = {
   id: "toDate",
   label: "To Date",
   type: "date",
+  placeholder: DATE_PLACEHOLDER,
   matcher: (row, value, allFilters) => {
     const toStamp = toDateStamp(value);
     const rowStamp = toDateStamp(rowDate(row));

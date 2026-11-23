@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { ROUTES } from "../../../constants/routes";
 import ApiErrorState from "../../../components/common/ApiErrorState";
+import DateOnlyInput from "../../../components/shared/DateOnlyInput";
 import { useDashboardData } from "../../../features/dashboard/hooks/useDashboardData";
 
 const dispatchGridHours = Array.from({ length: 24 }, (_, index) => index);
@@ -1043,10 +1044,9 @@ export default function Dashboard() {
           >
             Operations Cockpit
           </Link>
-          <input
-            type="date"
+          <DateOnlyInput
             value={dashboardDate}
-            onChange={(event) => setDashboardDate(event.target.value)}
+            onChange={setDashboardDate}
             className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
           />
         </div>

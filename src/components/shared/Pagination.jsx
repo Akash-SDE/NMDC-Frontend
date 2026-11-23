@@ -21,6 +21,7 @@ export default function Pagination({
   showPrevNext = false,
   pageSizeOptions,
   onPageSizeChange,
+  embedded = false,
 }) {
   const safeTotalPages = Math.max(1, totalPages);
   const startItem = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
@@ -35,7 +36,11 @@ export default function Pagination({
   const pages = buildPageItems(currentPage, safeTotalPages);
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-4 3xl:pt-6 5xl:pt-8 border-t border-slate-100">
+    <div
+      className={`flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between ${
+        embedded ? "pt-0" : "border-t border-slate-100 pt-4 3xl:pt-6 5xl:pt-8"
+      }`}
+    >
       {/* Info text */}
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-[12px] 3xl:text-[14px] 5xl:text-[18px] text-slate-500">

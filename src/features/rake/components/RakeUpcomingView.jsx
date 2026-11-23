@@ -6,6 +6,7 @@ import {
   uniformSecondaryButtonClass,
 } from "../../../components/shared/UniformUi";
 import { formatDateTimeForTable } from "../../../utils/dateUtils";
+import DateTimeInput from "../../../components/shared/DateTimeInput";
 import { isUpcomingRowReady } from "../constants/rakeConstants";
 import Pagination from "../../../components/shared/Pagination";
 import { useClientPagination } from "../../../hooks/useClientPagination";
@@ -29,7 +30,12 @@ const UPCOMING_OFFERED_FILTER_COLUMNS = [
   { key: "wagons", label: "Wagons", getValue: (row) => row.noOfWagons ?? row.wagonSupply ?? "-" },
   { key: "route", label: "Route", type: "select", getValue: (row) => row.route || "-" },
   { key: "customer", label: "Customer", type: "select", getValue: (row) => row.customer || "-" },
-  { key: "offerTime", label: "Offer Time", getValue: (row) => formatDateTimeForTable(row.offerTime) },
+  {
+    key: "offerTime",
+    label: "Offer Time",
+    filterType: "datetime",
+    getValue: (row) => formatDateTimeForTable(row.offerTime),
+  },
 ];
 
 function lookupLabel(options, id) {
@@ -59,7 +65,6 @@ export default function RakeUpcomingView({
     destinations: [],
     wagonTypes: [],
   },
-  createLookupOption,
 }) {
   const draftFilterColumns = useMemo(
     () => [
@@ -111,6 +116,7 @@ export default function RakeUpcomingView({
       {
         key: "placementTime",
         label: "Placement Time",
+        filterType: "datetime",
         getValue: (row) => formatDateTimeForTable(row.placementTime),
       },
     ],
@@ -168,9 +174,6 @@ export default function RakeUpcomingView({
       placeholder={placeholder}
       className={compactInputClass}
       disabled={moving}
-      onCreateOption={
-        createLookupOption ? (label) => createLookupOption(lookupKey, label) : undefined
-      }
     />
   );
 
@@ -384,12 +387,9 @@ export default function RakeUpcomingView({
                       {renderCreatableSelect(row, "customer", "Customer", lookupOptions.customers, "customers")}
                     </td>
                     <td className="px-4 py-3">
-                      <input
-                        type="datetime-local"
+                      <DateTimeInput
                         value={row.placementTime}
-                        onChange={(event) =>
-                          updateUpcomingRow(row.id, "placementTime", event.target.value)
-                        }
+                        onChange={(next) => updateUpcomingRow(row.id, "placementTime", next)}
                         className={compactInputClass}
                         disabled={moving}
                       />

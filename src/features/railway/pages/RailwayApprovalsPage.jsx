@@ -3,9 +3,10 @@ import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
-import SearchBar from "../../../components/shared/SearchBar";
+import PageFrame from "../../../components/layout/PageFrame";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Pagination from "../../../components/shared/Pagination";
+import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
 import { useClientPagination } from "../../../hooks/useClientPagination";
 import { useColumnFilters } from "../../../hooks/useColumnFilters";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
@@ -167,7 +168,6 @@ export default function RailwayApprovalsPage() {
     : RAILWAY_DEPARTMENT_BY_ROLE[userRole] ?? APPROVAL_DEPARTMENTS.OPERATIONS;
 
   const focusedLoadingId = searchParams.get("loadingId");
-  const [search, setSearch] = useState("");
   const [selectedApproval, setSelectedApproval] = useState(null);
   const [reviewDepartment, setReviewDepartment] = useState(null);
   const [remarks, setRemarks] = useState("");
@@ -212,27 +212,16 @@ export default function RailwayApprovalsPage() {
     return approvals.filter(isVisibleInApprovalQueue);
   }, [approvals, focusedLoadingId]);
 
-  const searchedQueueItems = useMemo(() => {
-    if (!search.trim()) return visibleQueueItems;
-    const q = search.toLowerCase();
-    return visibleQueueItems.filter((approval) =>
-      [approval.rakeNumber, approval.customer, approval.siding, approval.loadingId]
-        .join(" ")
-        .toLowerCase()
-        .includes(q),
-    );
-  }, [visibleQueueItems, search]);
-
   const queueFilterColumns = useMemo(() => buildQueueFilterColumns(), []);
   const columnFilters = useColumnFilters(queueFilterColumns);
   const { applyFilters } = columnFilters;
   const queueItems = useMemo(
-    () => applyFilters(searchedQueueItems),
-    [applyFilters, searchedQueueItems],
+    () => applyFilters(visibleQueueItems),
+    [applyFilters, visibleQueueItems],
   );
 
   const { pageItems: pagedQueueItems, paginationProps } = useClientPagination(queueItems, {
-    resetKey: `${search}|${focusedLoadingId ?? ""}|${columnFilters.filterKey}`,
+    resetKey: `${focusedLoadingId ?? ""}|${columnFilters.filterKey}`,
   });
 
   const refreshQueue = useCallback(() => {
@@ -473,13 +462,13 @@ export default function RailwayApprovalsPage() {
     REVIEW_DEPARTMENTS.includes(reviewDepartment);
 
   return (
-    <>
-      <div className="space-y-6 animate-fadeIn">
-        <div>
-          <h2 className="text-[24px] sm:text-[28px] font-bold text-slate-800">
+  <PageFrame>
+      <div className="flex min-h-0 flex-1 flex-col gap-2 animate-fadeIn">
+        <div className="shrink-0">
+          <h2 className="text-[18px] font-bold text-slate-800 sm:text-[20px]">
             Railway Approval Queue
           </h2>
-          <p className="mt-1 text-[14px] text-slate-500">
+          <p className="text-[12px] text-slate-500">
             {isAdminProxy
               ? "Review and approve loading records on behalf of railway departments when required."
               : "Review completed loading records and grant railway approvals. Railway Commercial and C&W review in parallel once Operations sends a rake to both."}
@@ -509,17 +498,25 @@ export default function RailwayApprovalsPage() {
           </p>
         ) : null}
 
-        <SearchBar
-          placeholder="Search by rake number, customer, siding..."
-          value={search}
-          onChange={setSearch}
-          showFilter={false}
-        />
-
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
+        <DataTablePanel
+          className="min-h-0 flex-1"
+          footer={
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={refreshQueue}
+                disabled={approvalStatus === "loading"}
+                className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-60"
+              >
+                <RefreshCw className={`h-4 w-4 ${approvalStatus === "loading" ? "animate-spin" : ""}`} />
+                Refresh
+              </button>
+              {queueItems.length > 0 ? <Pagination embedded {...paginationProps} /> : null}
+            </div>
+          }
+        >
             <table className="w-full min-w-[960px]">
-              <thead>
+              <thead className={STICKY_TABLE_HEAD_CLASS}>
                 <tr className="border-b border-slate-200 bg-white">
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
                     Rake Number
@@ -619,20 +616,7 @@ export default function RailwayApprovalsPage() {
                 )}
               </tbody>
             </table>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3">
-            <button
-              type="button"
-              onClick={refreshQueue}
-              disabled={approvalStatus === "loading"}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-60"
-            >
-              <RefreshCw className={`h-4 w-4 ${approvalStatus === "loading" ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
-            {queueItems.length > 0 ? <Pagination {...paginationProps} /> : null}
-          </div>
-        </div>
+        </DataTablePanel>
       </div>
 
       {selectedApproval && reviewDepartment
@@ -898,6 +882,6 @@ export default function RailwayApprovalsPage() {
             document.body,
           )
         : null}
-    </>
+  </PageFrame>
   );
 }

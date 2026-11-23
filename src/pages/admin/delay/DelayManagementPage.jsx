@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   uniformInputClass,
 } from "../../../components/shared/UniformUi";
-import SearchBar from "../../../components/shared/SearchBar";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
@@ -33,7 +32,11 @@ import {
   listDelayRecords,
   updateDelayRecord,
 } from "../../../services/delayManagementService";
+import { formatDateTimeForTable as formatDateTimeForTableShared } from "../../../utils/dateUtils";
+import DateTimeInput from "../../../components/shared/DateTimeInput";
 import Pagination from "../../../components/shared/Pagination";
+import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
+import PageFrame from "../../../components/layout/PageFrame";
 import { useClientPagination } from "../../../hooks/useClientPagination";
 import { useColumnFilters } from "../../../hooks/useColumnFilters";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
@@ -130,15 +133,7 @@ function parseDateTimeToTimestamp(value) {
 
 function formatDateTimeForTable(value) {
   if (!value) return "-";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "-";
-
-  const day = String(parsed.getDate()).padStart(2, "0");
-  const month = String(parsed.getMonth() + 1).padStart(2, "0");
-  const year = parsed.getFullYear();
-  const hours = String(parsed.getHours()).padStart(2, "0");
-  const minutes = String(parsed.getMinutes()).padStart(2, "0");
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
+  return formatDateTimeForTableShared(value) || "-";
 }
 
 function toDateTimeLocalValue(value) {
@@ -251,8 +246,18 @@ const DELAY_FILTER_COLUMNS = [
   },
   { key: "processStage", label: "Process Stage", type: "select", getValue: (row) => row.processStage || "-" },
   { key: "category", label: "Category", type: "select" },
-  { key: "startTime", label: "Start Time", getValue: (row) => formatDateTimeForTable(row.startTime) },
-  { key: "endTime", label: "End Time", getValue: (row) => formatDateTimeForTable(row.endTime) },
+  {
+    key: "startTime",
+    label: "Start Time",
+    filterType: "datetime",
+    getValue: (row) => formatDateTimeForTable(row.startTime),
+  },
+  {
+    key: "endTime",
+    label: "End Time",
+    filterType: "datetime",
+    getValue: (row) => formatDateTimeForTable(row.endTime),
+  },
   { key: "duration", label: "Duration", getValue: getRowDuration },
   { key: "reason", label: "Reason" },
   { key: "reportedBy", label: "Reported By" },
@@ -761,17 +766,18 @@ export default function DelayManagementPage() {
 
   return (
     <>
-      <div className="space-y-6 3xl:space-y-8 5xl:space-y-12 animate-fadeIn">
-        <div>
-          <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] 5xl:text-[44px] font-bold text-slate-800">
+      <PageFrame>
+      <div className="flex min-h-0 flex-1 flex-col gap-3 animate-fadeIn">
+        <div className="shrink-0">
+          <h2 className="text-[18px] font-bold text-slate-800 sm:text-[20px]">
             Delay Management
           </h2>
-          <p className="mt-1 text-[14px] 3xl:text-[17px] 5xl:text-[22px] text-slate-500">
+          <p className="text-[12px] text-slate-500">
             Track manual delay logs together with end-to-end process delays from loading and railway approvals.
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid shrink-0 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Visible delays</p>
             <p className="mt-1 text-2xl font-bold text-slate-800">{summaryStats.total}</p>
@@ -794,7 +800,7 @@ export default function DelayManagementPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
           <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
             <button
               type="button"
@@ -858,13 +864,13 @@ export default function DelayManagementPage() {
         </div>
 
         {message ? (
-          <p className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
+          <p className="shrink-0 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
             {message}
           </p>
         ) : null}
 
         {viewMode === "journey" ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="shrink-0 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             {selectedJourney ? (
               <DelayProcessTimeline
                 milestones={selectedJourney.insights.milestones}
@@ -880,23 +886,18 @@ export default function DelayManagementPage() {
           </div>
         ) : (
           <>
-        <div className="flex items-center gap-3">
-          <div className="flex-1">
-            <SearchBar
-              placeholder="Search by rake number, category, process stage, source, reason, or status..."
-              value={tableSearch}
-              onChange={setTableSearch}
-              showFilter={false}
-            />
-          </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="flex-1" />
           <ColumnSettingsMenu {...columnVisibility.menuProps} />
         </div>
         <style>{columnVisibility.css}</style>
 
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+        <DataTablePanel
+          className="min-h-0 flex-1"
+          footer={<Pagination embedded {...paginationProps} />}
+        >
             <table data-colset={DELAY_HIDDEN_COLS_KEY} className="w-full min-w-425 whitespace-nowrap">
-              <thead>
+              <thead className={STICKY_TABLE_HEAD_CLASS}>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
                   <th className="sticky left-0 z-30 border-r border-slate-200/70 bg-slate-50 px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     Actions
@@ -1030,19 +1031,17 @@ export default function DelayManagementPage() {
                     </ThemedSelect>
                   </td>
                   <td className="px-5 py-3">
-                    <input
-                      type="datetime-local"
+                    <DateTimeInput
                       value={inlineForm.startTime}
-                      onChange={(event) => updateInline("startTime", event.target.value)}
+                      onChange={(next) => updateInline("startTime", next)}
                       className={compactInputClass}
                       disabled={!areMainFieldsEditable}
                     />
                   </td>
                   <td className="px-5 py-3">
-                    <input
-                      type="datetime-local"
+                    <DateTimeInput
                       value={inlineForm.endTime}
-                      onChange={(event) => updateInline("endTime", event.target.value)}
+                      onChange={(next) => updateInline("endTime", next)}
                       className={compactInputClass}
                     />
                   </td>
@@ -1302,15 +1301,11 @@ export default function DelayManagementPage() {
                 )}
               </tbody>
             </table>
-          </div>
-
-          <div className="px-5 pb-4">
-            <Pagination {...paginationProps} />
-          </div>
-        </div>
+        </DataTablePanel>
           </>
         )}
       </div>
+      </PageFrame>
 
       <ConfirmDialog
         isOpen={Boolean(statusConfirmLog)}

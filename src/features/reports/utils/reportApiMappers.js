@@ -44,7 +44,10 @@ export function mapReportLoading(dto) {
     completionTime: dto.completion_time || null,
     clearanceTime: dto.clearance_time || null,
     operatorFtp: dto.operator_ftp || "",
-    wagonSick: dto.wagon_sick_name || "No",
+    wagonSick:
+      dto.wagon_sick_name != null && dto.wagon_sick_name !== ""
+        ? dto.wagon_sick_name
+        : String(dto.wagon_sick ?? 0),
     manualLoadingTrack: MANUAL_LOADING_TRACK_LABELS[dto.manual_loading_track] || "",
     overloadedWagons: dto.overloaded_wagons ?? 0,
     weightRemoved: Number(dto.weight_removed) || 0,

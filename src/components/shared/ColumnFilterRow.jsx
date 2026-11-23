@@ -1,8 +1,16 @@
 import { useMemo } from "react";
 import { deriveColumnOptions } from "../../hooks/useColumnFilters";
+import { DATE_PLACEHOLDER, DATETIME_PLACEHOLDER } from "../../utils/dateUtils";
 
 const controlClass =
   "w-full min-w-[84px] rounded-md border border-slate-200 bg-white px-2 py-1.5 text-[12px] 3xl:text-[14px] font-normal normal-case tracking-normal text-slate-700 placeholder:text-slate-400 outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100";
+
+function columnFilterPlaceholder(column) {
+  if (column.filterPlaceholder) return column.filterPlaceholder;
+  if (column.filterType === "date") return DATE_PLACEHOLDER;
+  if (column.filterType === "datetime") return DATETIME_PLACEHOLDER;
+  return "Filter…";
+}
 
 function ClearButton({ onClear }) {
   return (
@@ -33,6 +41,7 @@ export default function ColumnFilterRow({
   rows = [],
   cellClassName = "px-5 py-2",
   rowClassName = "border-b border-slate-100 bg-white",
+  stickyWithHeader = false,
 }) {
   const hasActive = Object.values(filters).some((value) => String(value).trim() !== "");
 
@@ -49,8 +58,12 @@ export default function ColumnFilterRow({
     if (column.type === "none") clearIndex = index;
   });
 
+  const rowClasses = stickyWithHeader
+    ? `${rowClassName} [&>td]:bg-white [&>th]:bg-white`
+    : rowClassName;
+
   return (
-    <tr className={rowClassName} data-print-hide>
+    <tr className={rowClasses} data-print-hide>
       {columns.map((column, index) => {
         const value = filters[column.key] ?? "";
         const showClear = hasActive && (clearIndex === -1 ? index === columns.length - 1 : index === clearIndex);
@@ -79,7 +92,7 @@ export default function ColumnFilterRow({
               type="text"
               value={value}
               onChange={(e) => onFilterChange(column.key, e.target.value)}
-              placeholder="Filter…"
+              placeholder={columnFilterPlaceholder(column)}
               className={controlClass}
               aria-label={`Filter by ${label}`}
             />

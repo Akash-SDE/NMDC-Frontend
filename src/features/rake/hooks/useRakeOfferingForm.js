@@ -14,6 +14,10 @@ export function useRakeOfferingForm() {
     setOfferingForm((prev) => ({ ...prev, [field]: value }));
   }, []);
 
+  const patchOffering = useCallback((patch) => {
+    setOfferingForm((prev) => ({ ...prev, ...patch }));
+  }, []);
+
   const resetOfferingForm = useCallback(() => {
     setOfferingForm(createEmptyOfferingForm());
     setAdjustOfferFor("");
@@ -87,6 +91,7 @@ export function useRakeOfferingForm() {
     setInlineActionMode,
     setActiveInlineRakeId,
     updateOffering,
+    patchOffering,
     resetOfferingForm,
     prefillOfferingForm,
     loadRowForEdit,

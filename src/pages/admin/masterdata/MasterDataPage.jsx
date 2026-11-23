@@ -7,6 +7,7 @@ import StockpileMaster from "./StockpileMaster";
 import DelayCategoryMaster from "./DelayCategoryMaster";
 import WagonTypeMaster from "./WagonTypeMaster";
 import CustomerMaster from "./CustomerMaster";
+import PageFrame from "../../../components/layout/PageFrame";
 
 export default function MasterDataPage() {
   const { currentRoute } = useRouter();
@@ -54,9 +55,9 @@ export default function MasterDataPage() {
   }
 
   return (
-    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7 xl:px-10 3xl:px-14 3xl:py-10 5xl:px-20 5xl:py-14">
-      {renderContent()}
-    </div>
+    <PageFrame className="animate-fadeIn">
+      <div className="flex min-h-0 flex-1 flex-col">{renderContent()}</div>
+    </PageFrame>
   );
 }
 

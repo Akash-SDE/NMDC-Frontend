@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { destinationsMeta } from "../../../data/adminmasterdatafiles/destinations";
-import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
+import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Toast from "../../../components/shared/Toast";
 import { PlusIcon } from "../../../components/icons";
@@ -108,7 +108,7 @@ function DestinationForm({ initialData, onSave, onCancel, isEditing, saving }) {
     if (!form.code.trim()) e.code = "Code is required";
     if (!form.name.trim()) e.name = "Name is required";
     if (!form.state.trim()) e.state = "State is required";
-    if (!form.stationCode.trim()) e.stationCode = "Station code is required";
+    if (!form.stationCode.trim()) e.stationCode = "City/location is required";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -136,9 +136,9 @@ function DestinationForm({ initialData, onSave, onCancel, isEditing, saving }) {
         </div>
         <div>
           <label className="block text-[13px] 3xl:text-[15px] font-semibold text-slate-800 mb-1.5">
-            Railway Station Code *
+            City/Location *
           </label>
-          <input type="text" placeholder="e.g. PRDP" value={form.stationCode}
+          <input type="text" placeholder="e.g. Paradip" value={form.stationCode}
             onChange={(e) => handleChange("stationCode", e.target.value)}
             className={inputClass("stationCode")} />
           {errors.stationCode && <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.stationCode}</p>}
@@ -211,7 +211,7 @@ const FILTER_COLUMNS = [
   { key: "code", label: "Code" },
   { key: "name", label: "Destination Name" },
   { key: "state", label: "State", className: "hidden sm:table-cell" },
-  { key: "stationCode", label: "Station Code", className: "hidden md:table-cell" },
+  { key: "stationCode", label: "City/Location", className: "hidden md:table-cell" },
   { key: "status", label: "Status", type: "select", options: STATUS_FILTER_OPTIONS },
   { key: "actions", type: "none" },
 ];
@@ -227,7 +227,6 @@ export default function DestinationMaster() {
   const [destinations, setDestinations] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("code");
   const [sortOrder, setSortOrder] = useState("asc");
   const [loading, setLoading] = useState(false);
@@ -261,7 +260,7 @@ export default function DestinationMaster() {
         sortBy,
         sortOrder,
         sortFieldMap: SORT_FIELD_MAP,
-        filters: search.trim() ? { destination_name: search.trim() } : {},
+        filters: {},
       });
       const res = await fetchDestinations(filters);
       const results = res?.results ?? res ?? [];
@@ -272,7 +271,7 @@ export default function DestinationMaster() {
     } finally {
       setLoading(false);
     }
-  }, [search, serverPage, serverPageSize, sortBy, sortOrder]);
+  }, [serverPage, serverPageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     if (!isAddPage && !isEditPage) loadDestinations();
@@ -364,7 +363,8 @@ export default function DestinationMaster() {
   // Add / Edit form
   if (isAddPage || isEditPage) {
     return (
-      <div className="space-y-6 3xl:space-y-8">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
         <Toast toast={toast} />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -388,15 +388,18 @@ export default function DestinationMaster() {
           />
         </div>
       </div>
+    </div>
     );
   }
 
   // List
   return (
-    <div className="space-y-6 3xl:space-y-8">
-      <Toast toast={toast} />
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
+        <Toast toast={toast} />
+      </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex shrink-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] font-bold text-slate-800">
             {destinationsMeta.title}
@@ -410,17 +413,21 @@ export default function DestinationMaster() {
         </button>
       </div>
 
-      <SearchBar
-        placeholder={destinationsMeta.searchPlaceholder}
-        value={search}
-        onChange={(v) => { setSearch(v); setCurrentPage(1); }}
-        showFilter={false}
-      />
-
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+      <DataTablePanel
+          className="min-h-0 flex-1"
+          footer={
+            <Pagination
+              embedded
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={columnFilters.count}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+            />
+          }
+        >
           <table className="w-full" data-print-table>
-            <thead>
+            <thead className={STICKY_TABLE_HEAD_CLASS}>
               <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   {renderSortButton("Code", "code")}
@@ -432,7 +439,7 @@ export default function DestinationMaster() {
                   {renderSortButton("State", "state")}
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden md:table-cell">
-                  {renderSortButton("Station Code", "stationCode")}
+                  {renderSortButton("City/Location", "stationCode")}
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   {renderSortButton("Status", "status")}
@@ -494,17 +501,7 @@ export default function DestinationMaster() {
               )}
             </tbody>
           </table>
-        </div>
-        <div className="px-5 py-4">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalCount={columnFilters.count}
-            pageSize={PAGE_SIZE}
-            onPageChange={setCurrentPage}
-          />
-        </div>
-      </div>
+        </DataTablePanel>
 
       <ConfirmDialog
         isOpen={isStatusToggleOpen}

@@ -5,8 +5,9 @@ import {
   uploadRakeDocument,
   reprocessRakeDocument,
 } from "../../../services/extractionService";
-import SearchBar from "../../../components/shared/SearchBar";
 import Pagination from "../../../components/shared/Pagination";
+import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
+import PageFrame from "../../../components/layout/PageFrame";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 import { useColumnFilters, useServerColumnFilters } from "../../../hooks/useColumnFilters";
@@ -39,6 +40,8 @@ const slotStatusLabel = (slot) =>
 const rakeStatusLabel = (row) =>
   (RAKE_STATUS_BADGE[(row?.status || RAKE_STATUS.PENDING).toUpperCase()] ?? RAKE_STATUS_BADGE.PENDING).label;
 
+const DOCUMENT_COLUMN_ORDER = [DOCUMENT_TYPES.INVOICE, DOCUMENT_TYPES.RR, DOCUMENT_TYPES.RTP];
+
 const FILTER_COLUMNS = [
   { key: "view", type: "none", className: "w-[72px] px-3" },
   {
@@ -46,6 +49,14 @@ const FILTER_COLUMNS = [
     label: "Rake",
     getValue: (row) => row.rake_number || "",
     className: "min-w-[160px] px-4",
+  },
+  {
+    key: "invoice",
+    label: "Invoice",
+    type: "select",
+    options: Object.values(DOC_STATUS_BADGE).map((b) => b.label),
+    getValue: (row) => slotStatusLabel(row.invoice),
+    className: "min-w-[180px] px-4",
   },
   {
     key: "rr",
@@ -64,14 +75,6 @@ const FILTER_COLUMNS = [
     className: "min-w-[180px] px-4",
   },
   {
-    key: "invoice",
-    label: "Invoice",
-    type: "select",
-    options: Object.values(DOC_STATUS_BADGE).map((b) => b.label),
-    getValue: (row) => slotStatusLabel(row.invoice),
-    className: "min-w-[180px] px-4",
-  },
-  {
     key: "status",
     label: "Status",
     type: "select",
@@ -86,8 +89,6 @@ export default function ExtractionPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("rake_number");
   const [sortOrder, setSortOrder] = useState("asc");
@@ -98,14 +99,6 @@ export default function ExtractionPage() {
   const [reprocessingType, setReprocessingType] = useState(null);
   const [toast, setToast] = useState({ msg: "", type: "success" });
   const fileInputsRef = useRef({});
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setDebouncedSearch(search);
-      setCurrentPage(1);
-    }, 350);
-    return () => clearTimeout(t);
-  }, [search]);
 
   const sorted = useMemo(() => {
     return [...rows].sort((a, b) => {
@@ -148,9 +141,11 @@ export default function ExtractionPage() {
         page_size: serverPageSize,
         order_by: sortBy === "rake_number" ? "rake_number" : "id",
         order_type: sortOrder,
-        ...(debouncedSearch ? { search: debouncedSearch } : {}),
       });
-      setRows(data.results ?? []);
+      const results = (data.results ?? []).filter(
+        (row) => (row.status || "").toUpperCase() !== RAKE_STATUS.COMPLETED,
+      );
+      setRows(results);
       setTotalCount(data.count ?? 0);
     } catch (err) {
       setError(err?.response?.data?.detail || err?.message || "Failed to load rakes.");
@@ -158,16 +153,17 @@ export default function ExtractionPage() {
     } finally {
       setLoading(false);
     }
-  }, [serverPage, serverPageSize, debouncedSearch, sortBy, sortOrder]);
+  }, [serverPage, serverPageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const mergeRow = useCallback((rakeId, patch) => {
-    setRows((prev) =>
-      prev.map((row) => (row.rake_id === rakeId ? { ...row, ...patch } : row)),
-    );
+    setRows((prev) => {
+      const next = prev.map((row) => (row.rake_id === rakeId ? { ...row, ...patch } : row));
+      return next.filter((row) => (row.status || "").toUpperCase() !== RAKE_STATUS.COMPLETED);
+    });
   }, []);
 
   async function pollRakeUntilSettled(rakeId, documentType) {
@@ -316,12 +312,13 @@ export default function ExtractionPage() {
 
   return (
     <>
-      <div className="space-y-6 animate-fadeIn">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      <PageFrame>
+      <div className="flex min-h-0 flex-1 flex-col gap-4 animate-fadeIn">
+        <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-[24px] sm:text-[28px] font-bold text-slate-800">eT-RR Extraction</h2>
             <p className="mt-1 text-[14px] text-slate-500">
-              One row per rake — upload RR, RTP, and Invoice PDFs independently.
+              One row per rake — upload Invoice, RR, and RTP PDFs. Rows disappear once all three are uploaded.
             </p>
           </div>
           <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
@@ -330,7 +327,7 @@ export default function ExtractionPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             { label: "Total", value: loading ? "—" : totalCount, color: "text-slate-700", bg: "bg-slate-50 border-slate-200" },
             { label: "Completed", value: loading ? "—" : stats.completed, color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200" },
@@ -366,18 +363,23 @@ export default function ExtractionPage() {
             </button>
           </div>
         ) : null}
-
-        <SearchBar
-          placeholder="Search by rake number…"
-          value={search}
-          onChange={setSearch}
-          showFilter={false}
-        />
-
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+        <DataTablePanel
+          className="min-h-0 flex-1"
+          footer={
+            !loading && columnFilters.count > 0 ? (
+              <Pagination
+                embedded
+                currentPage={currentPage}
+                totalPages={columnFilters.totalPages}
+                totalCount={columnFilters.count}
+                pageSize={PAGE_SIZE}
+                onPageChange={setCurrentPage}
+              />
+            ) : null
+          }
+        >
             <table className="w-full border-separate border-spacing-0 whitespace-nowrap text-[13px]">
-              <thead>
+              <thead className={STICKY_TABLE_HEAD_CLASS}>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
                   <th className="px-3 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     View
@@ -385,9 +387,9 @@ export default function ExtractionPage() {
                   <th className="px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     <SortHeaderButton label="Rake" field="rake_number" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
+                  <th className="px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Invoice</th>
                   <th className="px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">RR</th>
                   <th className="px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">RTP</th>
-                  <th className="px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Invoice</th>
                   <th className="px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     <SortHeaderButton label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
@@ -425,7 +427,7 @@ export default function ExtractionPage() {
                         </button>
                       </td>
                       <td className="px-4 py-3 font-bold text-[#2563eb]">{row.rake_number || "—"}</td>
-                      {[DOCUMENT_TYPES.RR, DOCUMENT_TYPES.RTP, DOCUMENT_TYPES.INVOICE].map((docType) => {
+                      {DOCUMENT_COLUMN_ORDER.map((docType) => {
                         const slotKey =
                           docType === DOCUMENT_TYPES.RR
                             ? "rr"
@@ -460,20 +462,9 @@ export default function ExtractionPage() {
                 )}
               </tbody>
             </table>
-          </div>
-          {!loading && columnFilters.count > 0 ? (
-            <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-3">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={columnFilters.totalPages}
-                totalCount={columnFilters.count}
-                pageSize={PAGE_SIZE}
-                onPageChange={setCurrentPage}
-              />
-            </div>
-          ) : null}
-        </div>
+        </DataTablePanel>
       </div>
+      </PageFrame>
 
       {detailRakeId ? (
         <RakeExtractionDetailModal

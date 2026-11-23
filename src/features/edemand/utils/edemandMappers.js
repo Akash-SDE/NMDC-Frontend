@@ -3,6 +3,47 @@ export const SALES_TYPE_OPTIONS = [
   { id: 10, label: "AUCTION" },
 ];
 
+export const EDEMAND_STATUS = {
+  APPROVED: 5,
+  PENDING: 10,
+  CANCELLED: 50,
+};
+
+export const EDEMAND_STATUS_OPTIONS = [
+  { id: EDEMAND_STATUS.APPROVED, label: "Approved" },
+  { id: EDEMAND_STATUS.PENDING, label: "Pending" },
+];
+
+export function getEDemandStatusMeta(row) {
+  const code = row?.status ?? EDEMAND_STATUS.APPROVED;
+  const label =
+    row?.statusDescription ||
+    (code === EDEMAND_STATUS.PENDING
+      ? "Pending"
+      : code === EDEMAND_STATUS.CANCELLED
+        ? "Cancelled"
+        : "Approved");
+  if (code === EDEMAND_STATUS.PENDING) {
+    return {
+      label,
+      badgeClass: "border-amber-200 bg-amber-50 text-amber-800",
+      dotClass: "bg-amber-500",
+    };
+  }
+  if (code === EDEMAND_STATUS.CANCELLED) {
+    return {
+      label,
+      badgeClass: "border-slate-200 bg-slate-100 text-slate-600",
+      dotClass: "bg-slate-400",
+    };
+  }
+  return {
+    label: label === "Active" ? "Approved" : label,
+    badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    dotClass: "bg-emerald-500",
+  };
+}
+
 export function mapEDemand(dto) {
   return {
     id: dto.id,
@@ -16,13 +57,17 @@ export function mapEDemand(dto) {
     oreTypeId: dto.oretype ?? null,
     salesType: dto.sales_type_name || "",
     salesTypeId: dto.sales_type ?? null,
-    status: dto.status ?? null,
+    status: dto.status ?? EDEMAND_STATUS.APPROVED,
+    statusDescription: dto.status_description || "",
     createdAt: dto.created_on || null,
     updatedAt: dto.modified_on || null,
   };
 }
 
 export function eDemandFormToApi(form) {
+  const status = Number(form.status);
+  const safeStatus =
+    status === EDEMAND_STATUS.PENDING ? EDEMAND_STATUS.PENDING : EDEMAND_STATUS.APPROVED;
   return {
     fnote: String(form.fNote || "").trim() || null,
     demand_date: form.date,
@@ -30,6 +75,7 @@ export function eDemandFormToApi(form) {
     destination: Number(form.destination),
     oretype: Number(form.oreType),
     sales_type: Number(form.salesType),
+    status: safeStatus,
   };
 }
 
@@ -42,6 +88,7 @@ export function eDemandToForm(row) {
     destination: asValue(row.destinationId),
     oreType: asValue(row.oreTypeId),
     salesType: asValue(row.salesTypeId),
+    status: asValue(row.status ?? EDEMAND_STATUS.APPROVED),
   };
 }
 

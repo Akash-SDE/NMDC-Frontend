@@ -5,6 +5,7 @@ import {
   uniformSecondaryButtonClass,
 } from "../../../components/shared/UniformUi";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
+import DateTimeInput from "../../../components/shared/DateTimeInput";
 import {
   wagonTypeOptions,
   sidingOptions,
@@ -196,18 +197,16 @@ export default function RakeOfferingFormView({
                 />
               </UniformFormField>
               <UniformFormField label="Placement Time">
-                <input
-                  type="datetime-local"
+                <DateTimeInput
                   value={offeringForm.placementTime}
-                  onChange={(event) => updateOffering("placementTime", event.target.value)}
+                  onChange={(next) => updateOffering("placementTime", next)}
                   className={inputClass}
                 />
               </UniformFormField>
               <UniformFormField label="Offer Time">
-                <input
-                  type="datetime-local"
+                <DateTimeInput
                   value={offeringForm.offerTime}
-                  onChange={(event) => updateOffering("offerTime", event.target.value)}
+                  onChange={(next) => updateOffering("offerTime", next)}
                   className={inputClass}
                 />
               </UniformFormField>
@@ -236,10 +235,9 @@ export default function RakeOfferingFormView({
                 </UniformFormField>
 
                 <UniformFormField label="Adjusted Offer Time">
-                  <input
-                    type="datetime-local"
+                  <DateTimeInput
                     value={adjustOfferTime}
-                    onChange={(event) => setAdjustOfferTime(event.target.value)}
+                    onChange={setAdjustOfferTime}
                     className={inputClass}
                   />
                 </UniformFormField>

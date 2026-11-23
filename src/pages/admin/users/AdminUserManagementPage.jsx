@@ -18,6 +18,7 @@ import {
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import { useRouter } from "../../../context/RouterContext";
 import { useColumnFilters } from "../../../hooks/useColumnFilters";
+import { formatTableDateOnly } from "../../../utils/dateUtils";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 
 const initialUsers = [
@@ -144,13 +145,8 @@ function StatCard({ title, value, icon, valueTone = "text-slate-700" }) {
 }
 
 function formatDate(value) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "-";
-  return parsed.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  const formatted = formatTableDateOnly(value);
+  return formatted || "-";
 }
 
 const USER_FILTER_COLUMNS = [
@@ -163,7 +159,12 @@ const USER_FILTER_COLUMNS = [
     type: "select",
     getValue: (user) => (user.status === "active" ? "Active" : "Inactive"),
   },
-  { key: "createdDate", label: "Created On", getValue: (user) => formatDate(user.createdDate) },
+  {
+    key: "createdDate",
+    label: "Created On",
+    filterType: "date",
+    getValue: (user) => formatDate(user.createdDate),
+  },
   { key: "actions", type: "none" },
 ];
 

@@ -7,6 +7,7 @@ import { APPROVAL_STEP_LABELS } from "../../constants/approval";
 import { RAILWAY_FLAG_LABELS, RAILWAY_WAGON_FLAGS } from "../../constants/railwayInspection";
 import { getPriorVisibleDepartments, isPriorStepSubmitted } from "../../utils/approvalUtils";
 import { formatDateTimeForTable } from "../../utils/dateUtils";
+import DateTimeInput from "../shared/DateTimeInput";
 import {
   formatWagonNumbersInput,
   normalizeDepartmentInspection,
@@ -503,11 +504,10 @@ export function DepartmentInspectionFields({
       <div className="space-y-4">
         <InspectionSubsection title="Track Clearance">
           <UniformFormField label="Track Clearance Time">
-            <input
-              type="datetime-local"
+            <DateTimeInput
               className={uniformInputClass}
               value={trackClearanceTime || ""}
-              onChange={(event) => onTrackClearanceTimeChange(event.target.value)}
+              onChange={onTrackClearanceTimeChange}
             />
           </UniformFormField>
           <p className="mt-2 text-[12px] text-slate-600">

@@ -4,9 +4,9 @@ import { DOC_STATUS_BADGE, RAKE_STATUS_BADGE } from "../utils/rakeExtractionStat
 import { buildDocumentSections, fmt, getFileName } from "../utils/extractionFormat";
 
 const SLIDES = [
+  { key: "invoice", label: "Invoice", subtitle: "Tax invoice", type: "INVOICE" },
   { key: "rr", label: "RR", subtitle: "eT-RR / Railway Receipt", type: "RR" },
   { key: "rtp", label: "RTP", subtitle: "Ready to Proceed", type: "RTP" },
-  { key: "invoice", label: "Invoice", subtitle: "Tax invoice", type: "INVOICE" },
 ];
 
 function Badge({ map, status }) {

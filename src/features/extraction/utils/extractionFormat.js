@@ -2,6 +2,8 @@ export function fmt(val) {
   return val === null || val === undefined || val === "" ? "—" : String(val);
 }
 
+import { formatDateTimeForTable, formatTableDateOnly } from "../../../utils/dateUtils";
+
 export function fmtCurrency(val) {
   if (val === null || val === undefined || val === "") return "—";
   const n = Number(val);
@@ -11,18 +13,12 @@ export function fmtCurrency(val) {
 
 export function fmtDate(iso) {
   if (!iso) return "—";
-  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
-    const [y, m, d] = iso.split("-");
-    return `${d}-${m}-${y}`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(iso).trim())) {
+    const formatted = formatTableDateOnly(iso);
+    return formatted || "—";
   }
-  return new Date(iso).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
+  const formatted = formatDateTimeForTable(iso);
+  return formatted || "—";
 }
 
 export function getFileName(pdfPath) {

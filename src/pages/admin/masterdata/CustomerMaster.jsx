@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { customersMeta } from "../../../data/adminmasterdatafiles/customers";
-import SearchBar from "../../../components/shared/SearchBar";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import Pagination from "../../../components/shared/Pagination";
+import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Toast from "../../../components/shared/Toast";
 import { PlusIcon } from "../../../components/icons";
@@ -81,6 +81,7 @@ function toUi(r) {
     name: r.customer_name || "",
     contactPerson: r.customer_state || "",   // closest available field
     location: r.customer_address || "",
+    foissCode: r.foiss_code || "",
     status: r.status ? "active" : "inactive",
     _raw: r,
   };
@@ -93,6 +94,7 @@ function toApi(form) {
     customer_name: form.name,
     customer_address: form.location || null,
     customer_state: form.contactPerson || null,
+    foiss_code: form.foissCode?.trim() || null,
     status: form.status === "active",
   };
 }
@@ -104,6 +106,7 @@ const emptyForm = {
   name: "",
   contactPerson: "",
   location: "",
+  foissCode: "",
   status: "active",
 };
 
@@ -180,6 +183,19 @@ function CustomerForm({ initialData, onSave, onCancel, isEditing, saving }) {
         {errors.name && <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.name}</p>}
       </div>
 
+      <div>
+        <label className="block text-[13px] 3xl:text-[15px] font-semibold text-slate-800 mb-1.5">
+          FOISS Code
+        </label>
+        <input
+          type="text"
+          placeholder="e.g. FOISS-12345"
+          value={form.foissCode}
+          onChange={(e) => handleChange("foissCode", e.target.value)}
+          className={inputClass("foissCode")}
+        />
+      </div>
+
       {/* Address */}
       <div>
         <label className="block text-[13px] 3xl:text-[15px] font-semibold text-slate-800 mb-1.5">
@@ -232,6 +248,7 @@ const PAGE_SIZE = 10;
 const SORT_FIELD_MAP = {
   code: "customer_code",
   name: "customer_name",
+  foissCode: "foiss_code",
   contactPerson: "customer_state",
   location: "customer_address",
   status: "status",
@@ -243,6 +260,7 @@ const STATUS_FILTER_OPTIONS = [
 const FILTER_COLUMNS = [
   { key: "code", label: "Code" },
   { key: "name", label: "Customer Name" },
+  { key: "foissCode", label: "FOISS Code", className: "hidden lg:table-cell" },
   { key: "contactPerson", label: "State", className: "hidden sm:table-cell" },
   { key: "location", label: "Address", className: "hidden md:table-cell" },
   { key: "status", label: "Status", type: "select", options: STATUS_FILTER_OPTIONS },
@@ -261,7 +279,6 @@ export default function CustomerMaster() {
   const [customers, setCustomers] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("code");
   const [sortOrder, setSortOrder] = useState("asc");
   const [loading, setLoading] = useState(false);
@@ -300,7 +317,7 @@ export default function CustomerMaster() {
         sortBy,
         sortOrder,
         sortFieldMap: SORT_FIELD_MAP,
-        filters: search.trim() ? { customer_name: search.trim() } : {},
+        filters: {},
       });
       const res = await fetchCustomers(filters);
       const results = res?.results ?? res ?? [];
@@ -311,7 +328,7 @@ export default function CustomerMaster() {
     } finally {
       setLoading(false);
     }
-  }, [search, serverPage, serverPageSize, sortBy, sortOrder]);
+  }, [serverPage, serverPageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     if (!isAddPage && !isEditPage) loadCustomers();
@@ -419,7 +436,8 @@ export default function CustomerMaster() {
   // ── Add / Edit form page ─────────────────────────────────────────────────────
   if (isAddPage || isEditPage) {
     return (
-      <div className="space-y-6 3xl:space-y-8">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
         <Toast toast={toast} />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -446,15 +464,18 @@ export default function CustomerMaster() {
           />
         </div>
       </div>
+    </div>
     );
   }
 
   // ── List page ────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 3xl:space-y-8">
-      <Toast toast={toast} />
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
+        <Toast toast={toast} />
+      </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex shrink-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-[24px] sm:text-[28px] 3xl:text-[34px] font-bold text-slate-800">
             {customersMeta.title}
@@ -470,23 +491,30 @@ export default function CustomerMaster() {
         </button>
       </div>
 
-      <SearchBar
-        placeholder={customersMeta.searchPlaceholder}
-        value={search}
-        onChange={(v) => { setSearch(v); setCurrentPage(1); }}
-        showFilter={false}
-      />
-
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+      <DataTablePanel
+          className="min-h-0 flex-1"
+          footer={
+            <Pagination
+              embedded
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={columnFilters.count}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+            />
+          }
+        >
           <table className="w-full" data-print-table>
-            <thead>
+            <thead className={STICKY_TABLE_HEAD_CLASS}>
               <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   {renderSortButton("Code", "code")}
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase">
                   {renderSortButton("Customer Name", "name")}
+                </th>
+                <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden lg:table-cell">
+                  {renderSortButton("FOISS Code", "foissCode")}
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] font-bold tracking-[0.06em] text-slate-500 uppercase hidden sm:table-cell">
                   {renderSortButton("State", "contactPerson")}
@@ -506,13 +534,13 @@ export default function CustomerMaster() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center">
+                  <td colSpan={7} className="px-5 py-12 text-center">
                     <p className="text-[14px] text-slate-400 animate-pulse">Loading customers…</p>
                   </td>
                 </tr>
               ) : paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center">
+                  <td colSpan={7} className="px-5 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" className="mb-2">
                         <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
@@ -536,6 +564,11 @@ export default function CustomerMaster() {
                     <td className="px-5 py-4 3xl:px-6 3xl:py-5">
                       <span className="text-[13px] 3xl:text-[15px] font-semibold text-slate-800">
                         {cust.name}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 3xl:px-6 3xl:py-5 hidden lg:table-cell">
+                      <span className="text-[13px] 3xl:text-[15px] text-slate-600">
+                        {cust.foissCode || "—"}
                       </span>
                     </td>
                     <td className="px-5 py-4 3xl:px-6 3xl:py-5 hidden sm:table-cell">
@@ -583,17 +616,7 @@ export default function CustomerMaster() {
               )}
             </tbody>
           </table>
-        </div>
-        <div className="px-5 py-4 3xl:px-6 3xl:py-5">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalCount={columnFilters.count}
-            pageSize={PAGE_SIZE}
-            onPageChange={setCurrentPage}
-          />
-        </div>
-      </div>
+        </DataTablePanel>
 
       <ConfirmDialog
         isOpen={isStatusToggleOpen}

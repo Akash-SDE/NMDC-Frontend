@@ -2,14 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "../../context/RouterContext";
 import { useAuth } from "../../context/AuthContext";
 import { MenuIcon } from "../icons";
+import { formatDateTimeForTable } from "../../utils/dateUtils";
 
 /* ── helpers ─────────────────────────────────────────────────── */
 function formatDate(iso) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("en-IN", {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit", hour12: true,
-  });
+  const formatted = formatDateTimeForTable(iso);
+  return formatted || "—";
 }
 
 function getInitials(firstName, lastName) {
@@ -160,7 +159,7 @@ const calendarIcon = (
 );
 
 /* ── Header ──────────────────────────────────────────────────── */
-export default function Header({ onMenuClick }) {
+export default function Header({ onMenuClick, compact = false }) {
   const { userRole, logout } = useRouter();
   const { profile } = useAuth();
   const [popupOpen, setPopupOpen] = useState(false);
@@ -175,8 +174,12 @@ export default function Header({ onMenuClick }) {
   }
 
   return (
-    <header className="relative z-30 shrink-0 bg-[#F3F5F8] py-2 shadow-lg">
-      <div className="flex h-15.5 items-center justify-between rounded-xl px-3 sm:px-4 lg:px-5">
+    <header className="relative z-30 shrink-0 bg-[#F3F5F8] py-1 shadow-md">
+      <div
+        className={`flex items-center justify-between rounded-xl px-2 sm:px-3 ${
+          compact ? "h-12" : "h-14 sm:h-15.5"
+        }`}
+      >
 
         {/* left: mobile menu + title */}
         <div className="flex min-w-0 items-center gap-2 pr-3 sm:gap-3">
@@ -190,10 +193,18 @@ export default function Header({ onMenuClick }) {
           </button>
 
           <div className="min-w-0">
-            <h1 className="truncate text-[14px] font-extrabold leading-none text-[#1f4ec9] sm:text-[26px]">
+            <h1
+              className={`truncate font-extrabold leading-tight text-[#1f4ec9] ${
+                compact ? "text-[13px] sm:text-[15px]" : "text-[14px] sm:text-[22px]"
+              }`}
+            >
               RAKE DISPATCH MANAGEMENT SYSTEM
             </h1>
-            <p className="mt-1 truncate text-[11px] font-bold leading-none text-black sm:text-[22px]">
+            <p
+              className={`truncate font-semibold leading-tight text-slate-700 ${
+                compact ? "mt-0.5 text-[10px] sm:text-[11px]" : "mt-1 text-[11px] sm:text-[14px]"
+              }`}
+            >
               BIOM Bacheli Complex, Dantewada(C.G.)
             </p>
           </div>
