@@ -38,7 +38,10 @@ describe("railway role access", () => {
   it("gives superusers and admins unrestricted approval access", () => {
     expect(resolveRoleFromProfile({ is_superuser: true, role: [] })).toBe(USER_ROLES.SUPERADMIN);
     expect(resolveRoleFromProfile(profileWithRole("Admin"))).toBe(USER_ROLES.ADMIN);
+    expect(resolveRoleFromProfile(profileWithRole("NMDC Admin"))).toBe(USER_ROLES.ADMIN);
+    expect(resolveRoleFromProfile(profileWithRole("NMDC Attendance"))).toBe(USER_ROLES.NMDC);
     expect(RAILWAY_DEPARTMENT_BY_ROLE[USER_ROLES.SUPERADMIN]).toBeUndefined();
     expect(RAILWAY_DEPARTMENT_BY_ROLE[USER_ROLES.ADMIN]).toBeUndefined();
+    expect(DEFAULT_ROUTE_BY_ROLE[USER_ROLES.NMDC]).toContain("dept=nmdc");
   });
 });

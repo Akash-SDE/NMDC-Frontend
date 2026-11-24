@@ -59,7 +59,7 @@ export function AppRoutes() {
       <Route
         element={
           <ProtectedRoute
-            allowedRoles={[...RAILWAY_ROLES, USER_ROLES.ADMIN]}
+            allowedRoles={[...RAILWAY_ROLES, USER_ROLES.ADMIN, USER_ROLES.NMDC]}
           />
         }
       >
@@ -95,7 +95,13 @@ export function AppRoutes() {
         </Route>
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={[USER_ROLES.ADMIN, ...RAILWAY_ROLES]} />}>
+      <Route
+        element={
+          <ProtectedRoute
+            allowedRoles={[USER_ROLES.ADMIN, USER_ROLES.NMDC, ...RAILWAY_ROLES]}
+          />
+        }
+      >
         <Route element={<AdminLayout />}>
           <Route path="/" element={<Navigate to={ROUTES.ADMIN.DASHBOARD} replace />} />
           <Route

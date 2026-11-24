@@ -206,7 +206,9 @@ export function AuthProvider({ children }) {
       login,
       loginWithPassword,
       logout,
-      defaultRoute: userRole ? DEFAULT_ROUTE_BY_ROLE[userRole] : "/login",
+      defaultRoute: userRole
+        ? DEFAULT_ROUTE_BY_ROLE[userRole] ?? "/admin/dashboard"
+        : "/login",
     }),
     [
       user,

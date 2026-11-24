@@ -5,12 +5,14 @@ export const USER_ROLES = {
   STATION_MASTER: "station_master",
   COMMERCIAL: "commercial",
   CW_INSPECTOR: "cw_inspector",
+  NMDC: "nmdc",
 };
 
 export const RAILWAY_ROLES = [
   USER_ROLES.STATION_MASTER,
   USER_ROLES.COMMERCIAL,
   USER_ROLES.CW_INSPECTOR,
+  USER_ROLES.NMDC,
 ];
 
 export const isReadOnlyRole = (role) => RAILWAY_ROLES.includes(role);
@@ -19,7 +21,7 @@ export const RAILWAY_DEPARTMENT_BY_ROLE = {
   [USER_ROLES.STATION_MASTER]: "operations",
   [USER_ROLES.COMMERCIAL]: "commercial",
   [USER_ROLES.CW_INSPECTOR]: "cw",
-  nmdc: "nmdc",
+  [USER_ROLES.NMDC]: "nmdc",
 };
 
 export function resolveRoleFromProfile(profile) {
@@ -30,11 +32,13 @@ export function resolveRoleFromProfile(profile) {
   const has = (...keys) => roleNames.some((name) => keys.some((key) => name.includes(key)));
 
   if (has("superadmin")) return USER_ROLES.SUPERADMIN;
+  // "NMDC Admin", "System Admin", etc. — full admin panel (not department-only nmdc)
+  if (has("admin")) return USER_ROLES.ADMIN;
   if (has("operator")) return USER_ROLES.OPERATOR;
   if (has("station", "operation")) return USER_ROLES.STATION_MASTER;
   if (has("commercial")) return USER_ROLES.COMMERCIAL;
   if (has("cnw", "c&w", "cw", "wagon")) return USER_ROLES.CW_INSPECTOR;
-  if (has("nmdc")) return "nmdc";
+  if (has("nmdc")) return USER_ROLES.NMDC;
   return USER_ROLES.ADMIN;
 }
 
@@ -45,4 +49,5 @@ export const DEFAULT_ROUTE_BY_ROLE = {
   [USER_ROLES.STATION_MASTER]: "/railway/approvals?dept=operations",
   [USER_ROLES.COMMERCIAL]: "/railway/approvals?dept=commercial",
   [USER_ROLES.CW_INSPECTOR]: "/railway/approvals?dept=cw",
+  [USER_ROLES.NMDC]: "/railway/approvals?dept=nmdc",
 };

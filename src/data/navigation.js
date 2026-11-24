@@ -170,7 +170,12 @@ const railwaySidebarSections = adminSidebarSections.map((section) => ({
 }));
 
 export function getSidebarSections(userRole) {
-  if (userRole === "station_master" || userRole === "commercial" || userRole === "cw_inspector") {
+  if (
+    userRole === "station_master" ||
+    userRole === "commercial" ||
+    userRole === "cw_inspector" ||
+    userRole === "nmdc"
+  ) {
     return railwaySidebarSections;
   }
 
