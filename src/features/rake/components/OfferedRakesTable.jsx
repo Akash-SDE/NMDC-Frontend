@@ -22,6 +22,12 @@ import { useColumnFilters } from "../../../hooks/useColumnFilters";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 import ColumnSettingsMenu from "../../../components/shared/ColumnSettingsMenu";
 import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
+import RowActionsMenu from "../../../components/shared/RowActionsMenu";
+import {
+  ADMIN_DATA_TABLE_CLASS,
+  ADMIN_TABLE_STICKY_ACTIONS_TD,
+  ADMIN_TABLE_STICKY_ACTIONS_TH,
+} from "../../../components/shared/tableDensity";
 import CreatableLookupSelect from "../../../components/shared/CreatableLookupSelect";
 import { useColumnVisibility } from "../../../hooks/useColumnVisibility";
 
@@ -33,6 +39,7 @@ const getOfferedRakeStatusLabel = (row) =>
 const RAKE_HIDDEN_COLS_KEY = "nmdc_rake_hidden_columns";
 const OFFERED_RAKE_FILTER_COLUMNS = [
   { key: "actions", type: "none", className: "sticky left-0 z-30 border-r border-slate-200/70 bg-white" },
+  { key: "fNote", label: "F-Note", getValue: (row) => row.fNote || "-" },
   { key: "rakeNumber", label: "Rake Number", getValue: (row) => row.rakeNumber || "-" },
   { key: "siding", label: "Siding", type: "select", getValue: (row) => row.siding || "-" },
   { key: "route", label: "Route", type: "select", getValue: (row) => row.route || "-" },
@@ -41,7 +48,6 @@ const OFFERED_RAKE_FILTER_COLUMNS = [
   { key: "destination", label: "Destination", type: "select", getValue: (row) => row.destination || "-" },
   { key: "wagonType", label: "Wagon Type", type: "select", getValue: (row) => row.wagonType || "-" },
   { key: "wagonSupply", label: "Wagon Supply", getValue: (row) => row.wagonSupply ?? "-" },
-  { key: "fNote", label: "F-Note", getValue: (row) => row.fNote || "-" },
   {
     key: "adjustOfferFor",
     label: "Offered For",
@@ -178,11 +184,15 @@ export default function OfferedRakesTable({
         className="min-h-0 flex-1"
         footer={<Pagination embedded {...paginationProps} />}
       >
-          <table data-colset={RAKE_HIDDEN_COLS_KEY} className="w-full min-w-[880px] whitespace-nowrap">
+          <table
+            data-colset={RAKE_HIDDEN_COLS_KEY}
+            className={`${ADMIN_DATA_TABLE_CLASS} w-full min-w-[880px] whitespace-nowrap`}
+          >
             <thead className={STICKY_TABLE_HEAD_CLASS}>
               <tr className="border-b border-slate-100 bg-slate-50/60">
-                <th className="sticky left-0 z-30 border-r border-slate-200/70 bg-slate-50 px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                  Actions
+                <th className={ADMIN_TABLE_STICKY_ACTIONS_TH}>Actions</th>
+                <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                  <SortHeaderButton label="F-Note" field="fNote" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                   <SortHeaderButton label="Rake Number" field="rakeNumber" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
@@ -209,9 +219,6 @@ export default function OfferedRakesTable({
                   <SortHeaderButton label="Wagon Supply" field="wagonSupply" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                  <SortHeaderButton label="F-Note" field="fNote" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                </th>
-                <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                   <SortHeaderButton label="Offered For" field="adjustOfferFor" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
@@ -224,8 +231,8 @@ export default function OfferedRakesTable({
               <ColumnFilterRow {...columnFilters.filterRowProps} rows={sortedRows} />
             </thead>
             <tbody className="divide-y divide-slate-100">
-              <tr data-write className="bg-blue-50/50 align-top [&>td]:py-4">
-                <td className="sticky left-0 z-20 border-r border-slate-200/70 bg-blue-50 px-5 py-3">
+              <tr data-write className="bg-blue-50/50 align-top">
+                <td className={`${ADMIN_TABLE_STICKY_ACTIONS_TD} bg-blue-50`}>
                   <div className="flex flex-col items-center gap-2">
                     {inlineActionMode !== "add" ? (
                       <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500">
@@ -268,6 +275,26 @@ export default function OfferedRakesTable({
                       </button>
                     </div>
                   </div>
+                </td>
+                <td className="px-5 py-3">
+                  <CreatableLookupSelect
+                    value={offeringForm.fNote}
+                    onChange={(fNote) => updateOffering("fNote", fNote)}
+                    options={fNoteSelectOptions}
+                    placeholder="F-Note"
+                    className={compactInputClass}
+                    disabled={!areMainFieldsEditable}
+                    onCreateOption={
+                      createFNoteOption
+                        ? (label) =>
+                            createFNoteOption(label, {
+                              customer: offeringForm.customer,
+                              destination: offeringForm.destination,
+                              oreType: offeringForm.oreType,
+                            })
+                        : undefined
+                    }
+                  />
                 </td>
                 <td className="px-5 py-3">
                   <input
@@ -347,26 +374,6 @@ export default function OfferedRakesTable({
                     placeholder="Wagons"
                     className={compactInputClass}
                     disabled={!areMainFieldsEditable}
-                  />
-                </td>
-                <td className="px-5 py-3">
-                  <CreatableLookupSelect
-                    value={offeringForm.fNote}
-                    onChange={(fNote) => updateOffering("fNote", fNote)}
-                    options={fNoteSelectOptions}
-                    placeholder="F-Note"
-                    className={compactInputClass}
-                    disabled={!areMainFieldsEditable}
-                    onCreateOption={
-                      createFNoteOption
-                        ? (label) =>
-                            createFNoteOption(label, {
-                              customer: offeringForm.customer,
-                              destination: offeringForm.destination,
-                              oreType: offeringForm.oreType,
-                            })
-                        : undefined
-                    }
                   />
                 </td>
                 <td className="px-5 py-3">
@@ -458,75 +465,48 @@ export default function OfferedRakesTable({
                   return (
                     <tr
                       key={row.rakeId}
-                      className={`hover:bg-slate-50/60 transition-colors group [&>td]:py-5 ${
+                      className={`hover:bg-slate-50/60 transition-colors group ${
                         row.rakeId === activeInlineRakeId ? "bg-amber-50/60" : ""
                       } ${row.isDisabled ? "opacity-70" : ""}`}
                     >
-                      <td
-                        className={`sticky left-0 z-20 border-r border-slate-200/70 px-5 py-4 ${actionCellClass}`}
-                      >
-                        <div className="flex items-center justify-center gap-2 opacity-60 transition-opacity group-hover:opacity-100">
-                          <button
-                            data-write
-                            type="button"
-                            onClick={() => onEditOffered(row)}
-                            disabled={row.isDisabled}
-                            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                              row.isDisabled
-                                ? "cursor-not-allowed text-slate-300"
-                                : "text-slate-400 hover:bg-blue-50 hover:text-blue-600"
-                            }`}
-                            title={row.isDisabled ? "Enable to edit" : "Edit"}
-                          >
-                            <EditIcon />
-                          </button>
-
-                          <button
-                            data-write
-                            type="button"
-                            onClick={() => onOpenAdjustment(row)}
-                            disabled={row.isDisabled}
-                            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                              row.isDisabled
-                                ? "cursor-not-allowed text-slate-300"
-                                : "text-slate-400 hover:bg-indigo-50 hover:text-indigo-600"
-                            }`}
-                            aria-label={row.isDisabled ? "Enable to adjust" : "Adjustment"}
-                            title={row.isDisabled ? "Enable to adjust" : "Adjustment"}
-                          >
-                            <AdjustmentIcon />
-                          </button>
-
-                          <button
-                            data-write
-                            type="button"
-                            onClick={() => onLoadRedirect(row)}
-                            disabled={row.isDisabled}
-                            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                              row.isDisabled
-                                ? "cursor-not-allowed text-slate-300"
-                                : "text-slate-400 hover:bg-emerald-50 hover:text-emerald-600"
-                            }`}
-                            aria-label={row.isDisabled ? "Enable to open load management" : "Load management"}
-                            title="Load management"
-                          >
-                            <LoadingIcon className="h-4 w-4" />
-                          </button>
-
-                          <button
-                            data-write
-                            type="button"
-                            onClick={() => onRequestStatusToggle(row.rakeId)}
-                            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                              row.isDisabled
-                                ? "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"
-                                : "text-slate-400 hover:bg-amber-50 hover:text-amber-600"
-                            }`}
-                            title={row.isDisabled ? "Enable" : "Disable"}
-                          >
-                            {row.isDisabled ? <EnableIcon /> : <DisableIcon />}
-                          </button>
-                        </div>
+                      <td className={`${ADMIN_TABLE_STICKY_ACTIONS_TD} ${actionCellClass}`}>
+                        <RowActionsMenu
+                          className="opacity-80 transition-opacity group-hover:opacity-100"
+                          primary={{
+                            label: row.isDisabled ? "Enable to edit" : "Edit",
+                            onClick: () => onEditOffered(row),
+                            disabled: row.isDisabled,
+                            icon: <EditIcon />,
+                            active:
+                              row.rakeId === activeInlineRakeId && inlineActionMode === "edit",
+                          }}
+                          items={[
+                            {
+                              id: "adjust",
+                              label: "Adjustment",
+                              onClick: () => onOpenAdjustment(row),
+                              disabled: row.isDisabled,
+                              icon: <AdjustmentIcon />,
+                            },
+                            {
+                              id: "loading",
+                              label: "Load management",
+                              onClick: () => onLoadRedirect(row),
+                              disabled: row.isDisabled,
+                              icon: <LoadingIcon className="h-4 w-4" />,
+                            },
+                            {
+                              id: "toggle-status",
+                              label: row.isDisabled ? "Enable row" : "Disable row",
+                              onClick: () => onRequestStatusToggle(row.rakeId),
+                              tone: row.isDisabled ? "success" : "default",
+                              icon: row.isDisabled ? <EnableIcon /> : <DisableIcon />,
+                            },
+                          ]}
+                        />
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="text-[13px] text-slate-700">{row.fNote || "-"}</span>
                       </td>
                       <td className="px-5 py-4">
                         <span className="text-[13px] font-semibold text-slate-800">{row.rakeNumber || "-"}</span>
@@ -551,9 +531,6 @@ export default function OfferedRakesTable({
                       </td>
                       <td className="px-5 py-4">
                         <span className="text-[13px] text-slate-700">{row.wagonSupply ?? "-"}</span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="text-[13px] text-slate-700">{row.fNote || "-"}</span>
                       </td>
                       <td className="px-5 py-4">
                         <span className="text-[13px] text-slate-700">{offeredFor}</span>

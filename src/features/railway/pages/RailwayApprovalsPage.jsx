@@ -7,6 +7,7 @@ import PageFrame from "../../../components/layout/PageFrame";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import Pagination from "../../../components/shared/Pagination";
 import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
+import { ADMIN_DATA_TABLE_CLASS } from "../../../components/shared/tableDensity";
 import { useClientPagination } from "../../../hooks/useClientPagination";
 import { useColumnFilters } from "../../../hooks/useColumnFilters";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
@@ -530,7 +531,7 @@ export default function RailwayApprovalsPage() {
             </div>
           }
         >
-            <table className="w-full min-w-[960px]">
+            <table className={`${ADMIN_DATA_TABLE_CLASS} w-full min-w-[960px]`}>
               <thead className={STICKY_TABLE_HEAD_CLASS}>
                 <tr className="border-b border-slate-200 bg-white">
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">

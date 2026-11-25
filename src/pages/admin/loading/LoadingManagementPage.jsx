@@ -44,6 +44,12 @@ import { useColumnFilters } from "../../../hooks/useColumnFilters";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
 import ColumnSettingsMenu from "../../../components/shared/ColumnSettingsMenu";
 import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
+import RowActionsMenu from "../../../components/shared/RowActionsMenu";
+import {
+  ADMIN_DATA_TABLE_CLASS,
+  ADMIN_TABLE_STICKY_ACTIONS_TD,
+  ADMIN_TABLE_STICKY_ACTIONS_TH,
+} from "../../../components/shared/tableDensity";
 import PageFrame from "../../../components/layout/PageFrame";
 import { useColumnVisibility } from "../../../hooks/useColumnVisibility";
 
@@ -305,8 +311,8 @@ export default function LoadingManagementPage() {
   const [rakeOptions, setRakeOptions] = useState([]);
   const [stockpileOptions, setStockpileOptions] = useState([]);
   const [tableSearch, setTableSearch] = useState("");
-  const [sortBy, setSortBy] = useState("rakeNumber");
-  const [sortOrder, setSortOrder] = useState("asc");
+  const [sortBy, setSortBy] = useState("placementTime");
+  const [sortOrder, setSortOrder] = useState("desc");
   const [inlineForm, setInlineForm] = useState(initialInlineForm);
   const [inlineActionMode, setInlineActionMode] = useState("add");
   const [activeInlineId, setActiveInlineId] = useState(null);
@@ -856,9 +862,12 @@ export default function LoadingManagementPage() {
           className="min-h-0 flex-1"
           footer={<Pagination embedded {...paginationProps} />}
         >
-          <table data-colset={LOADING_HIDDEN_COLS_KEY} className="w-full min-w-[1400px] border-separate border-spacing-0 whitespace-nowrap">
+          <table
+            data-colset={LOADING_HIDDEN_COLS_KEY}
+            className={`${ADMIN_DATA_TABLE_CLASS} w-full min-w-[1400px] border-separate border-spacing-0 whitespace-nowrap`}
+          >
               <colgroup>
-                <col className="w-[108px]" />
+                <col className="w-[4.25rem]" />
                 <col />
                 <col />
                 <col />
@@ -881,9 +890,7 @@ export default function LoadingManagementPage() {
               </colgroup>
               <thead className={STICKY_TABLE_HEAD_CLASS}>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
-                  <th className="sticky left-0 z-30 border-r border-slate-200/70 bg-slate-50 px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                    Actions
-                  </th>
+                  <th className={ADMIN_TABLE_STICKY_ACTIONS_TH}>Actions</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     <SortHeaderButton label="Rake ID" field="rakeId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
@@ -952,7 +959,7 @@ export default function LoadingManagementPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 <tr data-write className="bg-blue-50/50 align-top [&>td]:py-4">
-                  <td className="sticky left-0 z-20 border-r border-slate-200/70 bg-blue-50 px-5 py-3">
+                  <td className={`${ADMIN_TABLE_STICKY_ACTIONS_TD} bg-blue-50`}>
                     <div className="flex flex-col items-center gap-2">
                       {inlineActionMode !== "add" ? (
                         <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500">
@@ -1246,89 +1253,53 @@ export default function LoadingManagementPage() {
                           row.id === activeInlineId ? "bg-amber-50/60" : ""
                         } ${row.isDisabled ? "opacity-70" : ""}`}
                       >
-                        <td
-                          className={`sticky left-0 z-20 border-r border-slate-200/70 px-5 py-4 ${actionCellClass}`}
-                        >
-                          <div className="flex items-center justify-center gap-2 opacity-60 transition-opacity group-hover:opacity-100">
-                            <button
-                              data-write
-                              type="button"
-                              onClick={() => handleEditRow(row)}
-                              disabled={row.isDisabled || row.isSubmitted}
-                              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                                row.isDisabled || row.isSubmitted
-                                  ? "cursor-not-allowed text-slate-300"
-                                  : "text-slate-400 hover:bg-blue-50 hover:text-blue-600"
-                              }`}
-                              title={
-                                row.isSubmitted
-                                  ? "Locked after final submit"
-                                  : row.isDisabled
-                                    ? "Enable to edit"
-                                    : "Edit"
-                              }
-                            >
-                              <EditIcon />
-                            </button>
-
-                            <button
-                              data-write
-                              type="button"
-                              onClick={() => handleOpenAdjustment(row)}
-                              disabled={row.isDisabled}
-                              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                                row.isDisabled
-                                  ? "cursor-not-allowed text-slate-300"
-                                  : isAdjusting
-                                    ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
-                                    : "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                              }`}
-                              aria-label={row.isDisabled ? "Enable to adjust" : "Adjustment"}
-                              title={row.isDisabled ? "Enable to adjust" : "Adjustment"}
-                            >
-                              <AdjustmentIcon className="h-4 w-4" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleDelayRedirect(row)}
-                              disabled={row.isDisabled}
-                              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                                row.isDisabled
-                                  ? "cursor-not-allowed text-slate-300"
-                                  : "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                              }`}
-                              title="Delay management"
-                            >
-                              <DelayIcon className="h-4 w-4" />
-                            </button>
-
-                            <button
-                              data-write
-                              type="button"
-                              onClick={() => requestRakeStatusToggle(row.id)}
-                              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                                row.isDisabled
-                                  ? "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"
-                                  : "text-slate-400 hover:bg-amber-50 hover:text-amber-600"
-                              }`}
-                              title={row.isDisabled ? "Enable" : "Disable"}
-                            >
-                              {row.isDisabled ? <EnableIcon /> : <DisableIcon />}
-                            </button>
-
-                            {canFinalSubmit ? (
-                              <button
-                                data-write
-                                type="button"
-                                onClick={() => setFinalSubmitTarget(loadingId)}
-                                className="inline-flex h-8 items-center rounded-lg border border-violet-300 bg-violet-50 px-2 text-[10px] font-bold uppercase tracking-[0.04em] text-violet-700 transition-colors hover:bg-violet-100"
-                                title="Submit loading for railway approval"
-                              >
-                                Submit
-                              </button>
-                            ) : null}
-                          </div>
+                        <td className={`${ADMIN_TABLE_STICKY_ACTIONS_TD} ${actionCellClass}`}>
+                          <RowActionsMenu
+                            className="opacity-80 transition-opacity group-hover:opacity-100"
+                            primary={{
+                              label: row.isSubmitted
+                                ? "Locked after final submit"
+                                : row.isDisabled
+                                  ? "Enable to edit"
+                                  : "Edit",
+                              onClick: () => handleEditRow(row),
+                              disabled: row.isDisabled || row.isSubmitted,
+                              icon: <EditIcon />,
+                              active: activeInlineId === row.id && inlineActionMode === "edit",
+                            }}
+                            items={[
+                              {
+                                id: "adjust",
+                                label: "Adjustment",
+                                onClick: () => handleOpenAdjustment(row),
+                                disabled: row.isDisabled,
+                                icon: <AdjustmentIcon className="h-4 w-4" />,
+                              },
+                              {
+                                id: "delay",
+                                label: "Delay management",
+                                onClick: () => handleDelayRedirect(row),
+                                disabled: row.isDisabled,
+                                icon: <DelayIcon className="h-4 w-4" />,
+                                dataWrite: false,
+                              },
+                              {
+                                id: "toggle-status",
+                                label: row.isDisabled ? "Enable row" : "Disable row",
+                                onClick: () => requestRakeStatusToggle(row.id),
+                                tone: row.isDisabled ? "success" : "default",
+                                icon: row.isDisabled ? <EnableIcon /> : <DisableIcon />,
+                              },
+                              canFinalSubmit
+                                ? {
+                                    id: "submit",
+                                    label: "Submit for railway approval",
+                                    onClick: () => setFinalSubmitTarget(loadingId),
+                                    tone: "default",
+                                  }
+                                : null,
+                            ].filter(Boolean)}
+                          />
                         </td>
                         <td className="px-5 py-4">
                           <span className="text-[13px] font-semibold text-blue-600">{row.rakeId}</span>

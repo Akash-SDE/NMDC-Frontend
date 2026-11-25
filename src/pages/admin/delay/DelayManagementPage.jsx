@@ -6,6 +6,12 @@ import {
 } from "../../../components/shared/UniformUi";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
+import RowActionsMenu from "../../../components/shared/RowActionsMenu";
+import {
+  ADMIN_DATA_TABLE_CLASS,
+  ADMIN_TABLE_STICKY_ACTIONS_TD,
+  ADMIN_TABLE_STICKY_ACTIONS_TH,
+} from "../../../components/shared/tableDensity";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
 import DelayProcessTimeline from "../../../components/delay/DelayProcessTimeline";
 import {
@@ -896,12 +902,13 @@ export default function DelayManagementPage() {
           className="min-h-0 flex-1"
           footer={<Pagination embedded {...paginationProps} />}
         >
-            <table data-colset={DELAY_HIDDEN_COLS_KEY} className="w-full min-w-425 whitespace-nowrap">
+            <table
+              data-colset={DELAY_HIDDEN_COLS_KEY}
+              className={`${ADMIN_DATA_TABLE_CLASS} w-full min-w-425 whitespace-nowrap`}
+            >
               <thead className={STICKY_TABLE_HEAD_CLASS}>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
-                  <th className="sticky left-0 z-30 border-r border-slate-200/70 bg-slate-50 px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                    Actions
-                  </th>
+                  <th className={ADMIN_TABLE_STICKY_ACTIONS_TH}>Actions</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                     <SortHeaderButton label="Log ID" field="id" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
@@ -940,7 +947,7 @@ export default function DelayManagementPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 <tr data-write className="bg-blue-50/50 align-top [&>td]:py-4">
-                  <td className="sticky left-0 z-20 border-r border-slate-200/70 bg-blue-50 px-5 py-3">
+                  <td className={`${ADMIN_TABLE_STICKY_ACTIONS_TD} bg-blue-50`}>
                     <div className="flex flex-col items-center gap-2">
                       {inlineActionMode !== "add" ? (
                         <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500">
@@ -1162,92 +1169,60 @@ export default function DelayManagementPage() {
                     return (
                       <Fragment key={row.id}>
                       <tr
-                        className={`hover:bg-slate-50/60 transition-colors group [&>td]:py-5 ${
+                        className={`hover:bg-slate-50/60 transition-colors group ${
                           row.id === activeInlineLogId ? "bg-amber-50/60" : ""
                         } ${row.isDisabled ? "opacity-70" : ""}`}
                       >
-                        <td
-                          className={`sticky left-0 z-20 border-r border-slate-200/70 px-5 py-4 ${actionCellClass}`}
-                        >
-                          <div className="flex items-center justify-center gap-2 opacity-60 transition-opacity group-hover:opacity-100">
-                            <button
-                              data-write
-                              type="button"
-                              onClick={() => handleEditRow(row)}
-                              disabled={row.isDisabled || row.isReadOnly}
-                              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                                row.isDisabled || row.isReadOnly
-                                  ? "cursor-not-allowed text-slate-300"
-                                  : "text-slate-400 hover:bg-blue-50 hover:text-blue-600"
-                              }`}
-                              title={row.isReadOnly ? "Read-only delay" : row.isDisabled ? "Enable to edit" : "Edit"}
-                            >
-                              <EditIcon />
-                            </button>
-
-                            <button
-                              data-write
-                              type="button"
-                              onClick={() => handleOpenAdjustment(row)}
-                              disabled={row.isDisabled || row.isReadOnly}
-                              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                                row.isDisabled || row.isReadOnly
-                                  ? "cursor-not-allowed text-slate-300"
-                                  : isAdjusting
-                                    ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
-                                    : "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                              }`}
-                              aria-label={row.isReadOnly ? "Read-only delay" : "Adjustment"}
-                              title={row.isReadOnly ? "Read-only delay" : "Adjustment"}
-                            >
-                              <AdjustmentIcon className="h-4 w-4" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleLoadRedirect(row)}
-                              disabled={row.isDisabled || (!row.loadingId && !row.rakeId)}
-                              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                                row.isDisabled || (!row.loadingId && !row.rakeId)
-                                  ? "cursor-not-allowed text-slate-300"
-                                  : "text-slate-400 hover:bg-emerald-50 hover:text-emerald-600"
-                              }`}
-                              aria-label="Load management"
-                              title="Load management"
-                            >
-                              <LoadingIcon className="h-4 w-4" />
-                            </button>
-
-                            {rowLoading ? (
-                              <button
-                                type="button"
-                                onClick={() => toggleTimelineRow(row)}
-                                className={`rounded-md px-2 py-1 text-[10px] font-semibold transition-colors ${
-                                  isTimelineOpen
-                                    ? "bg-violet-100 text-violet-700"
-                                    : "text-slate-500 hover:bg-violet-50 hover:text-violet-700"
-                                }`}
-                              >
-                                Journey
-                              </button>
-                            ) : null}
-
-                            {!row.isReadOnly ? (
-                              <button
-                                data-write
-                                type="button"
-                                onClick={() => requestLogStatusToggle(row.id)}
-                                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                                  row.isDisabled
-                                    ? "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"
-                                    : "text-slate-400 hover:bg-amber-50 hover:text-amber-600"
-                                }`}
-                                title={row.isDisabled ? "Enable" : "Disable"}
-                              >
-                                {row.isDisabled ? <EnableIcon /> : <DisableIcon />}
-                              </button>
-                            ) : null}
-                          </div>
+                        <td className={`${ADMIN_TABLE_STICKY_ACTIONS_TD} ${actionCellClass}`}>
+                          <RowActionsMenu
+                            className="opacity-80 transition-opacity group-hover:opacity-100"
+                            primary={{
+                              label: row.isReadOnly
+                                ? "Read-only delay"
+                                : row.isDisabled
+                                  ? "Enable to edit"
+                                  : "Edit",
+                              onClick: () => handleEditRow(row),
+                              disabled: row.isDisabled || row.isReadOnly,
+                              icon: <EditIcon />,
+                              active:
+                                row.id === activeInlineLogId && inlineActionMode === "edit",
+                            }}
+                            items={[
+                              {
+                                id: "adjust",
+                                label: "Adjustment",
+                                onClick: () => handleOpenAdjustment(row),
+                                disabled: row.isDisabled || row.isReadOnly,
+                                icon: <AdjustmentIcon className="h-4 w-4" />,
+                              },
+                              {
+                                id: "loading",
+                                label: "Load management",
+                                onClick: () => handleLoadRedirect(row),
+                                disabled: row.isDisabled || (!row.loadingId && !row.rakeId),
+                                icon: <LoadingIcon className="h-4 w-4" />,
+                                dataWrite: false,
+                              },
+                              rowLoading
+                                ? {
+                                    id: "journey",
+                                    label: isTimelineOpen ? "Hide journey timeline" : "Journey timeline",
+                                    onClick: () => toggleTimelineRow(row),
+                                    dataWrite: false,
+                                  }
+                                : null,
+                              !row.isReadOnly
+                                ? {
+                                    id: "toggle-status",
+                                    label: row.isDisabled ? "Enable row" : "Disable row",
+                                    onClick: () => requestLogStatusToggle(row.id),
+                                    tone: row.isDisabled ? "success" : "default",
+                                    icon: row.isDisabled ? <EnableIcon /> : <DisableIcon />,
+                                  }
+                                : null,
+                            ].filter(Boolean)}
+                          />
                         </td>
                         <td className="px-5 py-4 text-[13px] font-semibold text-blue-600">
                           {row.logId || row.id}

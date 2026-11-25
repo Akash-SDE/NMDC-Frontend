@@ -14,12 +14,18 @@ import { useColumnFilters, useServerColumnFilters } from "../../../hooks/useColu
 import { ExtractionIcon } from "../../../components/icons";
 import DocumentSlotCell from "../components/DocumentSlotCell";
 import RakeExtractionDetailModal from "../components/RakeExtractionDetailModal";
+import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import {
   DOCUMENT_TYPES,
   DOC_STATUS_BADGE,
   RAKE_STATUS,
   RAKE_STATUS_BADGE,
 } from "../utils/rakeExtractionStatus";
+import { extractTextFromPdfFile } from "../utils/pdfText";
+import {
+  getRakeFNoteFromRow,
+  validateDocumentBeforeUpload,
+} from "../utils/documentUploadValidation";
 
 const PAGE_SIZE = 10;
 
@@ -98,6 +104,7 @@ export default function ExtractionPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [reprocessingType, setReprocessingType] = useState(null);
   const [toast, setToast] = useState({ msg: "", type: "success" });
+  const [mismatchConfirm, setMismatchConfirm] = useState(null);
   const fileInputsRef = useRef({});
 
   const sorted = useMemo(() => {
@@ -227,14 +234,7 @@ export default function ExtractionPage() {
     input?.click();
   }
 
-  async function handleFileSelected(rakeId, documentType, event) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    if (file.type !== "application/pdf") {
-      showToast("Only PDF files are allowed.", "error");
-      return;
-    }
+  async function performUpload(rakeId, documentType, file) {
     const uploadKey = `${rakeId}-${documentType}`;
     setUploadingKey(uploadKey);
     try {
@@ -259,6 +259,50 @@ export default function ExtractionPage() {
     } finally {
       setUploadingKey(null);
     }
+  }
+
+  async function handleFileSelected(rakeId, documentType, event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      showToast("Only PDF files are allowed.", "error");
+      return;
+    }
+
+    if (
+      documentType === DOCUMENT_TYPES.INVOICE ||
+      documentType === DOCUMENT_TYPES.RTP
+    ) {
+      let row = rows.find((r) => r.rake_id === rakeId);
+      if (documentType === DOCUMENT_TYPES.RTP && row && !getRakeFNoteFromRow(row)) {
+        try {
+          const detail = await fetchRakeExtractionDetail(rakeId);
+          row = { ...row, ...detail };
+        } catch {
+          /* use list row */
+        }
+      }
+
+      try {
+        const pdfText = await extractTextFromPdfFile(file);
+        const check = validateDocumentBeforeUpload(documentType, pdfText, row);
+        if (!check.ok) {
+          setMismatchConfirm({
+            rakeId,
+            documentType,
+            file,
+            title: check.title,
+            message: check.message,
+          });
+          return;
+        }
+      } catch {
+        showToast("Could not read PDF for reference check. Uploading anyway.", "warning");
+      }
+    }
+
+    await performUpload(rakeId, documentType, file);
   }
 
   async function openDetail(rakeId) {
@@ -478,6 +522,23 @@ export default function ExtractionPage() {
           }}
         />
       ) : null}
+
+      <ConfirmDialog
+        isOpen={Boolean(mismatchConfirm)}
+        onClose={() => setMismatchConfirm(null)}
+        onConfirm={async () => {
+          const pending = mismatchConfirm;
+          setMismatchConfirm(null);
+          if (pending?.file) {
+            await performUpload(pending.rakeId, pending.documentType, pending.file);
+          }
+        }}
+        title={mismatchConfirm?.title ?? "Reference mismatch"}
+        message={mismatchConfirm?.message ?? ""}
+        confirmLabel="Upload & extract"
+        cancelLabel="Cancel"
+        variant="warning"
+      />
     </>
   );
 }

@@ -6,6 +6,7 @@ import Modal from "../../../components/shared/Modal";
 import Pagination from "../../../components/shared/Pagination";
 import { formatDateTimeForTable } from "../../../utils/dateUtils";
 import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
+import { ADMIN_DATA_TABLE_CLASS } from "../../../components/shared/tableDensity";
 import PageFrame from "../../../components/layout/PageFrame";
 import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ColumnFilterRow from "../../../components/shared/ColumnFilterRow";
@@ -668,7 +669,9 @@ export default function UserManagementPage() {
             ) : null
           }
         >
-            <table className="w-full min-w-[980px] border-separate border-spacing-0 text-[13px]">
+            <table
+              className={`${ADMIN_DATA_TABLE_CLASS} w-full min-w-[980px] border-separate border-spacing-0 text-[13px]`}
+            >
               <thead className={STICKY_TABLE_HEAD_CLASS}>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
                   <th className="w-[52px] px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">#</th>

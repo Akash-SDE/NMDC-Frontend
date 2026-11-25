@@ -12,6 +12,12 @@ import { SortHeaderButton } from "../../../components/shared/TableSortHeader";
 import ThemedSelect from "../../../components/shared/ThemedSelect";
 import Pagination from "../../../components/shared/Pagination";
 import DataTablePanel, { STICKY_TABLE_HEAD_CLASS } from "../../../components/shared/DataTablePanel";
+import RowActionsMenu from "../../../components/shared/RowActionsMenu";
+import {
+  ADMIN_DATA_TABLE_CLASS,
+  ADMIN_TABLE_STICKY_ACTIONS_TD,
+  ADMIN_TABLE_STICKY_ACTIONS_TH,
+} from "../../../components/shared/tableDensity";
 import PageFrame from "../../../components/layout/PageFrame";
 import { useClientPagination } from "../../../hooks/useClientPagination";
 import { useColumnFilters } from "../../../hooks/useColumnFilters";
@@ -469,7 +475,7 @@ export default function EDemandManagementPage() {
             ) : null
           }
         >
-            <table className="w-full" data-print-table>
+            <table className={`${ADMIN_DATA_TABLE_CLASS} w-full`} data-print-table>
               <thead className={STICKY_TABLE_HEAD_CLASS}>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
                   <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
@@ -658,10 +664,10 @@ export default function EDemandManagementPage() {
           ) : null
         }
       >
-          <table className="w-full" data-print-table>
+          <table className={`${ADMIN_DATA_TABLE_CLASS} w-full`} data-print-table>
             <thead className={STICKY_TABLE_HEAD_CLASS}>
               <tr className="border-b border-slate-100 bg-slate-50/60">
-                <th className="sticky left-0 z-30 border-r border-slate-200/70 bg-slate-50 px-5 py-3.5 text-center text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
+                <th className={`${ADMIN_TABLE_STICKY_ACTIONS_TH} 3xl:text-[13px] 5xl:text-[17px]`}>
                   Actions
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] 3xl:text-[13px] 5xl:text-[17px] font-bold tracking-[0.06em] text-slate-500 uppercase">
@@ -733,7 +739,7 @@ export default function EDemandManagementPage() {
             <tbody className="divide-y divide-slate-100">
               {/* Inline Action Row */}
               <tr data-write className="bg-blue-50/50 align-top [&>td]:py-4">
-                <td className="sticky left-0 z-20 border-r border-slate-200/70 bg-blue-50 px-5 py-3">
+                <td className={`${ADMIN_TABLE_STICKY_ACTIONS_TD} bg-blue-50`}>
                   <div className="flex flex-col items-center gap-2">
                     {inlineActionMode === "edit" ? (
                       <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500 text-center">
@@ -872,27 +878,24 @@ export default function EDemandManagementPage() {
                         : "hover:bg-slate-50/70"
                     }`}
                   >
-                    <td className="px-5 py-3.5 sticky left-0 z-10 border-r border-slate-200/50 bg-white group-hover:bg-slate-50">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          data-write
-                          type="button"
-                          onClick={() => handleEditDemand(row)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                          title="Edit"
-                        >
-                          <EditIcon />
-                        </button>
-                        <button
-                          data-write
-                          type="button"
-                          onClick={() => requestDemandDelete(row)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                          title="Delete"
-                        >
-                          <DeleteIcon />
-                        </button>
-                      </div>
+                    <td className={`${ADMIN_TABLE_STICKY_ACTIONS_TD} group-hover:bg-slate-50`}>
+                      <RowActionsMenu
+                        primary={{
+                          label: "Edit",
+                          onClick: () => handleEditDemand(row),
+                          icon: <EditIcon />,
+                          active: row.id === activeInlineDemandId,
+                        }}
+                        items={[
+                          {
+                            id: "delete",
+                            label: "Delete",
+                            onClick: () => requestDemandDelete(row),
+                            tone: "danger",
+                            icon: <DeleteIcon />,
+                          },
+                        ]}
+                      />
                     </td>
                     <td className="px-5 py-3.5 text-[13px] 3xl:text-[16px] 5xl:text-[20px] font-semibold text-slate-800">
                       {row.fNote}
