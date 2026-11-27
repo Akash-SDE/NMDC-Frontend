@@ -12,6 +12,7 @@ import PageFrame from "../../../components/layout/PageFrame";
 import OfferedRakesTable from "../components/OfferedRakesTable";
 import RakeUpcomingView from "../components/RakeUpcomingView";
 import { apiDateToDateTimeLocal } from "../../../utils/dateUtils";
+import { assertUniqueFNoteOnRake } from "../utils/fNoteRakeValidation";
 
 export default function RakeManagementPage() {
   const { navigate, currentRoute } = useRouter();
@@ -189,6 +190,9 @@ export default function RakeManagementPage() {
     }
 
     try {
+      assertUniqueFNoteOnRake(uiRows, offeringForm.fNote, {
+        excludeRakeId: activeInlineRakeId,
+      });
       await updateOfferedRake(activeInlineRakeId, {
         rake_number: offeringForm.rakeNumber.trim(),
         siding: Number(offeringForm.siding),
@@ -216,6 +220,7 @@ export default function RakeManagementPage() {
     updateOfferedRake,
     adjustOfferFor,
     adjustOfferTime,
+    uiRows,
   ]);
 
 

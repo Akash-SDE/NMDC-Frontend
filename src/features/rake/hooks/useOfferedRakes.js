@@ -8,6 +8,7 @@ import { fetchSidings } from "../../../services/sidingService";
 import { fetchWagonTypes } from "../../../services/wagonTypeService";
 import { listEDemands } from "../../../services/edemandService";
 import { quickCreateFNote } from "../utils/fNoteQuickCreate";
+import { assertUniqueFNoteOnRake } from "../utils/fNoteRakeValidation";
 
 const RAKE_STATUS_DRAFT = 5;
 const RAKE_STATUS_CANCELLED = 50;
@@ -229,6 +230,8 @@ export function useOfferedRakes() {
         throw new Error("Complete the rake details before adding.");
       }
 
+      assertUniqueFNoteOnRake(uiRows, form.fNote);
+
       if (reload) setSaving(true);
       try {
         await createRake(payload);
@@ -237,7 +240,7 @@ export function useOfferedRakes() {
         if (reload) setSaving(false);
       }
     },
-    [fetchRakes],
+    [fetchRakes, uiRows],
   );
 
   const updateOfferedRake = useCallback(
